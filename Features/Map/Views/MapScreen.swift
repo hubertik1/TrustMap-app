@@ -1,15 +1,13 @@
+import Combine
 import MapKit
 import SwiftUI
+import UIKit
 
 struct MapScreen: View {
     @ObservedObject private var container: AppContainer
     @StateObject private var viewModel: MapScreenViewModel
-    @State private var cameraPosition: MapCameraPosition = .region(
-        MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-            span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18)
-        )
-    )
+    @State private var cameraPosition: MapCameraPosition = .automatic
+    @Environment(\.openURL) private var openURL
 
     init(container: AppContainer) {
         self.container = container
@@ -20,7 +18,8 @@ struct MapScreen: View {
                 userRepository: container.userRepository,
                 placeRepository: container.placeRepository,
                 placeReviewRepository: container.placeReviewRepository,
-                mapSearchService: container.mapSearchService
+                mapSearchService: container.mapSearchService,
+                userLocationService: container.userLocationService
             )
         )
     }
@@ -28,6 +27,8 @@ struct MapScreen: View {
     var body: some View {
         ZStack {
             Map(position: $cameraPosition) {
+                UserAnnotation()
+
                 ForEach(viewModel.annotations, id: \.id) { annotation in
                     Annotation(annotation.place.name, coordinate: annotation.coordinate) {
                         Button {
@@ -49,6 +50,9 @@ struct MapScreen: View {
             }
             .onMapCameraChange { context in
                 viewModel.region = context.region
+            }
+            .onReceive(viewModel.$requestedCameraRegion.compactMap { $0 }) { region in
+                cameraPosition = .region(region)
             }
             .ignoresSafeArea(edges: .bottom)
 
@@ -81,15 +85,49 @@ struct MapScreen: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            Text(viewModel.filterState.summaryText)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial, in: Capsule())
-                .padding()
+            VStack(spacing: 8) {
+                if let locationMessage = viewModel.locationAccessState.message {
+                    HStack(alignment: .center, spacing: 12) {
+                        Image(systemName: "location")
+                            .foregroundStyle(.secondary)
+
+                        Text(locationMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if viewModel.locationAccessState.showsSettingsAction,
+                           let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                            Button("Settings") {
+                                openURL(settingsURL)
+                            }
+                            .font(.footnote.weight(.semibold))
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+
+                Text(viewModel.filterState.summaryText)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial, in: Capsule())
+            }
+            .padding()
         }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    viewModel.recenterOnUserLocation()
+                } label: {
+                    Image(systemName: "location.fill")
+                }
+                .accessibilityLabel("Center on my location")
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     viewModel.isFilterPresented = true
@@ -119,6 +157,7 @@ struct MapScreen: View {
             }
         }
         .task {
+            viewModel.startLocationFlowIfNeeded()
             await viewModel.load()
         }
     }
@@ -130,7 +169,6 @@ struct MapScreen: View {
                     Button {
                         Task {
                             await viewModel.selectSearchResult(result)
-                            cameraPosition = .region(viewModel.region)
                         }
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {

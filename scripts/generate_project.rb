@@ -40,6 +40,7 @@ target.build_configurations.each do |config|
   config.build_settings['GENERATE_INFOPLIST_FILE'] = 'YES'
   config.build_settings['INFOPLIST_KEY_CFBundleDisplayName'] = APP_NAME
   config.build_settings['INFOPLIST_KEY_LSApplicationCategoryType'] = 'public.app-category.food-and-drink'
+  config.build_settings['INFOPLIST_KEY_NSLocationWhenInUseUsageDescription'] = 'TrustMap uses your location to center the map around you and help you discover nearby places.'
   config.build_settings['INFOPLIST_KEY_UIApplicationSceneManifest_Generation'] = 'YES'
   config.build_settings['INFOPLIST_KEY_UILaunchScreen_Generation'] = 'YES'
   config.build_settings['ASSETCATALOG_COMPILER_APPICON_NAME'] = ''

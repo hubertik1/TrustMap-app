@@ -5,6 +5,7 @@ enum AppError: LocalizedError {
     case invalidSession
     case missingCurrentUser
     case invalidPlaceSelection
+    case locationFailure(String)
     case persistenceFailure(String)
     case syncFailure(String)
     case validationFailure(String)
@@ -20,6 +21,8 @@ enum AppError: LocalizedError {
             return "No signed-in user is available."
         case .invalidPlaceSelection:
             return "Select a place before continuing."
+        case .locationFailure(let message):
+            return message
         case .persistenceFailure(let message):
             return message
         case .syncFailure(let message):

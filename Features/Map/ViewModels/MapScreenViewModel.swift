@@ -1,12 +1,11 @@
+import CoreLocation
 import Foundation
 import MapKit
 
 @MainActor
 final class MapScreenViewModel: ObservableObject {
-    @Published var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-        span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18)
-    )
+    @Published var region: MKCoordinateRegion?
+    @Published var requestedCameraRegion: MKCoordinateRegion?
     @Published var searchText = ""
     @Published var searchResults: [PlaceSearchResult] = []
     @Published var annotations: [MapPlaceAnnotation] = []
@@ -16,6 +15,7 @@ final class MapScreenViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var isFilterPresented = false
+    @Published private(set) var locationAccessState: UserLocationAccessState = .idle
 
     private let sessionStore: SessionStore
     private let friendRepository: FriendRepository
@@ -23,6 +23,10 @@ final class MapScreenViewModel: ObservableObject {
     private let placeRepository: PlaceRepository
     private let placeReviewRepository: PlaceReviewRepository
     private let mapSearchService: MapSearchService
+    private let userLocationService: UserLocationServicing
+    private var hasCenteredOnUserLocation = false
+    private var hasStartedLocationFlow = false
+    private var shouldCenterOnNextLocationUpdate = true
 
     init(
         sessionStore: SessionStore,
@@ -30,7 +34,8 @@ final class MapScreenViewModel: ObservableObject {
         userRepository: UserProfileRepository,
         placeRepository: PlaceRepository,
         placeReviewRepository: PlaceReviewRepository,
-        mapSearchService: MapSearchService
+        mapSearchService: MapSearchService,
+        userLocationService: UserLocationServicing
     ) {
         self.sessionStore = sessionStore
         self.friendRepository = friendRepository
@@ -38,6 +43,17 @@ final class MapScreenViewModel: ObservableObject {
         self.placeRepository = placeRepository
         self.placeReviewRepository = placeReviewRepository
         self.mapSearchService = mapSearchService
+        self.userLocationService = userLocationService
+
+        self.userLocationService.onAuthorizationChange = { [weak self] status in
+            self?.handleAuthorizationChange(status)
+        }
+        self.userLocationService.onLocationUpdate = { [weak self] location in
+            self?.handleLocationUpdate(location)
+        }
+        self.userLocationService.onError = { [weak self] error in
+            self?.handleLocationError(error)
+        }
     }
 
     func load() async {
@@ -83,6 +99,22 @@ final class MapScreenViewModel: ObservableObject {
         await load()
     }
 
+    func startLocationFlowIfNeeded() {
+        guard !hasStartedLocationFlow else {
+            return
+        }
+
+        hasStartedLocationFlow = true
+        locationAccessState = userLocationService.authorizationStatus == .notDetermined ? .requestingPermission : .locating
+        userLocationService.start()
+    }
+
+    func recenterOnUserLocation() {
+        locationAccessState = .locating
+        shouldCenterOnNextLocationUpdate = true
+        userLocationService.requestCurrentLocation()
+    }
+
     func selectAnnotation(_ annotation: MapPlaceAnnotation) {
         selectedPlace = annotation.place
     }
@@ -97,7 +129,12 @@ final class MapScreenViewModel: ObservableObject {
             selectedPlace = try placeRepository.upsertPlace(from: result, createdByUserID: currentUser.id)
             searchResults = []
             searchText = ""
-            region.center = result.coordinate
+            let searchRegion = MKCoordinateRegion(
+                center: result.coordinate,
+                span: Self.defaultSpan
+            )
+            region = searchRegion
+            requestedCameraRegion = searchRegion
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
@@ -129,4 +166,45 @@ final class MapScreenViewModel: ObservableObject {
         }
         .sorted { $0.averageRating > $1.averageRating }
     }
+
+    private func handleAuthorizationChange(_ status: CLAuthorizationStatus) {
+        switch status {
+        case .notDetermined:
+            locationAccessState = .requestingPermission
+        case .authorizedAlways, .authorizedWhenInUse:
+            locationAccessState = .locating
+        case .denied:
+            locationAccessState = .denied
+        case .restricted:
+            locationAccessState = .restricted
+        @unknown default:
+            locationAccessState = .failed("TrustMap could not read the current location permission status.")
+        }
+    }
+
+    private func handleLocationUpdate(_ location: CLLocation) {
+        locationAccessState = .ready
+
+        let userRegion = MKCoordinateRegion(
+            center: location.coordinate,
+            span: Self.defaultSpan
+        )
+        region = userRegion
+
+        guard shouldCenterOnNextLocationUpdate || !hasCenteredOnUserLocation else {
+            return
+        }
+
+        hasCenteredOnUserLocation = true
+        shouldCenterOnNextLocationUpdate = false
+        requestedCameraRegion = userRegion
+    }
+
+    private func handleLocationError(_ error: AppError) {
+        locationAccessState = .failed(error.errorDescription ?? "TrustMap could not determine your current location.")
+    }
+}
+
+private extension MapScreenViewModel {
+    static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
 }

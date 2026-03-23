@@ -45,7 +45,7 @@ final class AppleAuthenticationService: AuthServicing {
             )
 
         case .failure(let error):
-            throw mapAuthorizationError(error)
+            throw Self.mapAuthorizationError(error)
         }
     }
 
@@ -61,7 +61,7 @@ final class AppleAuthenticationService: AuthServicing {
         try await withCheckedThrowingContinuation { continuation in
             provider.getCredentialState(forUserID: userID) { state, error in
                 if let error {
-                    continuation.resume(throwing: self.mapAuthorizationError(error))
+                    continuation.resume(throwing: Self.mapAuthorizationError(error))
                 } else {
                     continuation.resume(returning: state)
                 }
@@ -69,7 +69,7 @@ final class AppleAuthenticationService: AuthServicing {
         }
     }
 
-    private func mapAuthorizationError(_ error: Error) -> AppError {
+    private nonisolated static func mapAuthorizationError(_ error: Error) -> AppError {
         guard let authorizationError = error as? ASAuthorizationError else {
             return AppError.wrap(error)
         }
@@ -85,6 +85,12 @@ final class AppleAuthenticationService: AuthServicing {
 
         case .notInteractive:
             return .authFailed("Sign in with Apple is currently unavailable because the request is not running in an interactive UI context.")
+
+        case .credentialExport, .credentialImport, .matchedExcludedCredential, .preferSignInWithApple:
+            return .authFailed("Sign in with Apple failed because the selected credential is unavailable for this request. Try again with a different account or credential.")
+
+        case .deviceNotConfiguredForPasskeyCreation:
+            return .authFailed("Sign in with Apple is unavailable because this device is not configured for passkey creation.")
 
         @unknown default:
             return .authFailed("Sign in with Apple failed. Verify the target capabilities and signing configuration, then try again.")

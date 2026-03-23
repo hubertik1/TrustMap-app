@@ -15,6 +15,7 @@ final class AppContainer: ObservableObject {
     let dishReviewRepository: DishReviewRepository
     let feedRepository: FeedRepository
     let mapSearchService: MapSearchService
+    let userLocationService: UserLocationService
     let sessionStore: SessionStore
 
     init(inMemory: Bool = false) {
@@ -59,6 +60,7 @@ final class AppContainer: ObservableObject {
         )
         let feedRepository = FeedRepository(persistenceController: persistenceController)
         let mapSearchService = MapSearchService()
+        let userLocationService = UserLocationService()
         let sessionStore = SessionStore(
             authService: authService,
             userRepository: userRepository
@@ -77,6 +79,7 @@ final class AppContainer: ObservableObject {
         self.dishReviewRepository = dishReviewRepository
         self.feedRepository = feedRepository
         self.mapSearchService = mapSearchService
+        self.userLocationService = userLocationService
         self.sessionStore = sessionStore
     }
 }
