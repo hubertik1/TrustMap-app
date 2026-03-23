@@ -3,6 +3,7 @@ import SwiftUI
 struct PlacesView: View {
     @ObservedObject private var container: AppContainer
     @StateObject private var viewModel: PlacesViewModel
+    private let reviewFilterOptions: [ReviewSourceFilterMode] = [.mineAndFriends, .mineOnly, .friendsOnly]
 
     init(container: AppContainer) {
         self.container = container
@@ -74,7 +75,7 @@ struct PlacesView: View {
                     }
 
                     Section("Filter Reviews") {
-                        ForEach(ReviewSourceFilterMode.allCases) { mode in
+                        ForEach(reviewFilterOptions) { mode in
                             Button {
                                 Task { await viewModel.apply(sourceFilter: mode) }
                             } label: {
