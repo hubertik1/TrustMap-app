@@ -27,6 +27,7 @@ final class MapScreenViewModel: ObservableObject {
     private var hasCenteredOnUserLocation = false
     private var hasStartedLocationFlow = false
     private var shouldCenterOnNextLocationUpdate = true
+    private var searchTask: Task<Void, Never>?
 
     init(
         sessionStore: SessionStore,
@@ -83,20 +84,30 @@ final class MapScreenViewModel: ObservableObject {
     }
 
     func performSearch() async {
-        isLoading = true
-        errorMessage = nil
-
-        do {
-            searchResults = try await mapSearchService.search(query: searchText, region: region)
-        } catch {
-            errorMessage = AppError.wrap(error).errorDescription
-        }
-
-        isLoading = false
+        await searchForSuggestions(reportErrors: true)
     }
 
     func applyFilters() async {
         await load()
+    }
+
+    func handleSearchTextChange() {
+        searchTask?.cancel()
+
+        let normalizedQuery = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedQuery.isEmpty else {
+            searchResults = []
+            return
+        }
+
+        searchTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else {
+                return
+            }
+
+            await self?.searchForSuggestions(reportErrors: false)
+        }
     }
 
     func startLocationFlowIfNeeded() {
@@ -126,11 +137,12 @@ final class MapScreenViewModel: ObservableObject {
         }
 
         do {
-            selectedPlace = try placeRepository.upsertPlace(from: result, createdByUserID: currentUser.id)
+            let resolvedResult = try await mapSearchService.resolve(result, region: region)
+            selectedPlace = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
             searchResults = []
             searchText = ""
             let searchRegion = MKCoordinateRegion(
-                center: result.coordinate,
+                center: resolvedResult.coordinate ?? region?.center ?? CLLocationCoordinate2D(latitude: 52.2297, longitude: 21.0122),
                 span: Self.defaultSpan
             )
             region = searchRegion
@@ -202,6 +214,26 @@ final class MapScreenViewModel: ObservableObject {
 
     private func handleLocationError(_ error: AppError) {
         locationAccessState = .failed(error.errorDescription ?? "TrustMap could not determine your current location.")
+    }
+
+    private func searchForSuggestions(reportErrors: Bool) async {
+        let normalizedQuery = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedQuery.isEmpty else {
+            searchResults = []
+            return
+        }
+
+        do {
+            searchResults = try await mapSearchService.search(query: normalizedQuery, region: region)
+            if reportErrors {
+                errorMessage = nil
+            }
+        } catch {
+            searchResults = []
+            if reportErrors {
+                errorMessage = AppError.wrap(error).errorDescription
+            }
+        }
     }
 }
 

@@ -43,6 +43,10 @@ final class PlaceRepository {
     }
 
     func upsertPlace(from searchResult: PlaceSearchResult, createdByUserID: UUID?) throws -> Place {
+        guard let coordinate = searchResult.coordinate else {
+            throw AppError.invalidPlaceSelection
+        }
+
         let appleMapsPlaceID = searchResult.id
 
         if let existingPlace = try allPlaces().first(where: { $0.appleMapsPlaceId == appleMapsPlaceID }) {
@@ -52,8 +56,8 @@ final class PlaceRepository {
         let place = Place(
             appleMapsPlaceId: appleMapsPlaceID,
             name: searchResult.name,
-            latitude: searchResult.coordinate.latitude,
-            longitude: searchResult.coordinate.longitude,
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
             address: searchResult.subtitle,
             sourceType: .appleMaps,
             createdByUserId: createdByUserID

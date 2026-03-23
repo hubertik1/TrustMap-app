@@ -76,6 +76,9 @@ struct MapScreen: View {
         .navigationTitle("Map")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $viewModel.searchText, prompt: "Search Apple Maps")
+        .onChange(of: viewModel.searchText) { _, _ in
+            viewModel.handleSearchTextChange()
+        }
         .onSubmit(of: .search) {
             Task { await viewModel.performSearch() }
         }
