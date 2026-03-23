@@ -35,59 +35,37 @@ struct ProfileView: View {
                                 Text(user.displayName)
                                     .font(.title3.weight(.semibold))
 
-                                Text(user.bio ?? "Private foodie mapping their favorite spots.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+                                if let bio = user.bio?.trimmingCharacters(in: .whitespacesAndNewlines),
+                                   !bio.isEmpty {
+                                    Text(bio)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
 
                                 Text("Joined \(user.createdAt.formatted(date: .abbreviated, time: .omitted))")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }
-
-                        LabeledContent("Rated Places", value: "\(viewModel.stats.ratedPlacesCount)")
-                        LabeledContent("Reviewed Dishes", value: "\(viewModel.stats.reviewedDishesCount)")
                     }
 
-                    Section("My Place Reviews") {
-                        if viewModel.placeReviews.isEmpty {
-                            Text("You haven’t reviewed any places yet.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(viewModel.placeReviews, id: \.id) { review in
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(viewModel.placeNames[review.placeId] ?? "Place")
-                                        if !review.descriptionText.isEmpty {
-                                            Text(review.descriptionText)
-                                                .font(.subheadline)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                    Spacer()
-                                    RatingBadgeView(rating: Double(review.ratingOverall))
-                                }
-                            }
+                    Section {
+                        NavigationLink {
+                            MyPlaceReviewsView(
+                                reviews: viewModel.placeReviews,
+                                placeNames: viewModel.placeNames
+                            )
+                        } label: {
+                            LabeledContent("Rated Places", value: "\(viewModel.stats.ratedPlacesCount)")
                         }
-                    }
 
-                    Section("My Dish Reviews") {
-                        if viewModel.dishReviews.isEmpty {
-                            Text("You haven’t reviewed any dishes yet.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(viewModel.dishReviews, id: \.id) { review in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
-                                        Text(review.dishName)
-                                        Spacer()
-                                        RatingBadgeView(rating: Double(review.dishRating))
-                                    }
-                                    Text(viewModel.placeNames[review.placeId] ?? "Place")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
+                        NavigationLink {
+                            MyDishReviewsView(
+                                reviews: viewModel.dishReviews,
+                                placeNames: viewModel.placeNames
+                            )
+                        } label: {
+                            LabeledContent("Reviewed Dishes", value: "\(viewModel.stats.reviewedDishesCount)")
                         }
                     }
 

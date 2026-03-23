@@ -63,6 +63,7 @@
 		8FF43B57053F3EFF30409C9B /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000841892FF73DCCC3FC8B6 /* PersistenceController.swift */; };
 		96726EC4605747C4A1D03C0B /* MapFilterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B79F6F0151730557AADAFDD /* MapFilterSheet.swift */; };
 		9E4F0021848AE4722C4D5515 /* UserSearchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 603B714B1AE817D7E5186AF5 /* UserSearchSheet.swift */; };
+		A08E2B5C6D7E8F9012345678 /* MyPlaceReviewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B18E2B5C6D7E8F9012345678 /* MyPlaceReviewsView.swift */; };
 		A3061460B65EC4C4CFC78AB7 /* AddDishReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A16C4136F69349C0B7D583E /* AddDishReviewView.swift */; };
 		A6C76D7A5CC5606481162034 /* FriendRelation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E795D8D48CC43AEF36B5661 /* FriendRelation.swift */; };
 		A7122C24C17F986D6750BB55 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F146AF08658EBBF78DC0F7 /* AppRootView.swift */; };
@@ -90,6 +91,7 @@
 		E8AC1D332EEB80387BED27D4 /* PlaceSearchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EE18EBAAABA5F171F951732 /* PlaceSearchResult.swift */; };
 		EC2BCDADB3037418F7050883 /* PlaceListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48C3F8C7AD64A46F6D942A3B /* PlaceListItem.swift */; };
 		EC84D6D5AF58C58B657AF163 /* PlaceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6511CB19CBDDD1BBFE9AC0F /* PlaceDetailView.swift */; };
+		F7A1B2C3D4E5F60718293A4B /* MyDishReviewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7A1B2C3D4E5F60718293A4B /* MyDishReviewsView.swift */; };
 		F13B242BF11797BDCBE49FFD /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 835C82319B5D4040C77D6EEE /* AppConfiguration.swift */; };
 		F1497476D362CCD46A4CF0BD /* PeopleFilterMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21FF5CAADE1EEB2943FE8E17 /* PeopleFilterMode.swift */; };
 		F505499EDE3A80F00EA85B15 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 83482BCC7BDDD8DCC10E2D50 /* Assets.xcassets */; };
@@ -166,6 +168,7 @@
 		A5F79C93D7C51D36A0CD0B82 /* ProfileViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProfileViewModel.swift; path = Features/Profile/ViewModels/ProfileViewModel.swift; sourceTree = "<group>"; };
 		A8A80FF1887F23C8DDA8D1F2 /* MainTabView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MainTabView.swift; path = App/Root/MainTabView.swift; sourceTree = "<group>"; };
 		B15B5387E2472EF7B6559FC8 /* PhotoAssetRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PhotoAssetRepository.swift; path = Features/Reviews/Services/PhotoAssetRepository.swift; sourceTree = "<group>"; };
+		B18E2B5C6D7E8F9012345678 /* MyPlaceReviewsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MyPlaceReviewsView.swift; path = Features/Profile/Views/MyPlaceReviewsView.swift; sourceTree = "<group>"; };
 		B9B553F4512BC218B4CCD1F0 /* AppleAuthenticationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppleAuthenticationService.swift; path = Features/Auth/Services/AppleAuthenticationService.swift; sourceTree = "<group>"; };
 		BEBA3F7E8E89E71E53003E7C /* PlaceDetailViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaceDetailViewModel.swift; path = Features/Places/ViewModels/PlaceDetailViewModel.swift; sourceTree = "<group>"; };
 		C45AC7B3C795540DDF58D18E /* AddDishReviewViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AddDishReviewViewModel.swift; path = Features/Dishes/ViewModels/AddDishReviewViewModel.swift; sourceTree = "<group>"; };
@@ -182,6 +185,7 @@
 		DDF0081689F677B3A812D8F6 /* AppTab.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppTab.swift; path = App/Root/AppTab.swift; sourceTree = "<group>"; };
 		E1E109A72258AB9DB6AA542F /* MapPlaceAnnotation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MapPlaceAnnotation.swift; path = Features/Map/Models/MapPlaceAnnotation.swift; sourceTree = "<group>"; };
 		E6D4BF9A51FFE4E6B43343DC /* MapSearchService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MapSearchService.swift; path = Features/Map/Services/MapSearchService.swift; sourceTree = "<group>"; };
+		E7A1B2C3D4E5F60718293A4B /* MyDishReviewsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MyDishReviewsView.swift; path = Features/Profile/Views/MyDishReviewsView.swift; sourceTree = "<group>"; };
 		F000841892FF73DCCC3FC8B6 /* PersistenceController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PersistenceController.swift; path = Core/Persistence/PersistenceController.swift; sourceTree = "<group>"; };
 		F119352EE9DA3BF196A0FA37 /* UserLocationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UserLocationService.swift; path = Features/Map/Services/UserLocationService.swift; sourceTree = "<group>"; };
 		F294FF4E758947240380152C /* DishReviewRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DishReviewRowView.swift; path = Shared/Components/DishReviewRowView.swift; sourceTree = "<group>"; };
@@ -304,6 +308,8 @@
 		2F3FBE7F64C1CD4FC308B9E4 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				E7A1B2C3D4E5F60718293A4B /* MyDishReviewsView.swift */,
+				B18E2B5C6D7E8F9012345678 /* MyPlaceReviewsView.swift */,
 				C86A90E6B6AE80FEBA296188 /* ProfileView.swift */,
 			);
 			name = Views;
@@ -967,6 +973,8 @@
 				2DD8DF1D09CB1D7915EA760A /* UserStats.swift in Sources */,
 				D95EA47692C844A1287B0DC6 /* UserProfileRepository.swift in Sources */,
 				FA21AC5827FAD1234D1C6F04 /* ProfileViewModel.swift in Sources */,
+				F7A1B2C3D4E5F60718293A4B /* MyDishReviewsView.swift in Sources */,
+				A08E2B5C6D7E8F9012345678 /* MyPlaceReviewsView.swift in Sources */,
 				CCD11482DBB675AC72FC3111 /* ProfileView.swift in Sources */,
 				DAEE9FB99E0A3A73BF64F307 /* PhotoAsset.swift in Sources */,
 				E682B6FCED3B54757F424CA2 /* PlaceReview.swift in Sources */,
