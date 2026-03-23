@@ -28,7 +28,6 @@ struct AddPlaceReviewView: View {
 
             Section("Review") {
                 Stepper("Rating: \(viewModel.ratingOverall)/10", value: $viewModel.ratingOverall, in: 1...10)
-                TextField("Short review", text: $viewModel.reviewText)
                 TextField("Description", text: $viewModel.descriptionText, axis: .vertical)
                     .lineLimit(3...6)
 

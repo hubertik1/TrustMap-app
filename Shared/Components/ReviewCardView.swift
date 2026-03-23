@@ -11,15 +11,8 @@ struct ReviewCardView: View {
             HStack(alignment: .top, spacing: 12) {
                 AvatarView(name: authorName)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(authorName)
-                        .font(.headline)
-
-                    if !review.reviewText.isEmpty {
-                        Text(review.reviewText)
-                            .font(.subheadline)
-                    }
-                }
+                Text(authorName)
+                    .font(.headline)
 
                 Spacer()
 

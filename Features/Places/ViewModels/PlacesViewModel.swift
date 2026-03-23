@@ -101,7 +101,7 @@ final class PlacesViewModel: ObservableObject {
                             reviewerID: $0.authorUserId,
                             reviewerName: userNames[$0.authorUserId] ?? "Friend",
                             rating: $0.ratingOverall,
-                            reviewText: $0.reviewText
+                            descriptionText: $0.descriptionText
                         )
                     }
 

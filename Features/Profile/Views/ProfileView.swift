@@ -58,9 +58,11 @@ struct ProfileView: View {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(viewModel.placeNames[review.placeId] ?? "Place")
-                                        Text(review.reviewText)
-                                            .font(.subheadline)
-                                            .foregroundStyle(.secondary)
+                                        if !review.descriptionText.isEmpty {
+                                            Text(review.descriptionText)
+                                                .font(.subheadline)
+                                                .foregroundStyle(.secondary)
+                                        }
                                     }
                                     Spacer()
                                     RatingBadgeView(rating: Double(review.ratingOverall))

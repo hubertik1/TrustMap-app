@@ -4,7 +4,6 @@ import UIKit
 @MainActor
 final class AddPlaceReviewViewModel: ObservableObject {
     @Published var ratingOverall = 8
-    @Published var reviewText = ""
     @Published var descriptionText = ""
     @Published var visibility: VisibilityStatus = .friendsOnly
     @Published var availableCategories: [CustomCategory] = []
@@ -91,7 +90,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
                     placeId: place.id,
                     authorUserId: currentUser.id,
                     ratingOverall: ratingOverall,
-                    reviewText: reviewText,
+                    reviewText: "",
                     descriptionText: descriptionText,
                     visibility: visibility,
                     photoDataItems: selectedPhotoData,

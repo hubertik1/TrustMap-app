@@ -60,8 +60,8 @@ struct PlaceListRowView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    if !rating.reviewText.isEmpty {
-                        Text(rating.reviewText)
+                    if !rating.descriptionText.isEmpty {
+                        Text(rating.descriptionText)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
@@ -85,9 +85,9 @@ struct PlaceListRowView: View {
             reviewCount: 3,
             categoryNames: ["Restaurants", "Pizza"],
             reviewerRatings: [
-                PlaceReviewerRating(id: UUID(), reviewerID: UUID(), reviewerName: "Me", rating: 9, reviewText: "Great crust and strong pasta menu."),
-                PlaceReviewerRating(id: UUID(), reviewerID: UUID(), reviewerName: "Alice", rating: 8, reviewText: "Excellent date-night spot."),
-                PlaceReviewerRating(id: UUID(), reviewerID: UUID(), reviewerName: "Bob", rating: 9, reviewText: "Worth going back for dessert.")
+                PlaceReviewerRating(id: UUID(), reviewerID: UUID(), reviewerName: "Me", rating: 9, descriptionText: "Great crust and strong pasta menu."),
+                PlaceReviewerRating(id: UUID(), reviewerID: UUID(), reviewerName: "Alice", rating: 8, descriptionText: "Excellent date-night spot."),
+                PlaceReviewerRating(id: UUID(), reviewerID: UUID(), reviewerName: "Bob", rating: 9, descriptionText: "Worth going back for dessert.")
             ]
         )
     )

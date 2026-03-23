@@ -5,5 +5,5 @@ struct PlaceReviewerRating: Identifiable, Hashable {
     let reviewerID: UUID
     let reviewerName: String
     let rating: Int
-    let reviewText: String
+    let descriptionText: String
 }
