@@ -67,10 +67,13 @@ struct MapScreen: View {
             } else if viewModel.annotations.isEmpty {
                 EmptyStateView(
                     title: "No Places on the Map Yet",
-                    message: "Add a review or include more friends in your filters to see pins here.",
+                    message: "Browse the map or search nearby places. Pins will appear after you or your friends add reviews.",
                     systemImage: "mappin.slash"
                 )
-                .background(.thinMaterial)
+                .padding()
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .padding()
+                .frame(maxHeight: .infinity, alignment: .top)
             }
         }
         .navigationTitle("Map")
