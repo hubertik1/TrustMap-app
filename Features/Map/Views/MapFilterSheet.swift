@@ -12,7 +12,7 @@ struct MapFilterSheet: View {
             Form {
                 Section("Visibility") {
                     Picker("Source", selection: $filterState.sourceMode) {
-                        ForEach(MapSourceFilterMode.allCases) { mode in
+                        ForEach(ReviewSourceFilterMode.allCases) { mode in
                             Text(mode.displayName).tag(mode)
                         }
                     }

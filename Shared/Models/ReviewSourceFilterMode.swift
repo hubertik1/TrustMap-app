@@ -1,6 +1,6 @@
 import Foundation
 
-enum MapSourceFilterMode: String, Codable, CaseIterable, Identifiable {
+enum ReviewSourceFilterMode: String, Codable, CaseIterable, Identifiable {
     case mineOnly
     case friendsOnly
     case mineAndFriends

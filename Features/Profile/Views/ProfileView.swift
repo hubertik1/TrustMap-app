@@ -9,6 +9,7 @@ struct ProfileView: View {
         _viewModel = StateObject(
             wrappedValue: ProfileViewModel(
                 sessionStore: container.sessionStore,
+                userRepository: container.userRepository,
                 placeRepository: container.placeRepository,
                 placeReviewRepository: container.placeReviewRepository,
                 dishReviewRepository: container.dishReviewRepository
@@ -24,7 +25,7 @@ struct ProfileView: View {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
-            } else if let user = viewModel.user {
+            } else if let user = viewModel.user ?? container.sessionStore.currentUser {
                 List {
                     Section {
                         HStack(spacing: 16) {
@@ -36,6 +37,10 @@ struct ProfileView: View {
 
                                 Text(user.bio ?? "Private foodie mapping their favorite spots.")
                                     .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+
+                                Text("Joined \(user.createdAt.formatted(date: .abbreviated, time: .omitted))")
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -91,6 +96,12 @@ struct ProfileView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+            } else {
+                EmptyStateView(
+                    title: "Profile Unavailable",
+                    message: "TrustMap could not load your account data yet. Pull to retry or reopen the app.",
+                    systemImage: "person.crop.circle.badge.exclamationmark"
+                )
             }
         }
         .navigationTitle("Profile")

@@ -19,20 +19,20 @@ struct MainTabView: View {
             .tag(AppTab.map)
 
             NavigationStack {
+                PlacesView(container: container)
+            }
+            .tabItem {
+                Label("Places", systemImage: "fork.knife")
+            }
+            .tag(AppTab.places)
+
+            NavigationStack {
                 FeedView(container: container)
             }
             .tabItem {
                 Label("Feed", systemImage: "list.bullet.rectangle")
             }
             .tag(AppTab.feed)
-
-            NavigationStack {
-                AddHubView(container: container)
-            }
-            .tabItem {
-                Label("Add", systemImage: "plus.circle")
-            }
-            .tag(AppTab.add)
 
             NavigationStack {
                 FriendsView(container: container)

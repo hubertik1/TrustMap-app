@@ -9,7 +9,9 @@ struct FeedView: View {
                 sessionStore: container.sessionStore,
                 feedRepository: container.feedRepository,
                 friendRepository: container.friendRepository,
-                userRepository: container.userRepository
+                userRepository: container.userRepository,
+                placeRepository: container.placeRepository,
+                placeReviewRepository: container.placeReviewRepository
             )
         )
     }
@@ -22,19 +24,24 @@ struct FeedView: View {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
-            } else if viewModel.activityItems.isEmpty {
+            } else if viewModel.feedItems.isEmpty {
                 EmptyStateView(
-                    title: "No Friend Activity Yet",
-                    message: "Once your friends add reviews or photos, their updates will show up here.",
+                    title: "No New Places Yet",
+                    message: "When you or your friends add new restaurant reviews, they will show up here.",
                     systemImage: "bell.slash"
                 )
             } else {
-                List(viewModel.activityItems, id: \.id) { item in
+                List(viewModel.feedItems) { item in
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(viewModel.title(for: item))
+                        Text(item.title)
                             .font(.headline)
+
+                        Text(item.subtitle)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+
                         Text(item.createdAt, style: .relative)
-                            .font(.subheadline)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)

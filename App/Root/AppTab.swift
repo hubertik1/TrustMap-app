@@ -2,8 +2,8 @@ import Foundation
 
 enum AppTab: Hashable {
     case map
+    case places
     case feed
-    case add
     case friends
     case profile
 }

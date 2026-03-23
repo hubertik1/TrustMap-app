@@ -11,25 +11,30 @@ final class ProfileViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let sessionStore: SessionStore
+    private let userRepository: UserProfileRepository
     private let placeRepository: PlaceRepository
     private let placeReviewRepository: PlaceReviewRepository
     private let dishReviewRepository: DishReviewRepository
 
     init(
         sessionStore: SessionStore,
+        userRepository: UserProfileRepository,
         placeRepository: PlaceRepository,
         placeReviewRepository: PlaceReviewRepository,
         dishReviewRepository: DishReviewRepository
     ) {
         self.sessionStore = sessionStore
+        self.userRepository = userRepository
         self.placeRepository = placeRepository
         self.placeReviewRepository = placeReviewRepository
         self.dishReviewRepository = dishReviewRepository
+        self.user = sessionStore.currentUser
     }
 
     func load() async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
+            user = nil
             return
         }
 
@@ -37,7 +42,7 @@ final class ProfileViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            user = currentUser
+            user = try userRepository.user(withID: currentUser.id) ?? currentUser
             placeReviews = try placeReviewRepository.reviews(authoredBy: currentUser.id)
             dishReviews = try dishReviewRepository.reviews(authoredBy: currentUser.id)
             stats = UserStats(

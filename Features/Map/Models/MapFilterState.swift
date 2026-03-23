@@ -1,7 +1,7 @@
 import Foundation
 
 struct MapFilterState: Equatable, Sendable {
-    var sourceMode: MapSourceFilterMode = .mineAndFriends
+    var sourceMode: ReviewSourceFilterMode = .mineAndFriends
     var minimumRating: Int = 1
     var maximumRating: Int = 10
     var peopleMode: PeopleFilterMode = .allVisible

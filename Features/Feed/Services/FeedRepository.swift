@@ -13,9 +13,9 @@ final class FeedRepository {
         persistenceController.mainContext
     }
 
-    func feed(for viewerID: UUID, friendIDs: Set<UUID>) throws -> [ActivityItem] {
+    func placeFeed(actorIDs: Set<UUID>) throws -> [ActivityItem] {
         let descriptor = FetchDescriptor<ActivityItem>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
         return try context.fetch(descriptor)
-            .filter { $0.actorUserId != viewerID && friendIDs.contains($0.actorUserId) }
+            .filter { actorIDs.contains($0.actorUserId) && $0.type == .placeReviewAdded }
     }
 }
