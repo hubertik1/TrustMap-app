@@ -48,6 +48,7 @@ struct MapScreen: View {
                             .tag(MapSelection(annotation.place.id))
                         }
                     }
+                    .mapStyle(mapStyle)
                     .mapFeatureSelectionDisabled { feature in
                         feature.kind != .pointOfInterest
                     }
@@ -157,7 +158,14 @@ struct MapScreen: View {
                 .accessibilityLabel("Center on my location")
             }
 
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    viewModel.isSatelliteEnabled.toggle()
+                } label: {
+                    Image(systemName: viewModel.isSatelliteEnabled ? "globe.americas.fill" : "map")
+                }
+                .accessibilityLabel(viewModel.isSatelliteEnabled ? "Switch to standard map" : "Switch to satellite map")
+
                 Button {
                     viewModel.isFilterPresented = true
                 } label: {
@@ -244,6 +252,19 @@ struct MapScreen: View {
             .padding(.horizontal)
         }
         .frame(maxHeight: 240)
+    }
+
+    private var mapStyle: MapStyle {
+        if viewModel.isSatelliteEnabled {
+            return .imagery(elevation: .realistic)
+        }
+
+        return .standard(
+            elevation: .realistic,
+            emphasis: .automatic,
+            pointsOfInterest: .all,
+            showsTraffic: false
+        )
     }
 
     private func clearMapSelection() {

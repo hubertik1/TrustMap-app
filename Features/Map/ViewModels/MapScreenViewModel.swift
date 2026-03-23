@@ -11,6 +11,7 @@ final class MapScreenViewModel: ObservableObject {
     @Published var annotations: [MapPlaceAnnotation] = []
     @Published var availablePeople: [FilterPerson] = []
     @Published var filterState = MapFilterState()
+    @Published var isSatelliteEnabled = false
     @Published var selectedPlace: Place?
     @Published var promptPlace: Place?
     @Published var droppedPinPlace: Place?

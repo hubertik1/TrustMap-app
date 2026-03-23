@@ -3,6 +3,8 @@ import SwiftData
 
 @MainActor
 final class CategoryRepository {
+    private static let defaultRestaurantCategoryName = "Restaurants"
+
     private let persistenceController: PersistenceController
     private let cloudKitSyncService: CloudKitSyncing
 
@@ -21,6 +23,16 @@ final class CategoryRepository {
     func categories(for ownerUserID: UUID) throws -> [CustomCategory] {
         let descriptor = FetchDescriptor<CustomCategory>(sortBy: [SortDescriptor(\.name)])
         return try context.fetch(descriptor).filter { $0.ownerUserId == ownerUserID }
+    }
+
+    func defaultRestaurantCategory(for ownerUserID: UUID) throws -> CustomCategory {
+        if let existingCategory = try categories(for: ownerUserID).first(where: {
+            $0.name.caseInsensitiveCompare(Self.defaultRestaurantCategoryName) == .orderedSame
+        }) {
+            return existingCategory
+        }
+
+        return try createCategory(ownerUserID: ownerUserID, name: Self.defaultRestaurantCategoryName, iconName: "fork.knife")
     }
 
     func categories(forPlace placeID: UUID) throws -> [CustomCategory] {

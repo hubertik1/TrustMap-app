@@ -41,7 +41,12 @@ final class AddPlaceReviewViewModel: ObservableObject {
         }
 
         do {
+            let defaultCategory = try categoryRepository.defaultRestaurantCategory(for: currentUser.id)
             availableCategories = try categoryRepository.categories(for: currentUser.id)
+
+            if selectedCategoryID == nil {
+                selectedCategoryID = defaultCategory.id
+            }
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
@@ -72,6 +77,15 @@ final class AddPlaceReviewViewModel: ObservableObject {
         errorMessage = nil
 
         do {
+            let resolvedCategoryID: UUID?
+            if let selectedCategoryID {
+                resolvedCategoryID = selectedCategoryID
+            } else if newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                resolvedCategoryID = try categoryRepository.defaultRestaurantCategory(for: currentUser.id).id
+            } else {
+                resolvedCategoryID = nil
+            }
+
             _ = try placeReviewRepository.addReview(
                 PlaceReviewDraft(
                     placeId: place.id,
@@ -81,7 +95,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
                     descriptionText: descriptionText,
                     visibility: visibility,
                     photoDataItems: selectedPhotoData,
-                    selectedCategoryId: selectedCategoryID,
+                    selectedCategoryId: resolvedCategoryID,
                     newCategoryName: newCategoryName.isEmpty ? nil : newCategoryName
                 )
             )

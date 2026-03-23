@@ -41,7 +41,6 @@ struct AddPlaceReviewView: View {
 
             Section("Category") {
                 Picker("Existing Category", selection: $viewModel.selectedCategoryID) {
-                    Text("None").tag(Optional<UUID>.none)
                     ForEach(viewModel.availableCategories, id: \.id) { category in
                         Text(category.name).tag(Optional(category.id))
                     }
