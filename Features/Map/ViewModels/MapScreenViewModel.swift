@@ -9,6 +9,7 @@ final class MapScreenViewModel: ObservableObject {
     @Published var searchText = ""
     @Published var searchResults: [PlaceSearchResult] = []
     @Published var annotations: [MapPlaceAnnotation] = []
+    @Published var availableCategoryOptions: [PlaceCategoryOption] = [.all, .restaurants]
     @Published var availablePeople: [FilterPerson] = []
     @Published var filterState = MapFilterState()
     @Published var isSatelliteEnabled = false
@@ -24,6 +25,7 @@ final class MapScreenViewModel: ObservableObject {
     private let sessionStore: SessionStore
     private let friendRepository: FriendRepository
     private let userRepository: UserProfileRepository
+    private let categoryRepository: CategoryRepository
     private let placeRepository: PlaceRepository
     private let placeReviewRepository: PlaceReviewRepository
     private let mapSearchService: MapSearchService
@@ -37,6 +39,7 @@ final class MapScreenViewModel: ObservableObject {
         sessionStore: SessionStore,
         friendRepository: FriendRepository,
         userRepository: UserProfileRepository,
+        categoryRepository: CategoryRepository,
         placeRepository: PlaceRepository,
         placeReviewRepository: PlaceReviewRepository,
         mapSearchService: MapSearchService,
@@ -45,6 +48,7 @@ final class MapScreenViewModel: ObservableObject {
         self.sessionStore = sessionStore
         self.friendRepository = friendRepository
         self.userRepository = userRepository
+        self.categoryRepository = categoryRepository
         self.placeRepository = placeRepository
         self.placeReviewRepository = placeReviewRepository
         self.mapSearchService = mapSearchService
@@ -73,13 +77,34 @@ final class MapScreenViewModel: ObservableObject {
         do {
             let friends = try friendRepository.acceptedFriends(for: currentUser.id)
             let friendIDs = Set(friends.map(\.id))
+            let defaultRestaurantCategory = try categoryRepository.defaultRestaurantCategory(for: currentUser.id)
+            let ownedCategories = try categoryRepository.categories(for: currentUser.id)
+            availableCategoryOptions = [.all, .restaurants] + ownedCategories
+                .filter {
+                    $0.id != defaultRestaurantCategory.id
+                        && $0.name.caseInsensitiveCompare(PlaceCategoryOption.restaurants.title) != .orderedSame
+                }
+                .map(PlaceCategoryOption.init(category:))
+
+            if !availableCategoryOptions.contains(filterState.selectedCategoryOption) {
+                filterState.selectedCategoryOption = .restaurants
+            }
+
             availablePeople = [FilterPerson(id: currentUser.id, name: "Me", isCurrentUser: true)]
                 + friends.map { FilterPerson(id: $0.id, name: $0.displayName, isCurrentUser: false) }
 
             let authorIDs = filterState.resolvedAuthorIDs(currentUserID: currentUser.id, friendIDs: friendIDs)
             let reviews = try placeReviewRepository.reviews(authoredBy: authorIDs, ratingRange: filterState.ratingRange)
             let places = try placeRepository.places(withIDs: Set(reviews.map(\.placeId)))
-            annotations = buildAnnotations(from: reviews, places: places)
+            let categoryNamesByPlace = try Dictionary(uniqueKeysWithValues: places.map { place in
+                let names = try categoryRepository.categories(forPlace: place.id).map(\.name)
+                return (place.id, names)
+            })
+            let filteredPlaces = places.filter { place in
+                let categoryNames = categoryNamesByPlace[place.id] ?? []
+                return filterState.selectedCategoryOption.matches(categoryNames: categoryNames)
+            }
+            annotations = buildAnnotations(from: reviews, places: filteredPlaces)
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }

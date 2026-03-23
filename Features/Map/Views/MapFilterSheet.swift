@@ -3,6 +3,7 @@ import SwiftUI
 struct MapFilterSheet: View {
     @Binding var filterState: MapFilterState
     let availablePeople: [FilterPerson]
+    let availableCategories: [PlaceCategoryOption]
     let onApply: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -10,6 +11,14 @@ struct MapFilterSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Category") {
+                    Picker("Category", selection: $filterState.selectedCategoryOption) {
+                        ForEach(availableCategories) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                }
+
                 Section("Visibility") {
                     Picker("Source", selection: $filterState.sourceMode) {
                         ForEach(ReviewSourceFilterMode.allCases) { mode in
@@ -90,6 +99,7 @@ private struct MapFilterSheetPreviewHost: View {
         MapFilterSheet(
             filterState: $filterState,
             availablePeople: PreviewAppFactory.samplePeople(),
+            availableCategories: [.all, .restaurants, PlaceCategoryOption(id: "bbq", title: "BBQ Spots", categoryID: UUID())],
             onApply: {}
         )
     }

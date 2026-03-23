@@ -1,6 +1,7 @@
 import Foundation
 
 struct MapFilterState: Equatable, Sendable {
+    var selectedCategoryOption: PlaceCategoryOption = .restaurants
     var sourceMode: ReviewSourceFilterMode = .mineAndFriends
     var minimumRating: Int = 1
     var maximumRating: Int = 10
@@ -12,7 +13,7 @@ struct MapFilterState: Equatable, Sendable {
     }
 
     var summaryText: String {
-        var components: [String] = [sourceMode.displayName]
+        var components: [String] = [selectedCategoryOption.title, sourceMode.displayName]
         if minimumRating > 1 || maximumRating < 10 {
             components.append("\(minimumRating)-\(maximumRating)/10")
         }

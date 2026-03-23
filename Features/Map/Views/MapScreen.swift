@@ -17,6 +17,7 @@ struct MapScreen: View {
                 sessionStore: container.sessionStore,
                 friendRepository: container.friendRepository,
                 userRepository: container.userRepository,
+                categoryRepository: container.categoryRepository,
                 placeRepository: container.placeRepository,
                 placeReviewRepository: container.placeReviewRepository,
                 mapSearchService: container.mapSearchService,
@@ -174,7 +175,11 @@ struct MapScreen: View {
             }
         }
         .sheet(isPresented: $viewModel.isFilterPresented) {
-            MapFilterSheet(filterState: $viewModel.filterState, availablePeople: viewModel.availablePeople) {
+            MapFilterSheet(
+                filterState: $viewModel.filterState,
+                availablePeople: viewModel.availablePeople,
+                availableCategories: viewModel.availableCategoryOptions
+            ) {
                 Task { await viewModel.applyFilters() }
             }
         }
