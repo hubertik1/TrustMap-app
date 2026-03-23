@@ -22,7 +22,7 @@ struct MainTabView: View {
                 PlacesView(container: container)
             }
             .tabItem {
-                Label("Places", systemImage: "fork.knife")
+                Label("Places", systemImage: "mappin.and.ellipse")
             }
             .tag(AppTab.places)
 
