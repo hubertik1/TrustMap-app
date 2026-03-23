@@ -1,0 +1,94 @@
+import Foundation
+
+@MainActor
+final class PlaceDetailViewModel: ObservableObject {
+    @Published private(set) var averageRating: Double?
+    @Published private(set) var placeReviews: [PlaceReview] = []
+    @Published private(set) var dishReviews: [DishReview] = []
+    @Published private(set) var placePhotos: [PhotoAsset] = []
+    @Published private(set) var categoryNames: [String] = []
+    @Published private(set) var authorNames: [UUID: String] = [:]
+    @Published private(set) var reviewPhotos: [UUID: [PhotoAsset]] = [:]
+    @Published private(set) var dishPhotos: [UUID: PhotoAsset] = [:]
+    @Published var errorMessage: String?
+    @Published var isLoading = false
+    @Published var isPresentingAddPlaceReview = false
+    @Published var isPresentingAddDishReview = false
+
+    let place: Place
+
+    private let sessionStore: SessionStore
+    private let friendRepository: FriendRepository
+    private let userRepository: UserProfileRepository
+    private let categoryRepository: CategoryRepository
+    private let photoAssetRepository: PhotoAssetRepository
+    private let placeReviewRepository: PlaceReviewRepository
+    private let dishReviewRepository: DishReviewRepository
+
+    init(
+        place: Place,
+        sessionStore: SessionStore,
+        friendRepository: FriendRepository,
+        userRepository: UserProfileRepository,
+        categoryRepository: CategoryRepository,
+        photoAssetRepository: PhotoAssetRepository,
+        placeReviewRepository: PlaceReviewRepository,
+        dishReviewRepository: DishReviewRepository
+    ) {
+        self.place = place
+        self.sessionStore = sessionStore
+        self.friendRepository = friendRepository
+        self.userRepository = userRepository
+        self.categoryRepository = categoryRepository
+        self.photoAssetRepository = photoAssetRepository
+        self.placeReviewRepository = placeReviewRepository
+        self.dishReviewRepository = dishReviewRepository
+    }
+
+    func load() async {
+        guard let currentUser = sessionStore.currentUser else {
+            errorMessage = AppError.missingCurrentUser.errorDescription
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let friendIDs = try friendRepository.acceptedFriendIDs(for: currentUser.id)
+            placeReviews = try placeReviewRepository.reviews(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
+            dishReviews = try dishReviewRepository.reviews(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
+            averageRating = try placeReviewRepository.averageRating(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
+            categoryNames = try categoryRepository.categories(forPlace: place.id).map(\.name)
+            placePhotos = try photoAssetRepository.photos(for: place.id)
+            reviewPhotos = Dictionary(grouping: placePhotos.compactMap { asset in
+                asset.placeReviewId.map { (reviewID: $0, asset: asset) }
+            }, by: \.reviewID).mapValues { $0.map(\.asset) }
+            dishPhotos = Dictionary(uniqueKeysWithValues: placePhotos.compactMap { asset in
+                guard let dishReviewId = asset.dishReviewId else {
+                    return nil
+                }
+                return (dishReviewId, asset)
+            })
+
+            let visibleAuthorIDs = Set(placeReviews.map(\.authorUserId) + dishReviews.map(\.authorUserId))
+            let allUsers = try userRepository.allKnownUsers()
+            authorNames = Dictionary(uniqueKeysWithValues: allUsers.compactMap { user in
+                visibleAuthorIDs.contains(user.id) ? (user.id, user.displayName) : nil
+            })
+            authorNames[currentUser.id] = currentUser.displayName
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
+        }
+
+        isLoading = false
+    }
+
+    func authorName(for userID: UUID) -> String {
+        authorNames[userID] ?? "Friend"
+    }
+
+    func imageData(for asset: PhotoAsset) -> Data? {
+        photoAssetRepository.imageData(for: asset)
+    }
+}

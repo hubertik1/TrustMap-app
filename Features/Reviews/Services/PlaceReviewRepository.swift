@@ -1,0 +1,140 @@
+import Foundation
+import SwiftData
+
+@MainActor
+final class PlaceReviewRepository {
+    private let persistenceController: PersistenceController
+    private let cloudKitSyncService: CloudKitSyncing
+    private let photoAssetRepository: PhotoAssetRepository
+    private let categoryRepository: CategoryRepository
+
+    init(
+        persistenceController: PersistenceController,
+        cloudKitSyncService: CloudKitSyncing,
+        photoAssetRepository: PhotoAssetRepository,
+        categoryRepository: CategoryRepository
+    ) {
+        self.persistenceController = persistenceController
+        self.cloudKitSyncService = cloudKitSyncService
+        self.photoAssetRepository = photoAssetRepository
+        self.categoryRepository = categoryRepository
+    }
+
+    private var context: ModelContext {
+        persistenceController.mainContext
+    }
+
+    func reviews(for placeID: UUID, visibleTo viewerID: UUID, friendIDs: Set<UUID>) throws -> [PlaceReview] {
+        try allReviews()
+            .filter { $0.placeId == placeID && isVisible($0, viewerID: viewerID, friendIDs: friendIDs) }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    func reviews(authoredBy authorIDs: Set<UUID>, ratingRange: ClosedRange<Int>) throws -> [PlaceReview] {
+        try allReviews()
+            .filter { authorIDs.contains($0.authorUserId) && ratingRange.contains($0.ratingOverall) }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    func reviews(authoredBy userID: UUID) throws -> [PlaceReview] {
+        try allReviews()
+            .filter { $0.authorUserId == userID }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    func addReview(_ draft: PlaceReviewDraft) throws -> PlaceReview {
+        guard (1...10).contains(draft.ratingOverall) else {
+            throw AppError.validationFailure("Place ratings must be between 1 and 10.")
+        }
+
+        let review = PlaceReview(
+            placeId: draft.placeId,
+            authorUserId: draft.authorUserId,
+            ratingOverall: draft.ratingOverall,
+            reviewText: draft.reviewText.trimmingCharacters(in: .whitespacesAndNewlines),
+            descriptionText: draft.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines),
+            visibility: draft.visibility
+        )
+        context.insert(review)
+        try saveChanges(message: "Unable to save the place review.")
+
+        if let selectedCategoryId = draft.selectedCategoryId {
+            try categoryRepository.assignCategory(selectedCategoryId, to: draft.placeId, assignedBy: draft.authorUserId)
+        }
+
+        if let newCategoryName = draft.newCategoryName?.trimmingCharacters(in: .whitespacesAndNewlines), !newCategoryName.isEmpty {
+            let category = try categoryRepository.createCategory(ownerUserID: draft.authorUserId, name: newCategoryName)
+            try categoryRepository.assignCategory(category.id, to: draft.placeId, assignedBy: draft.authorUserId)
+        }
+
+        let storedAssets = try photoAssetRepository.storePlaceReviewPhotos(
+            draft.photoDataItems,
+            ownerUserID: draft.authorUserId,
+            placeID: draft.placeId,
+            placeReviewID: review.id
+        )
+
+        let reviewActivity = ActivityItem(
+            actorUserId: draft.authorUserId,
+            type: .placeReviewAdded,
+            referenceId: review.id.uuidString
+        )
+        context.insert(reviewActivity)
+
+        if !storedAssets.isEmpty {
+            let photoActivity = ActivityItem(
+                actorUserId: draft.authorUserId,
+                type: .photoAdded,
+                referenceId: review.id.uuidString
+            )
+            context.insert(photoActivity)
+        }
+
+        try saveChanges(message: "Unable to save the activity for this review.")
+
+        Task {
+            await cloudKitSyncService.syncPlaceReview(review)
+            await cloudKitSyncService.syncActivity(reviewActivity)
+        }
+
+        return review
+    }
+
+    func averageRating(for placeID: UUID, visibleTo viewerID: UUID, friendIDs: Set<UUID>) throws -> Double? {
+        let reviews = try reviews(for: placeID, visibleTo: viewerID, friendIDs: friendIDs)
+        guard !reviews.isEmpty else {
+            return nil
+        }
+
+        let total = reviews.reduce(0) { $0 + $1.ratingOverall }
+        return Double(total) / Double(reviews.count)
+    }
+
+    private func isVisible(_ review: PlaceReview, viewerID: UUID, friendIDs: Set<UUID>) -> Bool {
+        if review.authorUserId == viewerID {
+            return true
+        }
+
+        switch review.visibility {
+        case .friendsOnly:
+            return friendIDs.contains(review.authorUserId)
+        case .onlyMe:
+            return false
+        }
+    }
+
+    private func allReviews() throws -> [PlaceReview] {
+        let descriptor = FetchDescriptor<PlaceReview>(sortBy: [SortDescriptor(\.updatedAt, order: .reverse)])
+        return try context.fetch(descriptor)
+    }
+
+    private func saveChanges(message: String) throws {
+        do {
+            if context.hasChanges {
+                try context.save()
+            }
+        } catch {
+            throw AppError.persistenceFailure(message)
+        }
+    }
+}
