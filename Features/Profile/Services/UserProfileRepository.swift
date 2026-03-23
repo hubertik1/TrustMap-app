@@ -3,6 +3,9 @@ import SwiftData
 
 @MainActor
 final class UserProfileRepository {
+    private static let legacyFallbackDisplayName = "My TrustMap"
+    private static let genericFallbackDisplayName = "Apple User"
+
     private let persistenceController: PersistenceController
     private let cloudKitSyncService: CloudKitSyncing
 
@@ -53,9 +56,20 @@ final class UserProfileRepository {
     }
 
     func createOrUpdateSignedInUser(credential: AppleSignInCredential) throws -> User {
+        let resolvedDisplayName = Self.resolvedDisplayName(from: credential)
+
         if let existingUser = try user(forAppleUserID: credential.userID) {
-            if let displayName = credential.displayName, !displayName.isEmpty {
-                existingUser.displayName = displayName
+            let normalizedCurrentDisplayName = existingUser.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let shouldUpdateDisplayName =
+                normalizedCurrentDisplayName.isEmpty
+                || normalizedCurrentDisplayName == Self.legacyFallbackDisplayName
+                || normalizedCurrentDisplayName == Self.genericFallbackDisplayName
+                || credential.displayName != nil
+
+            if let resolvedDisplayName,
+               !resolvedDisplayName.isEmpty,
+               shouldUpdateDisplayName {
+                existingUser.displayName = resolvedDisplayName
             }
 
             try saveChanges()
@@ -65,7 +79,7 @@ final class UserProfileRepository {
 
         let user = User(
             appleUserId: credential.userID,
-            displayName: credential.displayName ?? "My TrustMap"
+            displayName: resolvedDisplayName ?? Self.genericFallbackDisplayName
         )
         context.insert(user)
         try saveChanges()
@@ -92,5 +106,37 @@ final class UserProfileRepository {
         } catch {
             throw AppError.persistenceFailure("Unable to save the user profile.")
         }
+    }
+
+    private static func resolvedDisplayName(from credential: AppleSignInCredential) -> String? {
+        if let displayName = credential.displayName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !displayName.isEmpty {
+            return displayName
+        }
+
+        guard let email = credential.email?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !email.isEmpty,
+              !email.contains("privaterelay.appleid.com") else {
+            return nil
+        }
+
+        let localPart = email.split(separator: "@").first.map(String.init) ?? email
+        let replaced = localPart.replacingOccurrences(
+            of: "[._-]+",
+            with: " ",
+            options: .regularExpression
+        )
+        let collapsed = replaced.replacingOccurrences(
+            of: "\\s+",
+            with: " ",
+            options: .regularExpression
+        )
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !collapsed.isEmpty else {
+            return nil
+        }
+
+        return collapsed.localizedCapitalized
     }
 }

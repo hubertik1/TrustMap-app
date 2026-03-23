@@ -14,6 +14,7 @@ protocol AuthServicing: AnyObject {
 final class AppleAuthenticationService: AuthServicing {
     private enum StorageKeys {
         static let activeAppleUserID = "activeAppleUserID"
+        static let cachedProfilePrefix = "cachedAppleProfile"
     }
 
     private let provider = ASAuthorizationAppleIDProvider()
@@ -26,7 +27,7 @@ final class AppleAuthenticationService: AuthServicing {
     }
 
     func configure(_ request: ASAuthorizationAppleIDRequest) {
-        request.requestedScopes = [.fullName]
+        request.requestedScopes = [.fullName, .email]
     }
 
     func credential(from result: Result<ASAuthorization, any Error>) throws -> AppleSignInCredential {
@@ -36,12 +37,14 @@ final class AppleAuthenticationService: AuthServicing {
                 throw AppError.authFailed("Sign in with Apple did not return a valid credential.")
             }
 
-            let formattedName = credential.fullName
-                .flatMap { nameFormatter.string(from: $0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            let displayName = sanitizedValue(formattedDisplayName(from: credential.fullName)) ?? cachedDisplayName(for: credential.user)
+            let email = sanitizedValue(credential.email) ?? cachedEmail(for: credential.user)
+            persistCachedProfile(displayName: displayName, email: email, for: credential.user)
 
             return AppleSignInCredential(
                 userID: credential.user,
-                displayName: formattedName?.isEmpty == true ? nil : formattedName
+                displayName: displayName,
+                email: email
             )
 
         case .failure(let error):
@@ -67,6 +70,59 @@ final class AppleAuthenticationService: AuthServicing {
                 }
             }
         }
+    }
+
+    private func formattedDisplayName(from components: PersonNameComponents?) -> String? {
+        guard let components else {
+            return nil
+        }
+
+        let manualName = [
+            components.givenName,
+            components.middleName,
+            components.familyName
+        ]
+        .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+        .joined(separator: " ")
+
+        if !manualName.isEmpty {
+            return manualName
+        }
+
+        let formattedName = nameFormatter.string(from: components).trimmingCharacters(in: .whitespacesAndNewlines)
+        return formattedName.isEmpty ? nil : formattedName
+    }
+
+    private func persistCachedProfile(displayName: String?, email: String?, for userID: String) {
+        if let displayName {
+            defaults.set(displayName, forKey: cachedProfileKey(field: "displayName", userID: userID))
+        }
+
+        if let email {
+            defaults.set(email, forKey: cachedProfileKey(field: "email", userID: userID))
+        }
+    }
+
+    private func cachedDisplayName(for userID: String) -> String? {
+        sanitizedValue(defaults.string(forKey: cachedProfileKey(field: "displayName", userID: userID)))
+    }
+
+    private func cachedEmail(for userID: String) -> String? {
+        sanitizedValue(defaults.string(forKey: cachedProfileKey(field: "email", userID: userID)))
+    }
+
+    private func cachedProfileKey(field: String, userID: String) -> String {
+        "\(StorageKeys.cachedProfilePrefix).\(userID).\(field)"
+    }
+
+    private func sanitizedValue(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else {
+            return nil
+        }
+
+        return trimmed
     }
 
     private nonisolated static func mapAuthorizationError(_ error: Error) -> AppError {
