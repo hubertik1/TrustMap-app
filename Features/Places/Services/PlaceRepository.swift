@@ -1,4 +1,5 @@
 import Foundation
+import MapKit
 import SwiftData
 
 @MainActor
@@ -47,19 +48,45 @@ final class PlaceRepository {
             throw AppError.invalidPlaceSelection
         }
 
-        let appleMapsPlaceID = searchResult.id
+        return try upsertPlace(
+            appleMapsPlaceID: searchResult.mapItem == nil ? nil : searchResult.id,
+            name: searchResult.name,
+            coordinate: coordinate,
+            address: searchResult.subtitle,
+            sourceType: searchResult.mapItem == nil ? .manual : .appleMaps,
+            createdByUserID: createdByUserID
+        )
+    }
 
-        if let existingPlace = try allPlaces().first(where: { $0.appleMapsPlaceId == appleMapsPlaceID }) {
+    func upsertPlace(
+        appleMapsPlaceID: String? = nil,
+        name: String,
+        coordinate: CLLocationCoordinate2D,
+        address: String,
+        sourceType: PlaceSourceType,
+        createdByUserID: UUID?
+    ) throws -> Place {
+        if let appleMapsPlaceID,
+           let existingPlace = try allPlaces().first(where: { $0.appleMapsPlaceId == appleMapsPlaceID }) {
             return existingPlace
+        }
+
+        if let existingManualPlace = try allPlaces().first(where: {
+            $0.appleMapsPlaceId == nil
+                && $0.name == name
+                && abs($0.latitude - coordinate.latitude) < 0.0003
+                && abs($0.longitude - coordinate.longitude) < 0.0003
+        }) {
+            return existingManualPlace
         }
 
         let place = Place(
             appleMapsPlaceId: appleMapsPlaceID,
-            name: searchResult.name,
+            name: name,
             latitude: coordinate.latitude,
             longitude: coordinate.longitude,
-            address: searchResult.subtitle,
-            sourceType: .appleMaps,
+            address: address,
+            sourceType: sourceType,
             createdByUserId: createdByUserID
         )
         context.insert(place)

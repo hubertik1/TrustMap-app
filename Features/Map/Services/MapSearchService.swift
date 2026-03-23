@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import MapKit
 
@@ -37,6 +38,104 @@ final class MapSearchService {
         }
 
         return PlaceSearchResult(mapItem: firstResult)
+    }
+
+    func resolveFeature(
+        title: String?,
+        coordinate: CLLocationCoordinate2D,
+        region: MKCoordinateRegion?
+    ) async throws -> PlaceSearchResult {
+        let mapItem = try await nearestPointOfInterest(
+            to: coordinate,
+            matching: title,
+            region: region
+        )
+
+        if let mapItem {
+            return PlaceSearchResult(mapItem: mapItem)
+        }
+
+        return try await reverseGeocodedPlace(
+            at: coordinate,
+            fallbackName: title ?? "Selected Place"
+        )
+    }
+
+    func resolveMapTap(at coordinate: CLLocationCoordinate2D) async throws -> PlaceSearchResult {
+        if let pointOfInterest = try await nearestPointOfInterest(to: coordinate, matching: nil, region: nil) {
+            return PlaceSearchResult(mapItem: pointOfInterest)
+        }
+
+        return try await reverseGeocodedPlace(at: coordinate)
+    }
+
+    private func nearestPointOfInterest(
+        to coordinate: CLLocationCoordinate2D,
+        matching title: String?,
+        region: MKCoordinateRegion?
+    ) async throws -> MKMapItem? {
+        let referenceLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let normalizedTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let normalizedTitle, !normalizedTitle.isEmpty {
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = normalizedTitle
+            request.resultTypes = [.pointOfInterest, .address]
+            request.region = MKCoordinateRegion(center: coordinate, span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003))
+            if #available(iOS 18.0, *) {
+                request.regionPriority = .required
+            }
+
+            let response = try await MKLocalSearch(request: request).start()
+            let matchingItems = response.mapItems.filter { item in
+                guard let itemName = item.name else {
+                    return false
+                }
+
+                return itemName.localizedCaseInsensitiveContains(normalizedTitle)
+                    || normalizedTitle.localizedCaseInsensitiveContains(itemName)
+            }
+
+            if let nearestMatchingItem = nearestItem(from: matchingItems, referenceLocation: referenceLocation) {
+                return nearestMatchingItem
+            }
+        }
+
+        let request = MKLocalPointsOfInterestRequest(center: coordinate, radius: 180)
+        let response = try await MKLocalSearch(request: request).start()
+        return nearestItem(from: response.mapItems, referenceLocation: referenceLocation)
+    }
+
+    private func nearestItem(from items: [MKMapItem], referenceLocation: CLLocation) -> MKMapItem? {
+        items.min { lhs, rhs in
+            let lhsDistance = referenceLocation.distance(from: CLLocation(latitude: lhs.placemark.coordinate.latitude, longitude: lhs.placemark.coordinate.longitude))
+            let rhsDistance = referenceLocation.distance(from: CLLocation(latitude: rhs.placemark.coordinate.latitude, longitude: rhs.placemark.coordinate.longitude))
+            return lhsDistance < rhsDistance
+        }
+    }
+
+    private func reverseGeocodedPlace(
+        at coordinate: CLLocationCoordinate2D,
+        fallbackName: String = "Dropped Pin"
+    ) async throws -> PlaceSearchResult {
+        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let placemarks = try await CLGeocoder().reverseGeocodeLocation(location)
+        let placemark = placemarks.first
+
+        let subtitle = [
+            placemark?.thoroughfare,
+            placemark?.subThoroughfare,
+            placemark?.locality
+        ]
+        .compactMap { $0 }
+        .filter { !$0.isEmpty }
+        .joined(separator: ", ")
+
+        return PlaceSearchResult(
+            name: placemark?.name ?? fallbackName,
+            subtitle: subtitle.isEmpty ? "Selected from map" : subtitle,
+            coordinate: coordinate
+        )
     }
 }
 

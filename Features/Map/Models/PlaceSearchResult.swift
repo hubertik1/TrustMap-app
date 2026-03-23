@@ -7,6 +7,7 @@ struct PlaceSearchResult: Identifiable, @unchecked Sendable {
     let completion: MKLocalSearchCompletion?
     private let fallbackName: String
     private let fallbackSubtitle: String
+    private let fallbackCoordinate: CLLocationCoordinate2D?
 
     init(mapItem: MKMapItem) {
         let identifier = mapItem.placemark.coordinate.latitude.description
@@ -19,6 +20,7 @@ struct PlaceSearchResult: Identifiable, @unchecked Sendable {
         self.completion = nil
         self.fallbackName = mapItem.name ?? "Unknown Place"
         self.fallbackSubtitle = mapItem.formattedAddress
+        self.fallbackCoordinate = mapItem.placemark.coordinate
     }
 
     init(completion: MKLocalSearchCompletion) {
@@ -27,6 +29,16 @@ struct PlaceSearchResult: Identifiable, @unchecked Sendable {
         self.completion = completion
         self.fallbackName = completion.title
         self.fallbackSubtitle = completion.subtitle
+        self.fallbackCoordinate = nil
+    }
+
+    init(name: String, subtitle: String, coordinate: CLLocationCoordinate2D) {
+        self.id = coordinate.latitude.description + "-" + coordinate.longitude.description + "-" + name
+        self.mapItem = nil
+        self.completion = nil
+        self.fallbackName = name
+        self.fallbackSubtitle = subtitle
+        self.fallbackCoordinate = coordinate
     }
 
     var name: String {
@@ -39,6 +51,6 @@ struct PlaceSearchResult: Identifiable, @unchecked Sendable {
     }
 
     var coordinate: CLLocationCoordinate2D? {
-        mapItem?.placemark.coordinate
+        mapItem?.placemark.coordinate ?? fallbackCoordinate
     }
 }

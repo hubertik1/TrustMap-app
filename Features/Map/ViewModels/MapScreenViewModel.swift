@@ -12,6 +12,8 @@ final class MapScreenViewModel: ObservableObject {
     @Published var availablePeople: [FilterPerson] = []
     @Published var filterState = MapFilterState()
     @Published var selectedPlace: Place?
+    @Published var promptPlace: Place?
+    @Published var placeForReview: Place?
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var isFilterPresented = false
@@ -127,7 +129,16 @@ final class MapScreenViewModel: ObservableObject {
     }
 
     func selectAnnotation(_ annotation: MapPlaceAnnotation) {
-        selectedPlace = annotation.place
+        promptPlace = annotation.place
+    }
+
+    func selectPlace(withID placeID: UUID) {
+        guard let annotation = annotations.first(where: { $0.place.id == placeID }) else {
+            return
+        }
+
+        promptPlace = annotation.place
+        focus(on: annotation.place.coordinate)
     }
 
     func selectSearchResult(_ result: PlaceSearchResult) async {
@@ -138,7 +149,7 @@ final class MapScreenViewModel: ObservableObject {
 
         do {
             let resolvedResult = try await mapSearchService.resolve(result, region: region)
-            selectedPlace = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
+            let place = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
             searchResults = []
             searchText = ""
             let searchRegion = MKCoordinateRegion(
@@ -147,9 +158,72 @@ final class MapScreenViewModel: ObservableObject {
             )
             region = searchRegion
             requestedCameraRegion = searchRegion
+            promptPlace = place
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
+    }
+
+    func selectMapLocation(at coordinate: CLLocationCoordinate2D) async {
+        guard let currentUser = sessionStore.currentUser else {
+            errorMessage = AppError.missingCurrentUser.errorDescription
+            return
+        }
+
+        do {
+            let resolvedResult = try await mapSearchService.resolveMapTap(at: coordinate)
+            let place = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
+            promptPlace = place
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
+        }
+    }
+
+    func selectMapFeature(title: String?, coordinate: CLLocationCoordinate2D) async {
+        guard let currentUser = sessionStore.currentUser else {
+            errorMessage = AppError.missingCurrentUser.errorDescription
+            return
+        }
+
+        do {
+            let resolvedResult = try await mapSearchService.resolveFeature(
+                title: title,
+                coordinate: coordinate,
+                region: region
+            )
+            let place = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
+            promptPlace = place
+            focus(on: coordinate)
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
+        }
+    }
+
+    func openPromptedPlaceDetails() {
+        guard let promptPlace else {
+            return
+        }
+
+        selectedPlace = promptPlace
+        self.promptPlace = nil
+    }
+
+    func startReviewForPromptedPlace() {
+        guard let promptPlace else {
+            return
+        }
+
+        placeForReview = promptPlace
+        self.promptPlace = nil
+    }
+
+    func dismissPrompt() {
+        promptPlace = nil
+    }
+
+    private func focus(on coordinate: CLLocationCoordinate2D) {
+        let span = region?.span ?? Self.defaultSpan
+        requestedCameraRegion = MKCoordinateRegion(center: coordinate, span: span)
     }
 
     func userName(for userID: UUID) -> String {
