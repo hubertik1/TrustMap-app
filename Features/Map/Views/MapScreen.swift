@@ -43,15 +43,7 @@ struct MapScreen: View {
 
                         ForEach(viewModel.annotations, id: \.id) { annotation in
                             Annotation(annotation.place.name, coordinate: annotation.coordinate) {
-                                VStack(spacing: 4) {
-                                    RatingBadgeView(rating: annotation.averageRating)
-                                    Text(annotation.place.name)
-                                        .font(.caption2)
-                                        .lineLimit(1)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(.thinMaterial, in: Capsule())
-                                }
+                                RatingBadgeView(rating: annotation.averageRating)
                             }
                             .tag(MapSelection(annotation.place.id))
                         }
