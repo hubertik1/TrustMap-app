@@ -13,6 +13,7 @@ final class MapScreenViewModel: ObservableObject {
     @Published var filterState = MapFilterState()
     @Published var selectedPlace: Place?
     @Published var promptPlace: Place?
+    @Published var droppedPinPlace: Place?
     @Published var placeForReview: Place?
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -137,6 +138,7 @@ final class MapScreenViewModel: ObservableObject {
             return
         }
 
+        droppedPinPlace = nil
         promptPlace = annotation.place
         focus(on: annotation.place.coordinate)
     }
@@ -158,6 +160,7 @@ final class MapScreenViewModel: ObservableObject {
             )
             region = searchRegion
             requestedCameraRegion = searchRegion
+            droppedPinPlace = nil
             promptPlace = place
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
@@ -179,6 +182,23 @@ final class MapScreenViewModel: ObservableObject {
         }
     }
 
+    func selectLongPressLocation(at coordinate: CLLocationCoordinate2D) async {
+        guard let currentUser = sessionStore.currentUser else {
+            errorMessage = AppError.missingCurrentUser.errorDescription
+            return
+        }
+
+        do {
+            let resolvedResult = try await mapSearchService.resolveDroppedPin(at: coordinate)
+            let place = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
+            droppedPinPlace = place
+            promptPlace = place
+            focus(on: coordinate)
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
+        }
+    }
+
     func selectMapFeature(title: String?, coordinate: CLLocationCoordinate2D) async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
@@ -192,6 +212,7 @@ final class MapScreenViewModel: ObservableObject {
                 region: region
             )
             let place = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
+            droppedPinPlace = nil
             promptPlace = place
             focus(on: coordinate)
         } catch {
@@ -204,6 +225,7 @@ final class MapScreenViewModel: ObservableObject {
             return
         }
 
+        droppedPinPlace = nil
         selectedPlace = promptPlace
         self.promptPlace = nil
     }
@@ -213,11 +235,13 @@ final class MapScreenViewModel: ObservableObject {
             return
         }
 
+        droppedPinPlace = nil
         placeForReview = promptPlace
         self.promptPlace = nil
     }
 
     func dismissPrompt() {
+        droppedPinPlace = nil
         promptPlace = nil
     }
 

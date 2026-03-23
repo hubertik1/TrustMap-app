@@ -69,6 +69,10 @@ final class MapSearchService {
         return try await reverseGeocodedPlace(at: coordinate)
     }
 
+    func resolveDroppedPin(at coordinate: CLLocationCoordinate2D) async throws -> PlaceSearchResult {
+        try await reverseGeocodedPlace(at: coordinate, fallbackName: "Pinned Location")
+    }
+
     private func nearestPointOfInterest(
         to coordinate: CLLocationCoordinate2D,
         matching title: String?,
@@ -122,18 +126,34 @@ final class MapSearchService {
         let placemarks = try await CLGeocoder().reverseGeocodeLocation(location)
         let placemark = placemarks.first
 
-        let subtitle = [
+        let streetLine = [
             placemark?.thoroughfare,
-            placemark?.subThoroughfare,
+            placemark?.subThoroughfare
+        ]
+        .compactMap { $0 }
+        .filter { !$0.isEmpty }
+        .joined(separator: " ")
+
+        let localityLine = [
+            placemark?.postalCode,
             placemark?.locality
         ]
         .compactMap { $0 }
         .filter { !$0.isEmpty }
-        .joined(separator: ", ")
+        .joined(separator: " ")
+
+        let address = [streetLine, localityLine]
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+
+        let displayName = placemark?.name
+            ?? (streetLine.isEmpty ? nil : streetLine)
+            ?? (localityLine.isEmpty ? nil : localityLine)
+            ?? fallbackName
 
         return PlaceSearchResult(
-            name: placemark?.name ?? fallbackName,
-            subtitle: subtitle.isEmpty ? "Selected from map" : subtitle,
+            name: displayName,
+            subtitle: address.isEmpty ? "Selected from map" : address,
             coordinate: coordinate
         )
     }

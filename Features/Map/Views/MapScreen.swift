@@ -32,6 +32,15 @@ struct MapScreen: View {
                     Map(position: $cameraPosition, selection: $mapSelection) {
                         UserAnnotation()
 
+                        if let droppedPinPlace = viewModel.droppedPinPlace {
+                            Annotation("Dropped Pin", coordinate: droppedPinPlace.coordinate, anchor: .bottom) {
+                                Image(systemName: "mappin.circle.fill")
+                                    .font(.title)
+                                    .foregroundStyle(.red)
+                                    .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
+                            }
+                        }
+
                         ForEach(viewModel.annotations, id: \.id) { annotation in
                             Annotation(annotation.place.name, coordinate: annotation.coordinate) {
                                 VStack(spacing: 4) {
@@ -73,6 +82,7 @@ struct MapScreen: View {
                     .onReceive(viewModel.$requestedCameraRegion.compactMap { $0 }) { region in
                         cameraPosition = .region(region)
                     }
+                    .simultaneousGesture(longPressGesture(proxy: proxy))
                     .ignoresSafeArea(edges: .bottom)
 
                     if viewModel.isLoading && viewModel.annotations.isEmpty {
@@ -255,6 +265,13 @@ struct MapScreen: View {
                 .font(.headline)
                 .lineLimit(1)
 
+            if !place.address.isEmpty && place.address != place.name {
+                Text(place.address)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+
             Text("Add a rating for this place?")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -274,6 +291,23 @@ struct MapScreen: View {
         .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
+    }
+
+    private func longPressGesture(proxy: MapProxy) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.55, maximumDistance: 12)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .local))
+            .onEnded { value in
+                guard case .second(true, let drag?) = value,
+                      let coordinate = proxy.convert(drag.location, from: .local) else {
+                    return
+                }
+
+                clearMapSelection()
+
+                Task {
+                    await viewModel.selectLongPressLocation(at: coordinate)
+                }
+            }
     }
 }
 
