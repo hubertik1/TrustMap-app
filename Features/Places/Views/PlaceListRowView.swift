@@ -26,48 +26,6 @@ struct PlaceListRowView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-
-            if !item.categoryNames.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(item.categoryNames, id: \.self) { name in
-                            Text(name)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(.thinMaterial, in: Capsule())
-                        }
-                    }
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("People Ratings")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                ForEach(item.reviewerRatings.prefix(3)) { rating in
-                    HStack(spacing: 8) {
-                        Text(rating.reviewerName)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.primary)
-
-                        Spacer()
-
-                        Text("\(rating.rating)/10")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if !rating.descriptionText.isEmpty {
-                        Text(rating.descriptionText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-                }
-            }
         }
         .padding(.vertical, 8)
     }
@@ -83,12 +41,8 @@ struct PlaceListRowView: View {
             place: place,
             averageRating: 8.7,
             reviewCount: 3,
-            categoryNames: ["Restaurants", "Pizza"],
-            reviewerRatings: [
-                PlaceReviewerRating(id: UUID(), reviewerID: UUID(), reviewerName: "Me", rating: 9, descriptionText: "Great crust and strong pasta menu."),
-                PlaceReviewerRating(id: UUID(), reviewerID: UUID(), reviewerName: "Alice", rating: 8, descriptionText: "Excellent date-night spot."),
-                PlaceReviewerRating(id: UUID(), reviewerID: UUID(), reviewerName: "Bob", rating: 9, descriptionText: "Worth going back for dessert.")
-            ]
+            categoryNames: [],
+            reviewerRatings: []
         )
     )
     .padding()
