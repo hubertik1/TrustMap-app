@@ -85,38 +85,29 @@ struct MapScreen: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 8) {
-                if let locationMessage = viewModel.locationAccessState.message {
-                    HStack(alignment: .center, spacing: 12) {
-                        Image(systemName: "location")
-                            .foregroundStyle(.secondary)
+            if let locationMessage = viewModel.locationAccessState.message {
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: "location")
+                        .foregroundStyle(.secondary)
 
-                        Text(locationMessage)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(locationMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                        if viewModel.locationAccessState.showsSettingsAction,
-                           let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-                            Button("Settings") {
-                                openURL(settingsURL)
-                            }
-                            .font(.footnote.weight(.semibold))
+                    if viewModel.locationAccessState.showsSettingsAction,
+                       let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                        Button("Settings") {
+                            openURL(settingsURL)
                         }
+                        .font(.footnote.weight(.semibold))
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
-
-                Text(viewModel.filterState.summaryText)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial, in: Capsule())
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .padding()
             }
-            .padding()
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
