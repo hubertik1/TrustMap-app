@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 final class PlacesViewModel: ObservableObject {
     @Published private(set) var placeItems: [PlaceListItem] = []
-    @Published private(set) var availableCategoryOptions: [PlaceCategoryOption] = [.restaurants]
+    @Published private(set) var availableCategoryOptions: [PlaceCategoryOption] = [.all, .restaurants]
     @Published var selectedCategoryOption: PlaceCategoryOption = .restaurants
     @Published var sourceFilterMode: ReviewSourceFilterMode = .mineAndFriends
     @Published var isLoading = false
@@ -54,10 +54,12 @@ final class PlacesViewModel: ObservableObject {
             let placeIDs = Set(visibleReviews.map(\.placeId))
             let visiblePlaces = try placeRepository.places(withIDs: placeIDs)
 
+            _ = try categoryRepository.defaultRestaurantCategory(for: currentUser.id)
             let ownedCategories = try categoryRepository.categories(for: currentUser.id)
-            availableCategoryOptions = [.restaurants] + ownedCategories.map {
-                PlaceCategoryOption(id: $0.id.uuidString, title: $0.name, categoryID: $0.id)
-            }
+            let customCategoryOptions = ownedCategories
+                .filter { $0.name.caseInsensitiveCompare(PlaceCategoryOption.restaurants.title) != .orderedSame }
+                .map(PlaceCategoryOption.init(category:))
+            availableCategoryOptions = [.all, .restaurants] + customCategoryOptions
             if !availableCategoryOptions.contains(selectedCategoryOption) {
                 selectedCategoryOption = .restaurants
             }
@@ -72,7 +74,6 @@ final class PlacesViewModel: ObservableObject {
             })
 
             let groupedReviews = Dictionary(grouping: visibleReviews, by: \.placeId)
-            let selectedCategoryID = selectedCategoryOption.categoryID
 
             placeItems = visiblePlaces.compactMap { place in
                 guard let reviews = groupedReviews[place.id], !reviews.isEmpty else {
@@ -80,11 +81,8 @@ final class PlacesViewModel: ObservableObject {
                 }
 
                 let categoryNames = categoryNamesByPlace[place.id] ?? []
-                if let selectedCategoryID {
-                    let matchesCategory = ownedCategories.first(where: { $0.id == selectedCategoryID }).map { categoryNames.contains($0.name) } ?? false
-                    guard matchesCategory else {
-                        return nil
-                    }
+                guard selectedCategoryOption.matches(categoryNames: categoryNames) else {
+                    return nil
                 }
 
                 let average = Double(reviews.reduce(0) { $0 + $1.ratingOverall }) / Double(reviews.count)
