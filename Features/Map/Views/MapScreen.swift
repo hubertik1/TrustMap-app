@@ -203,26 +203,6 @@ struct MapScreen: View {
                 }
             }
         }
-        .sheet(
-            isPresented: Binding(
-                get: { viewModel.placeForReview != nil },
-                set: {
-                    if !$0 {
-                        viewModel.placeForReview = nil
-                        clearMapSelection()
-                    }
-                }
-            ),
-            onDismiss: {
-                Task { await viewModel.load() }
-            }
-        ) {
-            if let placeForReview = viewModel.placeForReview {
-                NavigationStack {
-                    AddPlaceReviewView(container: container, place: placeForReview)
-                }
-            }
-        }
         .task {
             viewModel.startLocationFlowIfNeeded()
             await viewModel.load()
@@ -281,7 +261,7 @@ struct MapScreen: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(place.name)
                 .font(.headline)
-                .lineLimit(1)
+                .lineLimit(2)
 
             if !place.address.isEmpty && place.address != place.name {
                 Text(place.address)
@@ -290,21 +270,10 @@ struct MapScreen: View {
                     .lineLimit(2)
             }
 
-            Text("Add a rating for this place?")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 8) {
-                Button("Add Rating") {
-                    viewModel.startReviewForPromptedPlace()
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button("Details") {
-                    viewModel.openPromptedPlaceDetails()
-                }
-                .buttonStyle(.bordered)
+            Button("Details") {
+                viewModel.openPromptedPlaceDetails()
             }
+            .buttonStyle(.bordered)
         }
         .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))

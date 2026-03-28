@@ -16,7 +16,6 @@ final class MapScreenViewModel: ObservableObject {
     @Published var selectedPlace: Place?
     @Published var promptPlace: Place?
     @Published var droppedPinPlace: Place?
-    @Published var placeForReview: Place?
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var isFilterPresented = false
@@ -253,16 +252,6 @@ final class MapScreenViewModel: ObservableObject {
 
         droppedPinPlace = nil
         selectedPlace = promptPlace
-        self.promptPlace = nil
-    }
-
-    func startReviewForPromptedPlace() {
-        guard let promptPlace else {
-            return
-        }
-
-        droppedPinPlace = nil
-        placeForReview = promptPlace
         self.promptPlace = nil
     }
 
