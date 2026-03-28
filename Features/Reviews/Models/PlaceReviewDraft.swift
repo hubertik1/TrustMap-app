@@ -9,5 +9,4 @@ struct PlaceReviewDraft: Sendable {
     let visibility: VisibilityStatus
     let photoDataItems: [Data]
     let selectedCategoryId: UUID?
-    let newCategoryName: String?
 }

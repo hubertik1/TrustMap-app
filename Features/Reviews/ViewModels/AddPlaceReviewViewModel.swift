@@ -3,18 +3,34 @@ import UIKit
 
 @MainActor
 final class AddPlaceReviewViewModel: ObservableObject {
+    enum ReviewAction {
+        case save
+        case delete
+
+        var errorTitle: String {
+            switch self {
+            case .save:
+                return "Unable to Save Review"
+            case .delete:
+                return "Unable to Delete Review"
+            }
+        }
+    }
+
     @Published var ratingOverall = 8
     @Published var descriptionText = ""
     @Published var visibility: VisibilityStatus = .friendsOnly
     @Published var availableCategories: [CustomCategory] = []
     @Published var selectedCategoryID: UUID?
-    @Published var newCategoryName = ""
     @Published var selectedPhotoData: [Data] = []
     @Published var selectedPreviewImages: [UIImage] = []
     @Published var isSaving = false
+    @Published var isDeleting = false
     @Published var errorMessage: String?
     @Published var didSave = false
+    @Published var didDelete = false
     @Published private(set) var isEditing = false
+    @Published private(set) var lastAction: ReviewAction = .save
 
     let place: Place
 
@@ -99,19 +115,15 @@ final class AddPlaceReviewViewModel: ObservableObject {
             return
         }
 
+        lastAction = .save
         isSaving = true
         errorMessage = nil
 
         do {
-            let existingReview = try placeReviewRepository.review(for: place.id, authoredBy: currentUser.id) ?? existingReview
-            let resolvedCategoryID: UUID?
-            if let selectedCategoryID {
-                resolvedCategoryID = selectedCategoryID
-            } else if newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                resolvedCategoryID = try categoryRepository.defaultRestaurantCategory(for: currentUser.id).id
-            } else {
-                resolvedCategoryID = nil
-            }
+            let persistedReview = try placeReviewRepository.review(for: place.id, authoredBy: currentUser.id)
+            let existingReview = persistedReview ?? self.existingReview
+            let defaultCategoryID = try categoryRepository.defaultRestaurantCategory(for: currentUser.id).id
+            let resolvedCategoryID = selectedCategoryID ?? defaultCategoryID
 
             let draft = PlaceReviewDraft(
                 placeId: place.id,
@@ -121,8 +133,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
                 descriptionText: descriptionText,
                 visibility: visibility,
                 photoDataItems: selectedPhotoData,
-                selectedCategoryId: resolvedCategoryID,
-                newCategoryName: newCategoryName.isEmpty ? nil : newCategoryName
+                selectedCategoryId: resolvedCategoryID
             )
 
             if let existingReview {
@@ -139,6 +150,32 @@ final class AddPlaceReviewViewModel: ObservableObject {
         }
 
         isSaving = false
+    }
+
+    func deleteReview() async {
+        lastAction = .delete
+
+        guard let currentUser = sessionStore.currentUser else {
+            errorMessage = AppError.missingCurrentUser.errorDescription
+            return
+        }
+
+        isDeleting = true
+        errorMessage = nil
+
+        do {
+            guard let review = try placeReviewRepository.review(for: place.id, authoredBy: currentUser.id) ?? existingReview else {
+                throw AppError.validationFailure("No review exists for this place yet.")
+            }
+
+            try placeReviewRepository.deleteReview(review)
+            existingReview = nil
+            didDelete = true
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
+        }
+
+        isDeleting = false
     }
 
     private func populateForm(with review: PlaceReview) {

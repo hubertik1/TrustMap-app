@@ -70,11 +70,6 @@ final class PlaceReviewRepository {
             try categoryRepository.assignCategory(selectedCategoryId, to: draft.placeId, assignedBy: draft.authorUserId)
         }
 
-        if let newCategoryName = draft.newCategoryName?.trimmingCharacters(in: .whitespacesAndNewlines), !newCategoryName.isEmpty {
-            let category = try categoryRepository.createCategory(ownerUserID: draft.authorUserId, name: newCategoryName)
-            try categoryRepository.assignCategory(category.id, to: draft.placeId, assignedBy: draft.authorUserId)
-        }
-
         let storedAssets = try photoAssetRepository.storePlaceReviewPhotos(
             draft.photoDataItems,
             ownerUserID: draft.authorUserId,
@@ -122,11 +117,6 @@ final class PlaceReviewRepository {
 
         if let selectedCategoryId = draft.selectedCategoryId {
             try categoryRepository.assignCategory(selectedCategoryId, to: draft.placeId, assignedBy: draft.authorUserId)
-        }
-
-        if let newCategoryName = draft.newCategoryName?.trimmingCharacters(in: .whitespacesAndNewlines), !newCategoryName.isEmpty {
-            let category = try categoryRepository.createCategory(ownerUserID: draft.authorUserId, name: newCategoryName)
-            try categoryRepository.assignCategory(category.id, to: draft.placeId, assignedBy: draft.authorUserId)
         }
 
         let storedAssets = try photoAssetRepository.storePlaceReviewPhotos(
