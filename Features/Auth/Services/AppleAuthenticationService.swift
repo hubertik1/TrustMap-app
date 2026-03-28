@@ -1,5 +1,6 @@
 import AuthenticationServices
 import Foundation
+import Security
 
 @MainActor
 protocol AuthServicing: AnyObject {
@@ -15,6 +16,7 @@ final class AppleAuthenticationService: AuthServicing {
     private enum StorageKeys {
         static let activeAppleUserID = "activeAppleUserID"
         static let cachedProfilePrefix = "cachedAppleProfile"
+        static let keychainService = "com.hubertik.TrustMap.appleProfile"
     }
 
     private let provider = ASAuthorizationAppleIDProvider()
@@ -96,24 +98,95 @@ final class AppleAuthenticationService: AuthServicing {
 
     private func persistCachedProfile(displayName: String?, email: String?, for userID: String) {
         if let displayName {
-            defaults.set(displayName, forKey: cachedProfileKey(field: "displayName", userID: userID))
+            saveCachedProfileValue(displayName, field: "displayName", for: userID)
         }
 
         if let email {
-            defaults.set(email, forKey: cachedProfileKey(field: "email", userID: userID))
+            saveCachedProfileValue(email, field: "email", for: userID)
         }
     }
 
     private func cachedDisplayName(for userID: String) -> String? {
-        sanitizedValue(defaults.string(forKey: cachedProfileKey(field: "displayName", userID: userID)))
+        cachedProfileValue(field: "displayName", for: userID)
     }
 
     private func cachedEmail(for userID: String) -> String? {
-        sanitizedValue(defaults.string(forKey: cachedProfileKey(field: "email", userID: userID)))
+        cachedProfileValue(field: "email", for: userID)
     }
 
     private func cachedProfileKey(field: String, userID: String) -> String {
         "\(StorageKeys.cachedProfilePrefix).\(userID).\(field)"
+    }
+
+    private func cachedProfileValue(field: String, for userID: String) -> String? {
+        let account = cachedProfileKey(field: field, userID: userID)
+
+        if let keychainValue = sanitizedValue(loadKeychainValue(account: account)) {
+            return keychainValue
+        }
+
+        guard let legacyValue = sanitizedValue(defaults.string(forKey: account)) else {
+            return nil
+        }
+
+        saveCachedProfileValue(legacyValue, field: field, for: userID)
+        return legacyValue
+    }
+
+    private func saveCachedProfileValue(_ value: String, field: String, for userID: String) {
+        let account = cachedProfileKey(field: field, userID: userID)
+        defaults.set(value, forKey: account)
+        saveKeychainValue(value, account: account)
+    }
+
+    private func saveKeychainValue(_ value: String, account: String) {
+        guard let data = value.data(using: .utf8) else {
+            return
+        }
+
+        let query = keychainQuery(account: account)
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+
+        if updateStatus == errSecSuccess {
+            return
+        }
+
+        guard updateStatus == errSecItemNotFound else {
+            return
+        }
+
+        var insertQuery = query
+        insertQuery[kSecValueData as String] = data
+        insertQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        SecItemAdd(insertQuery as CFDictionary, nil)
+    }
+
+    private func loadKeychainValue(account: String) -> String? {
+        var query = keychainQuery(account: account)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        guard status == errSecSuccess,
+              let data = result as? Data else {
+            return nil
+        }
+
+        return String(data: data, encoding: .utf8)
+    }
+
+    private func keychainQuery(account: String) -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: StorageKeys.keychainService,
+            kSecAttrAccount as String: account
+        ]
     }
 
     private func sanitizedValue(_ value: String?) -> String? {
