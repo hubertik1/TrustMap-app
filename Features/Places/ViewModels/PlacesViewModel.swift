@@ -69,7 +69,7 @@ final class PlacesViewModel: ObservableObject {
             userNames[currentUser.id] = currentUser.displayName
 
             let categoryNamesByPlace = try Dictionary(uniqueKeysWithValues: visiblePlaces.map { place in
-                let names = try categoryRepository.categories(forPlace: place.id).map(\.name)
+                let names = try categoryRepository.categoryNames(forPlace: place.id)
                 return (place.id, names)
             })
 

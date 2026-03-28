@@ -66,7 +66,7 @@ final class PlaceDetailViewModel: ObservableObject {
             currentUserPlaceReview = placeReviews.first(where: { $0.authorUserId == currentUser.id })
             dishReviews = try dishReviewRepository.reviews(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
             averageRating = try placeReviewRepository.averageRating(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
-            categoryNames = try categoryRepository.categories(forPlace: place.id).map(\.name)
+            categoryNames = try categoryRepository.categoryNames(forPlace: place.id)
             placePhotos = try photoAssetRepository.photos(for: place.id)
             reviewPhotos = Dictionary(grouping: placePhotos.compactMap { asset in
                 asset.placeReviewId.map { (reviewID: $0, asset: asset) }

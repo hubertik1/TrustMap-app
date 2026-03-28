@@ -98,7 +98,7 @@ final class MapScreenViewModel: ObservableObject {
             let reviews = try placeReviewRepository.reviews(authoredBy: authorIDs, ratingRange: filterState.ratingRange)
             let places = try placeRepository.places(withIDs: Set(reviews.map(\.placeId)))
             let categoryNamesByPlace = try Dictionary(uniqueKeysWithValues: places.map { place in
-                let names = try categoryRepository.categories(forPlace: place.id).map(\.name)
+                let names = try categoryRepository.categoryNames(forPlace: place.id)
                 return (place.id, names)
             })
             let filteredPlaces = places.filter { place in
