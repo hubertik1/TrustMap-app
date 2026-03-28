@@ -18,7 +18,6 @@ final class AddDishReviewViewModel: ObservableObject {
     }
 
     @Published var dishName = ""
-    @Published var dishCategory = ""
     @Published var dishRating = 8
     @Published var dishReviewText = ""
     @Published var priceText = ""
@@ -107,7 +106,6 @@ final class AddDishReviewViewModel: ObservableObject {
                 authorUserId: currentUser.id,
                 placeReviewId: existingPlaceReviewID,
                 dishName: trimmedDishName,
-                dishCategory: dishCategory.isEmpty ? nil : dishCategory,
                 dishRating: dishRating,
                 dishReviewText: dishReviewText,
                 price: price,
@@ -166,7 +164,6 @@ final class AddDishReviewViewModel: ObservableObject {
 
     private func populateForm(with review: DishReview) {
         dishName = review.dishName
-        dishCategory = review.dishCategory ?? ""
         dishRating = review.dishRating
         dishReviewText = review.dishReviewText
         if let price = review.price {

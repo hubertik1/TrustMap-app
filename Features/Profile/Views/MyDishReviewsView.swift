@@ -100,7 +100,6 @@ struct MyDishReviewsView: View {
                     placeId: UUID(uuidString: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD")!,
                     authorUserId: UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!,
                     dishName: "Tiramisu Pancakes",
-                    dishCategory: "Dessert Brunch",
                     dishRating: 10,
                     dishReviewText: "Ridiculously good mascarpone cream.",
                     price: 14

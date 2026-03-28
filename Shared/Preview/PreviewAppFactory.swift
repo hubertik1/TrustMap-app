@@ -133,7 +133,6 @@ enum PreviewAppFactory {
             authorUserId: me.id,
             placeReviewId: myReview.id,
             dishName: "Tiramisu Pancakes",
-            dishCategory: "Dessert Brunch",
             dishRating: 10,
             dishReviewText: "Ridiculously good mascarpone cream.",
             price: 14

@@ -65,19 +65,53 @@ final class CategoryRepository {
     }
 
     func assignCategory(_ categoryID: UUID, to placeID: UUID, assignedBy userID: UUID) throws {
-        let assignments = try context.fetch(FetchDescriptor<PlaceCategoryAssignment>())
-        if assignments.contains(where: { $0.placeId == placeID && $0.categoryId == categoryID }) {
+        let assignments = try assignments(forPlace: placeID, assignedBy: userID)
+        let staleAssignments = assignments.filter { $0.categoryId != categoryID }
+        let existingAssignment = assignments.first { $0.categoryId == categoryID }
+
+        if staleAssignments.isEmpty, existingAssignment != nil {
             return
         }
 
-        let assignment = PlaceCategoryAssignment(
-            placeId: placeID,
-            categoryId: categoryID,
-            assignedByUserId: userID
-        )
-        context.insert(assignment)
+        for assignment in staleAssignments {
+            context.delete(assignment)
+        }
+
+        let assignmentToKeep: PlaceCategoryAssignment
+        let shouldSyncAssignment: Bool
+
+        if let existingAssignment {
+            assignmentToKeep = existingAssignment
+            shouldSyncAssignment = false
+        } else {
+            let assignment = PlaceCategoryAssignment(
+                placeId: placeID,
+                categoryId: categoryID,
+                assignedByUserId: userID
+            )
+            context.insert(assignment)
+            assignmentToKeep = assignment
+            shouldSyncAssignment = true
+        }
+
         try saveChanges(message: "Unable to assign the category to this place.")
-        Task { await cloudKitSyncService.syncPlaceCategoryAssignment(assignment) }
+
+        if shouldSyncAssignment {
+            Task { await cloudKitSyncService.syncPlaceCategoryAssignment(assignmentToKeep) }
+        }
+    }
+
+    func removeAssignments(for placeID: UUID, assignedBy userID: UUID) throws {
+        let assignments = try assignments(forPlace: placeID, assignedBy: userID)
+        guard !assignments.isEmpty else {
+            return
+        }
+
+        for assignment in assignments {
+            context.delete(assignment)
+        }
+
+        try saveChanges(message: "Unable to clear the category for this place.")
     }
 
     private func saveChanges(message: String) throws {
@@ -88,5 +122,10 @@ final class CategoryRepository {
         } catch {
             throw AppError.persistenceFailure(message)
         }
+    }
+
+    private func assignments(forPlace placeID: UUID, assignedBy userID: UUID) throws -> [PlaceCategoryAssignment] {
+        try context.fetch(FetchDescriptor<PlaceCategoryAssignment>())
+            .filter { $0.placeId == placeID && $0.assignedByUserId == userID }
     }
 }

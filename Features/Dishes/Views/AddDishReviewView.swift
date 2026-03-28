@@ -31,7 +31,6 @@ struct AddDishReviewView: View {
 
             Section("Dish Review") {
                 TextField("Dish name", text: $viewModel.dishName)
-                TextField("Dish category", text: $viewModel.dishCategory)
                 Stepper("Rating: \(viewModel.dishRating)/10", value: $viewModel.dishRating, in: 1...10)
                 TextField("Short review", text: $viewModel.dishReviewText, axis: .vertical)
                     .lineLimit(3...5)

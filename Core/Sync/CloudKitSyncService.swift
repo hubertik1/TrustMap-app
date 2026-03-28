@@ -100,7 +100,6 @@ final class CloudKitSyncService: CloudKitSyncing {
         record["authorUserId"] = review.authorUserId.uuidString as CKRecordValue
         record["placeReviewId"] = review.placeReviewId?.uuidString as CKRecordValue?
         record["dishName"] = review.dishName as CKRecordValue
-        record["dishCategory"] = review.dishCategory as CKRecordValue?
         record["dishRating"] = review.dishRating as CKRecordValue
         record["dishReviewText"] = review.dishReviewText as CKRecordValue
         if let price = review.price {

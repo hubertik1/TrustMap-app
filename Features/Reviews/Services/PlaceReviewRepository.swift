@@ -117,6 +117,8 @@ final class PlaceReviewRepository {
 
         if let selectedCategoryId = draft.selectedCategoryId {
             try categoryRepository.assignCategory(selectedCategoryId, to: draft.placeId, assignedBy: draft.authorUserId)
+        } else {
+            try categoryRepository.removeAssignments(for: draft.placeId, assignedBy: draft.authorUserId)
         }
 
         let storedAssets = try photoAssetRepository.storePlaceReviewPhotos(
@@ -147,6 +149,8 @@ final class PlaceReviewRepository {
             for: review.id.uuidString,
             types: [.placeReviewAdded, .photoAdded]
         )
+
+        try categoryRepository.removeAssignments(for: review.placeId, assignedBy: review.authorUserId)
 
         for asset in relatedAssets {
             context.delete(asset)

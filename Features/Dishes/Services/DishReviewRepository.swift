@@ -50,7 +50,6 @@ final class DishReviewRepository {
             authorUserId: draft.authorUserId,
             placeReviewId: draft.placeReviewId,
             dishName: draft.dishName.trimmingCharacters(in: .whitespacesAndNewlines),
-            dishCategory: draft.dishCategory?.trimmingCharacters(in: .whitespacesAndNewlines),
             dishRating: draft.dishRating,
             dishReviewText: draft.dishReviewText.trimmingCharacters(in: .whitespacesAndNewlines),
             price: draft.price
@@ -98,7 +97,6 @@ final class DishReviewRepository {
 
         review.placeReviewId = draft.placeReviewId
         review.dishName = draft.dishName.trimmingCharacters(in: .whitespacesAndNewlines)
-        review.dishCategory = draft.dishCategory?.trimmingCharacters(in: .whitespacesAndNewlines)
         review.dishRating = draft.dishRating
         review.dishReviewText = draft.dishReviewText.trimmingCharacters(in: .whitespacesAndNewlines)
         review.price = draft.price

@@ -8,7 +8,6 @@ final class DishReview {
     var authorUserId: UUID
     var placeReviewId: UUID?
     var dishName: String
-    var dishCategory: String?
     var dishRating: Int
     var dishReviewText: String
     var price: Double?
@@ -21,7 +20,6 @@ final class DishReview {
         authorUserId: UUID,
         placeReviewId: UUID? = nil,
         dishName: String,
-        dishCategory: String? = nil,
         dishRating: Int,
         dishReviewText: String,
         price: Double? = nil,
@@ -33,7 +31,6 @@ final class DishReview {
         self.authorUserId = authorUserId
         self.placeReviewId = placeReviewId
         self.dishName = dishName
-        self.dishCategory = dishCategory
         self.dishRating = dishRating
         self.dishReviewText = dishReviewText
         self.price = price

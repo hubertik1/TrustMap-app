@@ -40,17 +40,11 @@ struct DishReviewRowView: View {
                         .font(.subheadline)
                 }
 
-                HStack(spacing: 8) {
-                    if let dishCategory = review.dishCategory, !dishCategory.isEmpty {
-                        Text(dishCategory)
-                    }
-
-                    if let price = review.price {
-                        Text(price, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
-                    }
+                if let price = review.price {
+                    Text(price, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
         }
     }
