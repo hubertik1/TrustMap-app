@@ -70,11 +70,13 @@ struct MapScreen: View {
                             }
                         }
                     }
-                    .onMapCameraChange { context in
-                        viewModel.region = context.region
+                    .onMapCameraChange(frequency: .onEnd) { context in
+                        viewModel.handleCameraChangeDidEnd(context.region)
                     }
                     .onReceive(viewModel.$requestedCameraRegion.compactMap { $0 }) { region in
-                        cameraPosition = .region(region)
+                        withAnimation(.easeInOut(duration: 0.45)) {
+                            cameraPosition = .region(region)
+                        }
                     }
                     .simultaneousGesture(longPressGesture(proxy: proxy))
                     .ignoresSafeArea(edges: .bottom)

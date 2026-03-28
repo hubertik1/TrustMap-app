@@ -33,6 +33,8 @@ final class MapScreenViewModel: ObservableObject {
     private var hasStartedLocationFlow = false
     private var shouldCenterOnNextLocationUpdate = true
     private var searchTask: Task<Void, Never>?
+    private var pendingPromptPlace: Place?
+    private var pendingPromptCoordinate: CLLocationCoordinate2D?
 
     init(
         sessionStore: SessionStore,
@@ -164,8 +166,7 @@ final class MapScreenViewModel: ObservableObject {
         }
 
         droppedPinPlace = nil
-        promptPlace = annotation.place
-        focus(on: annotation.place.coordinate)
+        deferPromptPresentation(for: annotation.place, focusingOn: annotation.place.coordinate)
     }
 
     func selectSearchResult(_ result: PlaceSearchResult) async {
@@ -186,7 +187,7 @@ final class MapScreenViewModel: ObservableObject {
             region = searchRegion
             requestedCameraRegion = searchRegion
             droppedPinPlace = nil
-            promptPlace = place
+            deferPromptPresentation(for: place, focusingOn: searchRegion.center)
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
@@ -217,8 +218,7 @@ final class MapScreenViewModel: ObservableObject {
             let resolvedResult = try await mapSearchService.resolveDroppedPin(at: coordinate)
             let place = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
             droppedPinPlace = place
-            promptPlace = place
-            focus(on: coordinate)
+            deferPromptPresentation(for: place, focusingOn: coordinate)
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
@@ -238,8 +238,7 @@ final class MapScreenViewModel: ObservableObject {
             )
             let place = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
             droppedPinPlace = nil
-            promptPlace = place
-            focus(on: coordinate)
+            deferPromptPresentation(for: place, focusingOn: coordinate)
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
@@ -258,6 +257,22 @@ final class MapScreenViewModel: ObservableObject {
     func dismissPrompt() {
         droppedPinPlace = nil
         promptPlace = nil
+        pendingPromptPlace = nil
+        pendingPromptCoordinate = nil
+    }
+
+    func handleCameraChangeDidEnd(_ region: MKCoordinateRegion) {
+        self.region = region
+
+        guard let pendingPromptPlace,
+              let pendingPromptCoordinate,
+              hasReachedPendingPromptTarget(region: region, target: pendingPromptCoordinate) else {
+            return
+        }
+
+        promptPlace = pendingPromptPlace
+        self.pendingPromptPlace = nil
+        self.pendingPromptCoordinate = nil
     }
 
     private func focus(on coordinate: CLLocationCoordinate2D) {
@@ -347,6 +362,21 @@ final class MapScreenViewModel: ObservableObject {
                 errorMessage = AppError.wrap(error).errorDescription
             }
         }
+    }
+
+    private func deferPromptPresentation(for place: Place, focusingOn coordinate: CLLocationCoordinate2D) {
+        promptPlace = nil
+        pendingPromptPlace = place
+        pendingPromptCoordinate = coordinate
+        focus(on: coordinate)
+    }
+
+    private func hasReachedPendingPromptTarget(region: MKCoordinateRegion, target: CLLocationCoordinate2D) -> Bool {
+        let latitudeTolerance = max(region.span.latitudeDelta * 0.1, 0.0001)
+        let longitudeTolerance = max(region.span.longitudeDelta * 0.1, 0.0001)
+
+        return abs(region.center.latitude - target.latitude) <= latitudeTolerance
+            && abs(region.center.longitude - target.longitude) <= longitudeTolerance
     }
 }
 
