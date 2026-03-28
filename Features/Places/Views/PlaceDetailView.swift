@@ -57,6 +57,19 @@ struct PlaceDetailView: View {
                         }
                     }
 
+                    Section("Photos") {
+                        if viewModel.placePhotos.isEmpty {
+                            Text("No photos have been added for this place yet.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            PhotoGridView(
+                                assets: viewModel.placePhotos,
+                                imageDataProvider: viewModel.imageData,
+                                allowsFullscreenPresentation: true
+                            )
+                        }
+                    }
+
                     Section("Dish Reviews") {
                         if viewModel.dishReviews.isEmpty {
                             Text("No visible dish reviews yet.")
@@ -65,15 +78,6 @@ struct PlaceDetailView: View {
                             ForEach(viewModel.dishReviews, id: \.id) { review in
                                 dishReviewRow(for: review)
                             }
-                        }
-                    }
-
-                    Section("Photos") {
-                        if viewModel.placePhotos.isEmpty {
-                            Text("No photos have been added for this place yet.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            PhotoGridView(assets: viewModel.placePhotos, imageDataProvider: viewModel.imageData)
                         }
                     }
                 }
