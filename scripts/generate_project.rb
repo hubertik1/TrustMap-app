@@ -42,8 +42,9 @@ target.build_configurations.each do |config|
   config.build_settings['INFOPLIST_KEY_LSApplicationCategoryType'] = 'public.app-category.food-and-drink'
   config.build_settings['INFOPLIST_KEY_NSLocationWhenInUseUsageDescription'] = 'TrustMap uses your location to center the map around you and help you discover nearby places.'
   config.build_settings['INFOPLIST_KEY_UIApplicationSceneManifest_Generation'] = 'YES'
-  config.build_settings['INFOPLIST_KEY_UILaunchScreen_Generation'] = 'YES'
-  config.build_settings['ASSETCATALOG_COMPILER_APPICON_NAME'] = ''
+  config.build_settings['INFOPLIST_KEY_UILaunchScreen_Generation'] = 'NO'
+  config.build_settings['INFOPLIST_KEY_UILaunchStoryboardName'] = 'LaunchScreen'
+  config.build_settings['ASSETCATALOG_COMPILER_APPICON_NAME'] = 'AppIcon'
   config.build_settings['ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME'] = 'AccentColor'
   config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
   config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'Resources/TrustMap.entitlements'
@@ -70,7 +71,7 @@ def add_folder_references(group, path, target)
       case File.extname(full_path)
       when '.swift'
         target.source_build_phase.add_file_reference(file_ref)
-      when '.xcassets'
+      when '.xcassets', '.storyboard'
         target.resources_build_phase.add_file_reference(file_ref)
       end
     end

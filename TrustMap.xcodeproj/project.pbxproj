@@ -37,6 +37,7 @@
 		38BDE449816082716B6AE65D /* PlaceSourceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5DF67C1535987E96F1B0E3 /* PlaceSourceType.swift */; };
 		3B29B95847D3B2D89AED94ED /* AddHubViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 503209AE7E375B7DA183BFEE /* AddHubViewModel.swift */; };
 		3CEE8F65B359F455DA554D68 /* MapPlaceAnnotation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1E109A72258AB9DB6AA542F /* MapPlaceAnnotation.swift */; };
+		3F0B8279CB040C2BC51F0F40 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D39A7482FF5AA8BFD70B61B2 /* LaunchScreen.storyboard */; };
 		4146C1848B175E0229C5FF67 /* RatingBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B13089F3D5070AAED4AF788 /* RatingBadgeView.swift */; };
 		418897AB8FE42229035E2D20 /* LocalPhotoStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D5C7D4224A7433877E526C8 /* LocalPhotoStorageService.swift */; };
 		41AB51C6DC6A795A130358EA /* Place.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1CAD01DE65F3CE5367B662 /* Place.swift */; };
@@ -187,6 +188,7 @@
 		C9557C937262657518E6089D /* PlaceReviewRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaceReviewRepository.swift; path = Features/Reviews/Services/PlaceReviewRepository.swift; sourceTree = "<group>"; };
 		CADB3EC147B2A9E94F845323 /* FilterPerson.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FilterPerson.swift; path = Features/Map/Models/FilterPerson.swift; sourceTree = "<group>"; };
 		CC2BF3AFC1EF75C8C9293F50 /* TrustMap.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; name = TrustMap.entitlements; path = Resources/TrustMap.entitlements; sourceTree = "<group>"; };
+		D39A7482FF5AA8BFD70B61B2 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Resources/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		D51802A3E797788B4FE3B12F /* WelcomeViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WelcomeViewModel.swift; path = Features/Auth/ViewModels/WelcomeViewModel.swift; sourceTree = "<group>"; };
 		D6511CB19CBDDD1BBFE9AC0F /* PlaceDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaceDetailView.swift; path = Features/Places/Views/PlaceDetailView.swift; sourceTree = "<group>"; };
 		D980806EAC5566DFEF85E66F /* FeedPlaceActivityItem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FeedPlaceActivityItem.swift; path = Features/Feed/Models/FeedPlaceActivityItem.swift; sourceTree = "<group>"; };
@@ -535,8 +537,8 @@
 				3B25C992E79F621683A050FB /* Persistence */,
 				F5E3BCFC46597ED61EC7A4F0 /* State */,
 				60DD5310E07CA2E8AFB6EF85 /* Sync */,
-				B49219912F787736009D49A1 /* Core/DeepLinks */,
-				B49219922F787736009D49A1 /* Core/Sharing */,
+				B49219912F787736009D49A1 /* DeepLinks */,
+				B49219922F787736009D49A1 /* Sharing */,
 			);
 			name = Core;
 			sourceTree = "<group>";
@@ -687,11 +689,12 @@
 			children = (
 				83482BCC7BDDD8DCC10E2D50 /* Assets.xcassets */,
 				CC2BF3AFC1EF75C8C9293F50 /* TrustMap.entitlements */,
+				D39A7482FF5AA8BFD70B61B2 /* LaunchScreen.storyboard */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
 		};
-		B49219912F787736009D49A1 /* Core/DeepLinks */ = {
+		B49219912F787736009D49A1 /* DeepLinks */ = {
 			isa = PBXGroup;
 			children = (
 				B49219992F787742009D49A1 /* DeepLinkRouter.swift */,
@@ -700,7 +703,7 @@
 			path = Core/DeepLinks;
 			sourceTree = "<group>";
 		};
-		B49219922F787736009D49A1 /* Core/Sharing */ = {
+		B49219922F787736009D49A1 /* Sharing */ = {
 			isa = PBXGroup;
 			children = (
 				B49219972F787742009D49A1 /* InviteLinkBuilder.swift */,
@@ -918,6 +921,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F505499EDE3A80F00EA85B15 /* Assets.xcassets in Resources */,
+				3F0B8279CB040C2BC51F0F40 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1032,7 +1036,7 @@
 		1D0AC29F1736F39DBA20A213 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = Resources/TrustMap.entitlements;
@@ -1046,7 +1050,8 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TrustMap uses your location to center the map around you and help you discover nearby places.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = NO;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIStatusBarHidden = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1068,7 +1073,7 @@
 		801D6A787F50DBFC2D4841BC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = Resources/TrustMap.entitlements;
@@ -1082,7 +1087,8 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TrustMap uses your location to center the map around you and help you discover nearby places.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = NO;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIStatusBarHidden = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
