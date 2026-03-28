@@ -10,6 +10,7 @@ final class PlaceDetailViewModel: ObservableObject {
     @Published private(set) var authorNames: [UUID: String] = [:]
     @Published private(set) var reviewPhotos: [UUID: [PhotoAsset]] = [:]
     @Published private(set) var dishPhotos: [UUID: PhotoAsset] = [:]
+    @Published private(set) var currentUserPlaceReview: PlaceReview?
     @Published var errorMessage: String?
     @Published var isLoading = false
     @Published var isPresentingAddPlaceReview = false
@@ -48,6 +49,7 @@ final class PlaceDetailViewModel: ObservableObject {
     func load() async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
+            currentUserPlaceReview = nil
             return
         }
 
@@ -57,6 +59,7 @@ final class PlaceDetailViewModel: ObservableObject {
         do {
             let friendIDs = try friendRepository.acceptedFriendIDs(for: currentUser.id)
             placeReviews = try placeReviewRepository.reviews(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
+            currentUserPlaceReview = placeReviews.first(where: { $0.authorUserId == currentUser.id })
             dishReviews = try dishReviewRepository.reviews(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
             averageRating = try placeReviewRepository.averageRating(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
             categoryNames = try categoryRepository.categories(forPlace: place.id).map(\.name)
@@ -82,6 +85,10 @@ final class PlaceDetailViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    var placeReviewButtonTitle: String {
+        currentUserPlaceReview == nil ? "Add Place Review" : "Edit Place Review"
     }
 
     func authorName(for userID: UUID) -> String {

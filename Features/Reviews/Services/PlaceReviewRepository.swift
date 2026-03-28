@@ -42,9 +42,17 @@ final class PlaceReviewRepository {
             .sorted { $0.updatedAt > $1.updatedAt }
     }
 
+    func review(for placeID: UUID, authoredBy userID: UUID) throws -> PlaceReview? {
+        try allReviews().first { $0.placeId == placeID && $0.authorUserId == userID }
+    }
+
     func addReview(_ draft: PlaceReviewDraft) throws -> PlaceReview {
         guard (1...10).contains(draft.ratingOverall) else {
             throw AppError.validationFailure("Place ratings must be between 1 and 10.")
+        }
+
+        if try review(for: draft.placeId, authoredBy: draft.authorUserId) != nil {
+            throw AppError.validationFailure("You've already reviewed this place. Edit your review instead.")
         }
 
         let review = PlaceReview(
@@ -97,6 +105,49 @@ final class PlaceReviewRepository {
             await cloudKitSyncService.syncActivity(reviewActivity)
         }
 
+        return review
+    }
+
+    func updateReview(_ review: PlaceReview, with draft: PlaceReviewDraft) throws -> PlaceReview {
+        guard (1...10).contains(draft.ratingOverall) else {
+            throw AppError.validationFailure("Place ratings must be between 1 and 10.")
+        }
+
+        review.ratingOverall = draft.ratingOverall
+        review.reviewText = draft.reviewText.trimmingCharacters(in: .whitespacesAndNewlines)
+        review.descriptionText = draft.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        review.visibility = draft.visibility
+        review.updatedAt = .now
+        try saveChanges(message: "Unable to update the place review.")
+
+        if let selectedCategoryId = draft.selectedCategoryId {
+            try categoryRepository.assignCategory(selectedCategoryId, to: draft.placeId, assignedBy: draft.authorUserId)
+        }
+
+        if let newCategoryName = draft.newCategoryName?.trimmingCharacters(in: .whitespacesAndNewlines), !newCategoryName.isEmpty {
+            let category = try categoryRepository.createCategory(ownerUserID: draft.authorUserId, name: newCategoryName)
+            try categoryRepository.assignCategory(category.id, to: draft.placeId, assignedBy: draft.authorUserId)
+        }
+
+        let storedAssets = try photoAssetRepository.storePlaceReviewPhotos(
+            draft.photoDataItems,
+            ownerUserID: draft.authorUserId,
+            placeID: draft.placeId,
+            placeReviewID: review.id
+        )
+
+        if !storedAssets.isEmpty {
+            let photoActivity = ActivityItem(
+                actorUserId: draft.authorUserId,
+                type: .photoAdded,
+                referenceId: review.id.uuidString
+            )
+            context.insert(photoActivity)
+            try saveChanges(message: "Unable to save the activity for this review.")
+            Task { await cloudKitSyncService.syncActivity(photoActivity) }
+        }
+
+        Task { await cloudKitSyncService.syncPlaceReview(review) }
         return review
     }
 

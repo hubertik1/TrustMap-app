@@ -89,7 +89,7 @@ struct PlaceDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 12) {
-                Button("Add Place Review") {
+                Button(viewModel.placeReviewButtonTitle) {
                     viewModel.isPresentingAddPlaceReview = true
                 }
                 .buttonStyle(.borderedProminent)
@@ -106,7 +106,11 @@ struct PlaceDetailView: View {
             Task { await viewModel.load() }
         }) {
             NavigationStack {
-                AddPlaceReviewView(container: container, place: viewModel.place)
+                AddPlaceReviewView(
+                    container: container,
+                    place: viewModel.place,
+                    existingReview: viewModel.currentUserPlaceReview
+                )
             }
         }
         .sheet(isPresented: $viewModel.isPresentingAddDishReview, onDismiss: {

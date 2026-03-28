@@ -6,13 +6,14 @@ struct AddPlaceReviewView: View {
     @StateObject private var viewModel: AddPlaceReviewViewModel
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
 
-    init(container: AppContainer, place: Place) {
+    init(container: AppContainer, place: Place, existingReview: PlaceReview? = nil) {
         _viewModel = StateObject(
             wrappedValue: AddPlaceReviewViewModel(
                 place: place,
                 sessionStore: container.sessionStore,
                 categoryRepository: container.categoryRepository,
-                placeReviewRepository: container.placeReviewRepository
+                placeReviewRepository: container.placeReviewRepository,
+                existingReview: existingReview
             )
         )
     }
@@ -72,7 +73,7 @@ struct AddPlaceReviewView: View {
                 }
             }
         }
-        .navigationTitle("Add Place Review")
+        .navigationTitle(viewModel.navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -90,7 +91,7 @@ struct AddPlaceReviewView: View {
             }
         }
         .task {
-            await viewModel.loadCategories()
+            await viewModel.load()
         }
         .onChange(of: selectedPhotoItems) { _, items in
             Task {
