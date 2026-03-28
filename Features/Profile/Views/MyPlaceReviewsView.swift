@@ -3,6 +3,10 @@ import SwiftUI
 struct MyPlaceReviewsView: View {
     let reviews: [PlaceReview]
     let placeNames: [UUID: String]
+    let onDelete: @MainActor (PlaceReview) async throws -> Void
+
+    @State private var deletingReviewIDs: Set<UUID> = []
+    @State private var deletionErrorMessage: String?
 
     var body: some View {
         Group {
@@ -36,12 +40,51 @@ struct MyPlaceReviewsView: View {
                             RatingBadgeView(rating: Double(review.ratingOverall))
                         }
                         .padding(.vertical, 4)
+                        .opacity(deletingReviewIDs.contains(review.id) ? 0.5 : 1)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                delete(review)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            .disabled(deletingReviewIDs.contains(review.id))
+                        }
                     }
                 }
                 .listStyle(.insetGrouped)
             }
         }
         .navigationTitle("My Place Reviews")
+        .alert("Couldn't Delete Review", isPresented: isShowingDeletionError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(deletionErrorMessage ?? "")
+        }
+    }
+
+    private var isShowingDeletionError: Binding<Bool> {
+        Binding(
+            get: { deletionErrorMessage != nil },
+            set: { if !$0 { deletionErrorMessage = nil } }
+        )
+    }
+
+    private func delete(_ review: PlaceReview) {
+        guard !deletingReviewIDs.contains(review.id) else {
+            return
+        }
+
+        deletingReviewIDs.insert(review.id)
+
+        Task {
+            do {
+                try await onDelete(review)
+            } catch {
+                deletionErrorMessage = AppError.wrap(error).errorDescription
+            }
+
+            deletingReviewIDs.remove(review.id)
+        }
     }
 }
 
@@ -59,7 +102,8 @@ struct MyPlaceReviewsView: View {
             ],
             placeNames: [
                 UUID(uuidString: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD")!: "Caffè Aurora"
-            ]
+            ],
+            onDelete: { _ in }
         )
     }
 }

@@ -80,8 +80,24 @@ final class PhotoAssetRepository {
         return try context.fetch(descriptor).filter { $0.placeId == placeID }
     }
 
+    func assets(forPlaceReviewID reviewID: UUID) throws -> [PhotoAsset] {
+        let descriptor = FetchDescriptor<PhotoAsset>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        return try context.fetch(descriptor).filter { $0.placeReviewId == reviewID }
+    }
+
+    func assets(forDishReviewID reviewID: UUID) throws -> [PhotoAsset] {
+        let descriptor = FetchDescriptor<PhotoAsset>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        return try context.fetch(descriptor).filter { $0.dishReviewId == reviewID }
+    }
+
     func imageData(for asset: PhotoAsset) -> Data? {
         storageService.imageData(for: asset.assetReference)
+    }
+
+    func removeStoredFiles(for assets: [PhotoAsset]) {
+        for asset in assets {
+            storageService.deleteImageIfPresent(for: asset.assetReference)
+        }
     }
 
     private func saveChanges() throws {

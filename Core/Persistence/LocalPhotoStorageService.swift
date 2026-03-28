@@ -24,6 +24,15 @@ final class LocalPhotoStorageService {
         try? Data(contentsOf: fileURL(for: reference))
     }
 
+    func deleteImageIfPresent(for reference: String) {
+        let url = fileURL(for: reference)
+        guard fileManager.fileExists(atPath: url.path) else {
+            return
+        }
+
+        try? fileManager.removeItem(at: url)
+    }
+
     func fileURL(for reference: String) -> URL {
         baseDirectory.appendingPathComponent(reference)
     }

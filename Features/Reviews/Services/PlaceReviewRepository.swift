@@ -100,6 +100,26 @@ final class PlaceReviewRepository {
         return review
     }
 
+    func deleteReview(_ review: PlaceReview) throws {
+        let relatedAssets = try photoAssetRepository.assets(forPlaceReviewID: review.id)
+        let relatedActivities = try activities(
+            for: review.id.uuidString,
+            types: [.placeReviewAdded, .photoAdded]
+        )
+
+        for asset in relatedAssets {
+            context.delete(asset)
+        }
+
+        for activity in relatedActivities {
+            context.delete(activity)
+        }
+
+        context.delete(review)
+        try saveChanges(message: "Unable to delete the place review.")
+        photoAssetRepository.removeStoredFiles(for: relatedAssets)
+    }
+
     func averageRating(for placeID: UUID, visibleTo viewerID: UUID, friendIDs: Set<UUID>) throws -> Double? {
         let reviews = try reviews(for: placeID, visibleTo: viewerID, friendIDs: friendIDs)
         guard !reviews.isEmpty else {
@@ -126,6 +146,13 @@ final class PlaceReviewRepository {
     private func allReviews() throws -> [PlaceReview] {
         let descriptor = FetchDescriptor<PlaceReview>(sortBy: [SortDescriptor(\.updatedAt, order: .reverse)])
         return try context.fetch(descriptor)
+    }
+
+    private func activities(for referenceID: String, types: Set<ActivityItemType>) throws -> [ActivityItem] {
+        let descriptor = FetchDescriptor<ActivityItem>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        return try context.fetch(descriptor).filter {
+            $0.referenceId == referenceID && types.contains($0.type)
+        }
     }
 
     private func saveChanges(message: String) throws {

@@ -87,9 +87,36 @@ final class DishReviewRepository {
         return review
     }
 
+    func deleteReview(_ review: DishReview) throws {
+        let relatedAssets = try photoAssetRepository.assets(forDishReviewID: review.id)
+        let relatedActivities = try activities(
+            for: review.id.uuidString,
+            types: [.dishReviewAdded, .photoAdded]
+        )
+
+        for asset in relatedAssets {
+            context.delete(asset)
+        }
+
+        for activity in relatedActivities {
+            context.delete(activity)
+        }
+
+        context.delete(review)
+        try saveChanges(message: "Unable to delete the dish review.")
+        photoAssetRepository.removeStoredFiles(for: relatedAssets)
+    }
+
     private func allReviews() throws -> [DishReview] {
         let descriptor = FetchDescriptor<DishReview>(sortBy: [SortDescriptor(\.updatedAt, order: .reverse)])
         return try context.fetch(descriptor)
+    }
+
+    private func activities(for referenceID: String, types: Set<ActivityItemType>) throws -> [ActivityItem] {
+        let descriptor = FetchDescriptor<ActivityItem>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        return try context.fetch(descriptor).filter {
+            $0.referenceId == referenceID && types.contains($0.type)
+        }
     }
 
     private func saveChanges(message: String) throws {

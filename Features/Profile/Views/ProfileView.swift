@@ -53,7 +53,10 @@ struct ProfileView: View {
                         NavigationLink {
                             MyPlaceReviewsView(
                                 reviews: viewModel.placeReviews,
-                                placeNames: viewModel.placeNames
+                                placeNames: viewModel.placeNames,
+                                onDelete: { review in
+                                    try await viewModel.deletePlaceReview(review)
+                                }
                             )
                         } label: {
                             LabeledContent("Rated Places", value: "\(viewModel.stats.ratedPlacesCount)")
@@ -62,7 +65,10 @@ struct ProfileView: View {
                         NavigationLink {
                             MyDishReviewsView(
                                 reviews: viewModel.dishReviews,
-                                placeNames: viewModel.placeNames
+                                placeNames: viewModel.placeNames,
+                                onDelete: { review in
+                                    try await viewModel.deleteDishReview(review)
+                                }
                             )
                         } label: {
                             LabeledContent("Reviewed Dishes", value: "\(viewModel.stats.reviewedDishesCount)")
