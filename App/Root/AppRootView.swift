@@ -2,10 +2,12 @@ import SwiftUI
 
 struct AppRootView: View {
     @ObservedObject private var container: AppContainer
+    @ObservedObject private var deepLinkRouter: DeepLinkRouter
     @ObservedObject private var sessionStore: SessionStore
 
     init(container: AppContainer) {
         self.container = container
+        self.deepLinkRouter = container.deepLinkRouter
         self.sessionStore = container.sessionStore
     }
 
@@ -31,6 +33,12 @@ struct AppRootView: View {
             if case .launching = sessionStore.state {
                 await sessionStore.bootstrap()
             }
+        }
+        .task(id: sessionStore.currentUser?.id) {
+            deepLinkRouter.resumePendingInviteIfNeeded(isAuthenticated: sessionStore.currentUser != nil)
+        }
+        .onOpenURL { url in
+            deepLinkRouter.handleIncomingURL(url, isAuthenticated: sessionStore.currentUser != nil)
         }
         .alert(
             "TrustMap",

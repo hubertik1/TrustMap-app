@@ -47,7 +47,12 @@ final class FeedViewModel: ObservableObject {
             var userNames = Dictionary(uniqueKeysWithValues: users.map { ($0.id, $0.displayName) })
             userNames[currentUser.id] = currentUser.displayName
 
-            let visibleReviews = try placeReviewRepository.reviews(authoredBy: actorIDs, ratingRange: 1...10)
+            let visibleReviews = try placeReviewRepository.reviews(
+                authoredBy: actorIDs,
+                visibleTo: currentUser.id,
+                friendIDs: friendIDs,
+                ratingRange: 1...10
+            )
             let reviewsByID = Dictionary(uniqueKeysWithValues: visibleReviews.map { ($0.id, $0) })
             let placeIDs = Set(visibleReviews.map(\.placeId))
             let places = try placeRepository.places(withIDs: placeIDs)

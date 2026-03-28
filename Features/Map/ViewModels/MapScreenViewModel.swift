@@ -95,7 +95,12 @@ final class MapScreenViewModel: ObservableObject {
                 + friends.map { FilterPerson(id: $0.id, name: $0.displayName, isCurrentUser: false) }
 
             let authorIDs = filterState.resolvedAuthorIDs(currentUserID: currentUser.id, friendIDs: friendIDs)
-            let reviews = try placeReviewRepository.reviews(authoredBy: authorIDs, ratingRange: filterState.ratingRange)
+            let reviews = try placeReviewRepository.reviews(
+                authoredBy: authorIDs,
+                visibleTo: currentUser.id,
+                friendIDs: friendIDs,
+                ratingRange: filterState.ratingRange
+            )
             let places = try placeRepository.places(withIDs: Set(reviews.map(\.placeId)))
             let categoryNamesByPlace = try Dictionary(uniqueKeysWithValues: places.map { place in
                 let names = try categoryRepository.categoryNames(forPlace: place.id)

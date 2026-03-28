@@ -36,6 +36,21 @@ final class PlaceReviewRepository {
             .sorted { $0.updatedAt > $1.updatedAt }
     }
 
+    func reviews(
+        authoredBy authorIDs: Set<UUID>,
+        visibleTo viewerID: UUID,
+        friendIDs: Set<UUID>,
+        ratingRange: ClosedRange<Int>
+    ) throws -> [PlaceReview] {
+        try allReviews()
+            .filter {
+                authorIDs.contains($0.authorUserId)
+                    && ratingRange.contains($0.ratingOverall)
+                    && isVisible($0, viewerID: viewerID, friendIDs: friendIDs)
+            }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
     func reviews(authoredBy userID: UUID) throws -> [PlaceReview] {
         try allReviews()
             .filter { $0.authorUserId == userID }

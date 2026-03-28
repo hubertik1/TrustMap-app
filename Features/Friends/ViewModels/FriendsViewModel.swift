@@ -2,33 +2,70 @@ import Foundation
 
 @MainActor
 final class FriendsViewModel: ObservableObject {
-    @Published private(set) var friends: [User] = []
-    @Published private(set) var incomingRequests: [FriendRelation] = []
-    @Published private(set) var outgoingRequests: [FriendRelation] = []
-    @Published private(set) var searchResults: [User] = []
-    @Published private(set) var userLookup: [UUID: User] = [:]
+    struct FriendListItem: Identifiable {
+        let id: UUID
+        let displayName: String
+        let bio: String?
+        let addedAt: Date
+    }
+
+    struct IncomingInviteListItem: Identifiable {
+        let id: UUID
+        let token: String
+        let inviterName: String
+        let inviterBio: String?
+        let createdAt: Date
+    }
+
+    struct OutgoingInviteListItem: Identifiable {
+        let id: UUID
+        let recipientName: String?
+        let createdAt: Date
+        let statusLabel: String
+    }
+
+    struct InviteSharePayload: Identifiable {
+        let id = UUID()
+        let message: String
+        let url: URL
+
+        var activityItems: [Any] {
+            [message, url]
+        }
+    }
+
+    @Published private(set) var friends: [FriendListItem] = []
+    @Published private(set) var incomingInvites: [IncomingInviteListItem] = []
+    @Published private(set) var outgoingInvites: [OutgoingInviteListItem] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
-    @Published var isSearchPresented = false
-    @Published var searchQuery = ""
+    @Published private(set) var activeInviteID: UUID?
+    @Published private(set) var isPreparingInvite = false
+    @Published var sharePayload: InviteSharePayload?
 
     private let sessionStore: SessionStore
     private let userRepository: UserProfileRepository
-    private let friendRepository: FriendRepository
+    private let friendRepository: any FriendsRepository
+    private let inviteLinkBuilder: any InviteLinkBuilding
 
     init(
         sessionStore: SessionStore,
         userRepository: UserProfileRepository,
-        friendRepository: FriendRepository
+        friendRepository: any FriendsRepository,
+        inviteLinkBuilder: any InviteLinkBuilding
     ) {
         self.sessionStore = sessionStore
         self.userRepository = userRepository
         self.friendRepository = friendRepository
+        self.inviteLinkBuilder = inviteLinkBuilder
     }
 
     func load() async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
+            friends = []
+            incomingInvites = []
+            outgoingInvites = []
             return
         }
 
@@ -36,79 +73,146 @@ final class FriendsViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            friends = try friendRepository.acceptedFriends(for: currentUser.id)
-            incomingRequests = try friendRepository.incomingRequests(for: currentUser.id)
-            outgoingRequests = try friendRepository.outgoingRequests(for: currentUser.id)
             let knownUsers = try userRepository.allKnownUsers()
-            userLookup = Dictionary(uniqueKeysWithValues: knownUsers.map { ($0.id, $0) })
+            let userLookup = Dictionary(uniqueKeysWithValues: knownUsers.map { ($0.id, $0) })
+            let friendships = try friendRepository.fetchFriends(for: currentUser.id)
+            let incomingInvites = try friendRepository.fetchIncomingInvites(for: currentUser.id)
+            let outgoingInvites = try friendRepository.fetchOutgoingInvites(for: currentUser.id)
+
+            friends = friendships.compactMap { friendship in
+                guard let otherUserID = friendship.otherUserID(for: currentUser.id) else {
+                    return nil
+                }
+
+                let user = userLookup[otherUserID]
+                return FriendListItem(
+                    id: friendship.id,
+                    displayName: user?.displayName ?? "TrustMap User",
+                    bio: user?.bio,
+                    addedAt: friendship.createdAt
+                )
+            }
+
+            self.incomingInvites = incomingInvites.map { invite in
+                let inviter = userLookup[invite.inviterUserId]
+                return IncomingInviteListItem(
+                    id: invite.id,
+                    token: invite.token,
+                    inviterName: inviter?.displayName ?? "TrustMap User",
+                    inviterBio: inviter?.bio,
+                    createdAt: invite.createdAt
+                )
+            }
+
+            self.outgoingInvites = outgoingInvites.map { invite in
+                OutgoingInviteListItem(
+                    id: invite.id,
+                    recipientName: invite.inviteeUserId.flatMap { userLookup[$0]?.displayName },
+                    createdAt: invite.createdAt,
+                    statusLabel: invite.inviteeUserId == nil ? "Waiting for someone to open your link." : "Waiting for a response."
+                )
+            }
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
+            friends = []
+            incomingInvites = []
+            outgoingInvites = []
         }
 
         isLoading = false
     }
 
-    func searchUsers() async {
+    func addFriend() async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
             return
         }
 
+        guard !isPreparingInvite else {
+            return
+        }
+
+        isPreparingInvite = true
+        errorMessage = nil
+        defer { isPreparingInvite = false }
+
         do {
-            searchResults = try userRepository.searchUsers(query: searchQuery, excluding: currentUser.id)
+            let invite = try friendRepository.createInvite(from: currentUser.id)
+            let inviteURL = try inviteLinkBuilder.inviteURL(for: invite.token)
+            await load()
+            sharePayload = InviteSharePayload(
+                message: "Join me in TrustMap and let’s add each other as friends.",
+                url: inviteURL
+            )
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
     }
 
-    func sendRequest(to user: User) async {
+    func accept(_ invite: IncomingInviteListItem) async {
+        await performInviteAction(inviteID: invite.id) { currentUserID in
+            try friendRepository.acceptInvite(token: invite.token, by: currentUserID)
+        }
+    }
+
+    func decline(_ invite: IncomingInviteListItem) async {
+        await performInviteAction(inviteID: invite.id) { currentUserID in
+            try friendRepository.declineInvite(token: invite.token, by: currentUserID)
+        }
+    }
+
+    func revoke(_ invite: OutgoingInviteListItem) async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
             return
         }
 
+        guard activeInviteID == nil else {
+            return
+        }
+
+        activeInviteID = invite.id
+        errorMessage = nil
+        defer { activeInviteID = nil }
+
         do {
-            try friendRepository.sendRequest(from: currentUser.id, to: user.id)
+            try friendRepository.revokeInvite(inviteID: invite.id, by: currentUser.id)
             await load()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
     }
 
-    func accept(_ relation: FriendRelation) async {
-        do {
-            try friendRepository.acceptRequest(relation.id)
-            await load()
-        } catch {
-            errorMessage = AppError.wrap(error).errorDescription
-        }
+    var hasAnyEntries: Bool {
+        !friends.isEmpty || !incomingInvites.isEmpty
     }
 
-    func reject(_ relation: FriendRelation) async {
-        do {
-            try friendRepository.rejectRequest(relation.id)
-            await load()
-        } catch {
-            errorMessage = AppError.wrap(error).errorDescription
-        }
+    var isMutating: Bool {
+        isPreparingInvite || activeInviteID != nil
     }
 
-    func removeFriend(_ user: User) async {
+    private func performInviteAction(
+        inviteID: UUID,
+        _ action: (_ currentUserID: UUID) throws -> Void
+    ) async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
             return
         }
 
+        guard activeInviteID == nil else {
+            return
+        }
+
+        activeInviteID = inviteID
+        errorMessage = nil
+        defer { activeInviteID = nil }
+
         do {
-            try friendRepository.removeFriend(currentUserID: currentUser.id, friendID: user.id)
+            try action(currentUser.id)
             await load()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
-    }
-
-    func name(for relation: FriendRelation, incoming: Bool) -> String {
-        let userID = incoming ? relation.ownerUserId : relation.targetUserId
-        return userLookup[userID]?.displayName ?? "Friend"
     }
 }

@@ -5,7 +5,8 @@ import OSLog
 @MainActor
 protocol CloudKitSyncing: AnyObject {
     func syncUser(_ user: User) async
-    func syncFriendRelation(_ relation: FriendRelation) async
+    func syncFriendInvite(_ invite: FriendInvite) async
+    func syncFriendship(_ friendship: Friendship) async
     func syncPlace(_ place: Place) async
     func syncCustomCategory(_ category: CustomCategory) async
     func syncPlaceCategoryAssignment(_ assignment: PlaceCategoryAssignment) async
@@ -42,12 +43,23 @@ final class CloudKitSyncService: CloudKitSyncing {
         await save(record)
     }
 
-    func syncFriendRelation(_ relation: FriendRelation) async {
-        let record = CKRecord(recordType: "FriendRelation", recordID: .init(recordName: relation.id.uuidString))
-        record["ownerUserId"] = relation.ownerUserId.uuidString as CKRecordValue
-        record["targetUserId"] = relation.targetUserId.uuidString as CKRecordValue
-        record["status"] = relation.status.rawValue as CKRecordValue
-        record["createdAt"] = relation.createdAt as CKRecordValue
+    func syncFriendInvite(_ invite: FriendInvite) async {
+        let record = CKRecord(recordType: "FriendInvite", recordID: .init(recordName: invite.id.uuidString))
+        record["token"] = invite.token as CKRecordValue
+        record["inviterUserId"] = invite.inviterUserId.uuidString as CKRecordValue
+        record["inviteeUserId"] = invite.inviteeUserId?.uuidString as CKRecordValue?
+        record["status"] = invite.status.rawValue as CKRecordValue
+        record["createdAt"] = invite.createdAt as CKRecordValue
+        record["expiresAt"] = invite.expiresAt as CKRecordValue?
+        record["respondedAt"] = invite.respondedAt as CKRecordValue?
+        await save(record)
+    }
+
+    func syncFriendship(_ friendship: Friendship) async {
+        let record = CKRecord(recordType: "Friendship", recordID: .init(recordName: friendship.id.uuidString))
+        record["userAId"] = friendship.userAId.uuidString as CKRecordValue
+        record["userBId"] = friendship.userBId.uuidString as CKRecordValue
+        record["createdAt"] = friendship.createdAt as CKRecordValue
         await save(record)
     }
 

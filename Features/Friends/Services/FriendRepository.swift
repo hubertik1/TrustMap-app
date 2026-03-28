@@ -1,8 +1,25 @@
 import Foundation
+import Security
 import SwiftData
 
 @MainActor
-final class FriendRepository {
+protocol FriendsRepository: AnyObject {
+    func fetchFriends(for userID: UUID) throws -> [Friendship]
+    func fetchIncomingInvites(for userID: UUID) throws -> [FriendInvite]
+    func fetchOutgoingInvites(for userID: UUID) throws -> [FriendInvite]
+    func createInvite(from inviterUserID: UUID) throws -> FriendInvite
+    func findInvite(by token: String) throws -> FriendInvite?
+    func prepareInvite(token: String, for inviteeUserID: UUID) throws -> FriendInvite?
+    func acceptInvite(token: String, by inviteeUserID: UUID) throws
+    func declineInvite(token: String, by inviteeUserID: UUID) throws
+    func revokeInvite(inviteID: UUID, by inviterUserID: UUID) throws
+    func acceptedFriendIDs(for userID: UUID) throws -> Set<UUID>
+    func acceptedFriends(for userID: UUID) throws -> [User]
+    func areFriends(_ firstUserID: UUID, _ secondUserID: UUID) throws -> Bool
+}
+
+@MainActor
+final class FriendRepository: FriendsRepository {
     private let persistenceController: PersistenceController
     private let cloudKitSyncService: CloudKitSyncing
     private let userRepository: UserProfileRepository
@@ -21,16 +38,21 @@ final class FriendRepository {
         persistenceController.mainContext
     }
 
+    func fetchFriends(for userID: UUID) throws -> [Friendship] {
+        try expireElapsedInvitesIfNeeded()
+
+        return try allFriendships()
+            .filter { $0.userAId == userID || $0.userBId == userID }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
     func acceptedFriendIDs(for userID: UUID) throws -> Set<UUID> {
-        let relations = try allRelations()
+        let friendships = try fetchFriends(for: userID)
         var ids = Set<UUID>()
 
-        for relation in relations where relation.status == .accepted {
-            if relation.ownerUserId == userID {
-                ids.insert(relation.targetUserId)
-            }
-            if relation.targetUserId == userID {
-                ids.insert(relation.ownerUserId)
+        for friendship in friendships {
+            if let otherUserID = friendship.otherUserID(for: userID) {
+                ids.insert(otherUserID)
             }
         }
 
@@ -45,87 +67,215 @@ final class FriendRepository {
             .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
     }
 
-    func incomingRequests(for userID: UUID) throws -> [FriendRelation] {
-        try allRelations()
-            .filter { $0.status == .pending && $0.targetUserId == userID }
+    func fetchIncomingInvites(for userID: UUID) throws -> [FriendInvite] {
+        try expireElapsedInvitesIfNeeded()
+
+        return try allInvites()
+            .filter { $0.status == .pending && $0.inviteeUserId == userID }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
-    func outgoingRequests(for userID: UUID) throws -> [FriendRelation] {
-        try allRelations()
-            .filter { $0.status == .pending && $0.ownerUserId == userID }
+    func fetchOutgoingInvites(for userID: UUID) throws -> [FriendInvite] {
+        try expireElapsedInvitesIfNeeded()
+
+        return try allInvites()
+            .filter { $0.status == .pending && $0.inviterUserId == userID }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
-    func sendRequest(from ownerUserID: UUID, to targetUserID: UUID) throws {
-        guard ownerUserID != targetUserID else {
-            throw AppError.validationFailure("You can’t send a friend request to yourself.")
+    func createInvite(from inviterUserID: UUID) throws -> FriendInvite {
+        try expireElapsedInvitesIfNeeded()
+
+        guard try userRepository.user(withID: inviterUserID) != nil else {
+            throw AppError.missingCurrentUser
         }
 
-        if let existing = try relationBetween(ownerUserID, targetUserID) {
-            if existing.status == .pending || existing.status == .accepted {
-                return
-            }
-
-            existing.status = .pending
-            try saveChanges()
-            Task { await cloudKitSyncService.syncFriendRelation(existing) }
-            return
+        if let existingInvite = try allInvites().first(where: {
+            $0.inviterUserId == inviterUserID
+                && $0.status == .pending
+                && $0.inviteeUserId == nil
+                && !$0.isExpired
+        }) {
+            return existingInvite
         }
 
-        let relation = FriendRelation(
-            ownerUserId: ownerUserID,
-            targetUserId: targetUserID,
-            status: .pending
+        let invite = FriendInvite(
+            token: Self.generateToken(),
+            inviterUserId: inviterUserID,
+            expiresAt: .now.addingTimeInterval(AppConfiguration.friendInviteLifetime)
         )
-        context.insert(relation)
+        context.insert(invite)
         try saveChanges()
-        Task { await cloudKitSyncService.syncFriendRelation(relation) }
+        Task { await cloudKitSyncService.syncFriendInvite(invite) }
+        return invite
     }
 
-    func acceptRequest(_ relationID: UUID) throws {
-        guard let relation = try relation(withID: relationID) else {
+    func findInvite(by token: String) throws -> FriendInvite? {
+        try expireElapsedInvitesIfNeeded()
+        return try allInvites().first(where: { $0.token == token })
+    }
+
+    func prepareInvite(token: String, for inviteeUserID: UUID) throws -> FriendInvite? {
+        guard let invite = try findInvite(by: token) else {
+            return nil
+        }
+
+        guard invite.status == .pending, !invite.isExpired else {
+            return invite
+        }
+
+        guard invite.inviterUserId != inviteeUserID else {
+            return invite
+        }
+
+        if try areFriends(invite.inviterUserId, inviteeUserID) {
+            return invite
+        }
+
+        if let claimedInviteeID = invite.inviteeUserId, claimedInviteeID != inviteeUserID {
+            return invite
+        }
+
+        if invite.inviteeUserId == nil {
+            invite.inviteeUserId = inviteeUserID
+            try saveChanges()
+            Task { await cloudKitSyncService.syncFriendInvite(invite) }
+        }
+
+        return invite
+    }
+
+    func acceptInvite(token: String, by inviteeUserID: UUID) throws {
+        try expireElapsedInvitesIfNeeded()
+
+        guard let invite = try findInvite(by: token) else {
+            throw AppError.validationFailure("This invite could not be found.")
+        }
+
+        guard invite.status == .pending else {
             return
         }
 
-        relation.status = .accepted
-        try saveChanges()
-        Task { await cloudKitSyncService.syncFriendRelation(relation) }
-    }
+        guard !invite.isExpired else {
+            throw AppError.validationFailure("This invite has expired.")
+        }
 
-    func rejectRequest(_ relationID: UUID) throws {
-        guard let relation = try relation(withID: relationID) else {
+        guard invite.inviterUserId != inviteeUserID else {
+            throw AppError.validationFailure("You can’t accept your own invite.")
+        }
+
+        if let claimedInviteeID = invite.inviteeUserId, claimedInviteeID != inviteeUserID {
+            throw AppError.validationFailure("This invite is reserved for another person.")
+        }
+
+        if try areFriends(invite.inviterUserId, inviteeUserID) {
             return
         }
 
-        relation.status = .rejected
+        invite.inviteeUserId = inviteeUserID
+        invite.status = .accepted
+        invite.respondedAt = .now
+
+        let friendship = Friendship(
+            userAId: invite.inviterUserId,
+            userBId: inviteeUserID
+        )
+        context.insert(friendship)
         try saveChanges()
-        Task { await cloudKitSyncService.syncFriendRelation(relation) }
+        Task {
+            await cloudKitSyncService.syncFriendInvite(invite)
+            await cloudKitSyncService.syncFriendship(friendship)
+        }
     }
 
-    func removeFriend(currentUserID: UUID, friendID: UUID) throws {
-        guard let relation = try relationBetween(currentUserID, friendID) else {
+    func declineInvite(token: String, by inviteeUserID: UUID) throws {
+        try expireElapsedInvitesIfNeeded()
+
+        guard let invite = try findInvite(by: token) else {
+            throw AppError.validationFailure("This invite could not be found.")
+        }
+
+        guard invite.status == .pending else {
             return
         }
 
-        context.delete(relation)
+        guard invite.inviterUserId != inviteeUserID else {
+            throw AppError.validationFailure("You can’t decline your own invite.")
+        }
+
+        if let claimedInviteeID = invite.inviteeUserId, claimedInviteeID != inviteeUserID {
+            throw AppError.validationFailure("This invite is reserved for another person.")
+        }
+
+        invite.inviteeUserId = inviteeUserID
+        invite.status = .declined
+        invite.respondedAt = .now
         try saveChanges()
+        Task { await cloudKitSyncService.syncFriendInvite(invite) }
     }
 
-    private func relation(withID relationID: UUID) throws -> FriendRelation? {
-        try allRelations().first(where: { $0.id == relationID })
+    func revokeInvite(inviteID: UUID, by inviterUserID: UUID) throws {
+        try expireElapsedInvitesIfNeeded()
+
+        guard let invite = try invite(withID: inviteID) else {
+            return
+        }
+
+        guard invite.inviterUserId == inviterUserID else {
+            throw AppError.validationFailure("Only the sender can cancel this invite.")
+        }
+
+        guard invite.status == .pending else {
+            return
+        }
+
+        invite.status = .revoked
+        invite.respondedAt = .now
+        try saveChanges()
+        Task { await cloudKitSyncService.syncFriendInvite(invite) }
     }
 
-    private func relationBetween(_ firstID: UUID, _ secondID: UUID) throws -> FriendRelation? {
-        try allRelations().first {
-            ($0.ownerUserId == firstID && $0.targetUserId == secondID)
-                || ($0.ownerUserId == secondID && $0.targetUserId == firstID)
+    func areFriends(_ firstUserID: UUID, _ secondUserID: UUID) throws -> Bool {
+        try friendshipBetween(firstUserID, secondUserID) != nil
+    }
+
+    private func invite(withID inviteID: UUID) throws -> FriendInvite? {
+        try allInvites().first(where: { $0.id == inviteID })
+    }
+
+    private func friendshipBetween(_ firstUserID: UUID, _ secondUserID: UUID) throws -> Friendship? {
+        let orderedPair = Self.orderedPair(firstUserID, secondUserID)
+
+        return try allFriendships().first {
+            $0.userAId == orderedPair.0 && $0.userBId == orderedPair.1
         }
     }
 
-    private func allRelations() throws -> [FriendRelation] {
-        let descriptor = FetchDescriptor<FriendRelation>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+    private func allInvites() throws -> [FriendInvite] {
+        let descriptor = FetchDescriptor<FriendInvite>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
         return try context.fetch(descriptor)
+    }
+
+    private func allFriendships() throws -> [Friendship] {
+        let descriptor = FetchDescriptor<Friendship>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        return try context.fetch(descriptor)
+    }
+
+    private func expireElapsedInvitesIfNeeded() throws {
+        let now = Date.now
+        let pendingExpiredInvites = try allInvites().filter {
+            $0.status == .pending && ($0.expiresAt?.timeIntervalSince(now) ?? 1) < 0
+        }
+
+        guard !pendingExpiredInvites.isEmpty else {
+            return
+        }
+
+        for invite in pendingExpiredInvites {
+            invite.status = .expired
+        }
+
+        try saveChanges()
     }
 
     private func saveChanges() throws {
@@ -136,5 +286,24 @@ final class FriendRepository {
         } catch {
             throw AppError.persistenceFailure("Unable to save the friend relationship.")
         }
+    }
+
+    private static func orderedPair(_ firstID: UUID, _ secondID: UUID) -> (UUID, UUID) {
+        firstID.uuidString < secondID.uuidString ? (firstID, secondID) : (secondID, firstID)
+    }
+
+    private static func generateToken(byteCount: Int = 24) -> String {
+        var bytes = [UInt8](repeating: 0, count: byteCount)
+        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+
+        guard status == errSecSuccess else {
+            return UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        }
+
+        return Data(bytes)
+            .base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
 }

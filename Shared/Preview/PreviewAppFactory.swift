@@ -62,6 +62,12 @@ enum PreviewAppFactory {
             displayName: "Bob",
             bio: "Dessert-first reviewer."
         )
+        let charlie = User(
+            id: UUID(uuidString: "99999999-9999-9999-9999-999999999999")!,
+            appleUserId: "preview.charlie",
+            displayName: "Charlie",
+            bio: "Late-night noodles specialist."
+        )
 
         let place = Place(
             id: UUID(uuidString: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD")!,
@@ -97,17 +103,26 @@ enum PreviewAppFactory {
             assignedByUserId: me.id
         )
 
-        let friendRelation = FriendRelation(
+        let friendship = Friendship(
             id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
-            ownerUserId: me.id,
-            targetUserId: alice.id,
-            status: .accepted
+            userAId: me.id,
+            userBId: alice.id
         )
-        let pendingRelation = FriendRelation(
+        let incomingInvite = FriendInvite(
             id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
-            ownerUserId: bob.id,
-            targetUserId: me.id,
-            status: .pending
+            token: "preview-incoming-token",
+            inviterUserId: bob.id,
+            inviteeUserId: me.id,
+            status: .pending,
+            expiresAt: .now.addingTimeInterval(AppConfiguration.friendInviteLifetime)
+        )
+        let outgoingInvite = FriendInvite(
+            id: UUID(uuidString: "ABABABAB-ABAB-ABAB-ABAB-ABABABABABAB")!,
+            token: "preview-outgoing-token",
+            inviterUserId: me.id,
+            inviteeUserId: charlie.id,
+            status: .pending,
+            expiresAt: .now.addingTimeInterval(AppConfiguration.friendInviteLifetime)
         )
 
         let myReview = PlaceReview(
@@ -154,12 +169,14 @@ enum PreviewAppFactory {
         context.insert(me)
         context.insert(alice)
         context.insert(bob)
+        context.insert(charlie)
         context.insert(place)
         context.insert(secondPlace)
         context.insert(category)
         context.insert(categoryAssignment)
-        context.insert(friendRelation)
-        context.insert(pendingRelation)
+        context.insert(friendship)
+        context.insert(incomingInvite)
+        context.insert(outgoingInvite)
         context.insert(myReview)
         context.insert(friendReview)
         context.insert(dishReview)

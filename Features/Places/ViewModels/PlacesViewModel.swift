@@ -50,7 +50,12 @@ final class PlacesViewModel: ObservableObject {
             let friends = try friendRepository.acceptedFriends(for: currentUser.id)
             let friendIDs = Set(friends.map(\.id))
             let authorIDs = resolvedAuthorIDs(currentUserID: currentUser.id, friendIDs: friendIDs)
-            let visibleReviews = try placeReviewRepository.reviews(authoredBy: authorIDs, ratingRange: 1...10)
+            let visibleReviews = try placeReviewRepository.reviews(
+                authoredBy: authorIDs,
+                visibleTo: currentUser.id,
+                friendIDs: friendIDs,
+                ratingRange: 1...10
+            )
             let placeIDs = Set(visibleReviews.map(\.placeId))
             let visiblePlaces = try placeRepository.places(withIDs: placeIDs)
 

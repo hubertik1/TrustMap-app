@@ -6,6 +6,9 @@ final class AppContainer: ObservableObject {
     let photoStorageService: LocalPhotoStorageService
     let cloudKitSyncService: CloudKitSyncService
     let authService: AppleAuthenticationService
+    let pendingDeepLinkStore: PendingDeepLinkStore
+    let inviteLinkBuilder: InviteLinkBuilder
+    let deepLinkRouter: DeepLinkRouter
     let userRepository: UserProfileRepository
     let friendRepository: FriendRepository
     let categoryRepository: CategoryRepository
@@ -25,6 +28,12 @@ final class AppContainer: ObservableObject {
             forceDisabled: !AppConfiguration.cloudKitSyncEnabled || AppConfiguration.isRunningPreviews
         )
         let authService = AppleAuthenticationService()
+        let pendingDeepLinkStore = PendingDeepLinkStore()
+        let inviteLinkBuilder = InviteLinkBuilder()
+        let deepLinkRouter = DeepLinkRouter(
+            inviteLinkBuilder: inviteLinkBuilder,
+            pendingDeepLinkStore: pendingDeepLinkStore
+        )
         let userRepository = UserProfileRepository(
             persistenceController: persistenceController,
             cloudKitSyncService: cloudKitSyncService
@@ -70,6 +79,9 @@ final class AppContainer: ObservableObject {
         self.photoStorageService = photoStorageService
         self.cloudKitSyncService = cloudKitSyncService
         self.authService = authService
+        self.pendingDeepLinkStore = pendingDeepLinkStore
+        self.inviteLinkBuilder = inviteLinkBuilder
+        self.deepLinkRouter = deepLinkRouter
         self.userRepository = userRepository
         self.friendRepository = friendRepository
         self.categoryRepository = categoryRepository

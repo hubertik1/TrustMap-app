@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct FriendsView: View {
     @StateObject private var viewModel: FriendsViewModel
@@ -8,99 +9,175 @@ struct FriendsView: View {
             wrappedValue: FriendsViewModel(
                 sessionStore: container.sessionStore,
                 userRepository: container.userRepository,
-                friendRepository: container.friendRepository
+                friendRepository: container.friendRepository,
+                inviteLinkBuilder: container.inviteLinkBuilder
             )
         )
     }
 
     var body: some View {
         Group {
-            if viewModel.isLoading {
+            if viewModel.isLoading && !viewModel.hasAnyEntries {
                 LoadingStateView(title: "Loading friends")
-            } else if let errorMessage = viewModel.errorMessage {
+            } else if let errorMessage = viewModel.errorMessage, !viewModel.hasAnyEntries {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
             } else {
                 List {
-                    Section("Friends") {
-                        if viewModel.friends.isEmpty {
-                            Text("No accepted friends yet.")
+                    Section {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Button {
+                                Task { await viewModel.addFriend() }
+                            } label: {
+                                Text(viewModel.isPreparingInvite ? "Preparing Invite…" : "Add Friend")
+                                    .font(.headline.weight(.semibold))
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        Capsule()
+                                            .fill(
+                                                viewModel.isMutating
+                                                    ? Color.accentColor.opacity(0.6)
+                                                    : Color.accentColor
+                                            )
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(viewModel.isMutating)
+
+                            Text("TrustMap creates a unique invite link and opens the iOS share sheet right away.")
+                                .font(.footnote)
                                 .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(viewModel.friends, id: \.id) { friend in
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    }
+
+                    if !viewModel.incomingInvites.isEmpty {
+                        Section("Awaiting Your Response") {
+                            ForEach(viewModel.incomingInvites) { invite in
+                                IncomingInviteRow(
+                                    invite: invite,
+                                    isProcessing: viewModel.activeInviteID == invite.id
+                                ) {
+                                    Task { await viewModel.accept(invite) }
+                                } onDecline: {
+                                    Task { await viewModel.decline(invite) }
+                                }
+                            }
+                        }
+                    }
+
+                    if viewModel.friends.isEmpty && !viewModel.hasAnyEntries {
+                        Section {
+                            EmptyFriendsState()
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                        }
+                    } else if viewModel.friends.isEmpty {
+                        Section("Friends") {
+                            Text("You don’t have any accepted friends yet.")
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Section("Friends") {
+                            ForEach(viewModel.friends) { friend in
                                 HStack(spacing: 12) {
                                     AvatarView(name: friend.displayName)
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(friend.displayName)
-                                        Text(friend.bio ?? "Private friend")
-                                            .font(.subheadline)
+                                        if let bio = friend.bio, !bio.isEmpty {
+                                            Text(bio)
+                                                .font(.subheadline)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Text("Added \(friend.addedAt.formatted(date: .abbreviated, time: .omitted))")
+                                            .font(.caption)
                                             .foregroundStyle(.secondary)
                                     }
                                 }
-                                .swipeActions {
-                                    Button("Remove", role: .destructive) {
-                                        Task { await viewModel.removeFriend(friend) }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Section("Incoming Requests") {
-                        if viewModel.incomingRequests.isEmpty {
-                            Text("No pending incoming requests.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(viewModel.incomingRequests, id: \.id) { relation in
-                                HStack {
-                                    Text(viewModel.name(for: relation, incoming: true))
-                                    Spacer()
-                                    Button("Accept") {
-                                        Task { await viewModel.accept(relation) }
-                                    }
-                                    Button("Reject", role: .destructive) {
-                                        Task { await viewModel.reject(relation) }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Section("Outgoing Requests") {
-                        if viewModel.outgoingRequests.isEmpty {
-                            Text("No outgoing requests.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(viewModel.outgoingRequests, id: \.id) { relation in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(viewModel.name(for: relation, incoming: false))
-                                    Text("Pending")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
+                                .padding(.vertical, 4)
                             }
                         }
                     }
                 }
                 .listStyle(.insetGrouped)
-            }
-        }
-        .navigationTitle("Friends")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Find Friends") {
-                    viewModel.isSearchPresented = true
+                .refreshable {
+                    await viewModel.load()
                 }
             }
         }
-        .sheet(isPresented: $viewModel.isSearchPresented) {
-            UserSearchSheet(viewModel: viewModel)
+        .navigationTitle("Friends")
+        .sheet(item: $viewModel.sharePayload) { payload in
+            InviteShareSheet(activityItems: payload.activityItems)
         }
-        .task {
-            await viewModel.load()
+        .onAppear {
+            Task { await viewModel.load() }
         }
     }
+}
+
+private struct IncomingInviteRow: View {
+    let invite: FriendsViewModel.IncomingInviteListItem
+    let isProcessing: Bool
+    let onAccept: () -> Void
+    let onDecline: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                AvatarView(name: invite.inviterName)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(invite.inviterName)
+                        .font(.headline)
+                    if let inviterBio = invite.inviterBio, !inviterBio.isEmpty {
+                        Text(inviterBio)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(invite.createdAt, style: .date)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            HStack {
+                Button("Accept", action: onAccept)
+                    .buttonStyle(.borderedProminent)
+                Button("Decline", role: .destructive, action: onDecline)
+                    .buttonStyle(.bordered)
+            }
+            .disabled(isProcessing)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct EmptyFriendsState: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            EmptyStateView(
+                title: "No Friends Yet",
+                message: "You don’t have any accepted friends yet.",
+                systemImage: "person.2.slash"
+            )
+            .frame(maxHeight: 220)
+        }
+        .padding(.vertical, 12)
+    }
+}
+
+private struct InviteShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {

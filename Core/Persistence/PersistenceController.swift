@@ -15,7 +15,8 @@ final class PersistenceController {
         do {
             modelContainer = try ModelContainer(
                 for: User.self,
-                FriendRelation.self,
+                FriendInvite.self,
+                Friendship.self,
                 Place.self,
                 PlaceReview.self,
                 DishReview.self,

@@ -80,6 +80,29 @@ final class PhotoAssetRepository {
         return try context.fetch(descriptor).filter { $0.placeId == placeID }
     }
 
+    func photos(
+        for placeID: UUID,
+        visiblePlaceReviewIDs: Set<UUID>,
+        visibleDishReviewIDs: Set<UUID>
+    ) throws -> [PhotoAsset] {
+        let descriptor = FetchDescriptor<PhotoAsset>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        return try context.fetch(descriptor).filter { asset in
+            guard asset.placeId == placeID else {
+                return false
+            }
+
+            if let placeReviewId = asset.placeReviewId, visiblePlaceReviewIDs.contains(placeReviewId) {
+                return true
+            }
+
+            if let dishReviewId = asset.dishReviewId, visibleDishReviewIDs.contains(dishReviewId) {
+                return true
+            }
+
+            return false
+        }
+    }
+
     func assets(forPlaceReviewID reviewID: UUID) throws -> [PhotoAsset] {
         let descriptor = FetchDescriptor<PhotoAsset>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
         return try context.fetch(descriptor).filter { $0.placeReviewId == reviewID }
