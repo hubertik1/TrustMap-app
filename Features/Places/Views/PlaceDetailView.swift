@@ -63,12 +63,7 @@ struct PlaceDetailView: View {
                                 .foregroundStyle(.secondary)
                         } else {
                             ForEach(viewModel.dishReviews, id: \.id) { review in
-                                DishReviewRowView(
-                                    review: review,
-                                    authorName: viewModel.authorName(for: review.authorUserId),
-                                    photo: viewModel.dishPhotos[review.id],
-                                    imageDataProvider: viewModel.imageData
-                                )
+                                dishReviewRow(for: review)
                             }
                         }
                     }
@@ -120,6 +115,18 @@ struct PlaceDetailView: View {
                 AddDishReviewView(container: container, place: viewModel.place)
             }
         }
+        .sheet(item: $viewModel.editingDishReview, onDismiss: {
+            Task { await viewModel.load() }
+        }) { review in
+            NavigationStack {
+                AddDishReviewView(
+                    container: container,
+                    place: viewModel.place,
+                    existingReview: review,
+                    existingPhotoData: viewModel.dishPhotoData(for: review)
+                )
+            }
+        }
         .task {
             await viewModel.load()
         }
@@ -127,6 +134,27 @@ struct PlaceDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Done") { dismiss() }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func dishReviewRow(for review: DishReview) -> some View {
+        let row = DishReviewRowView(
+            review: review,
+            authorName: viewModel.authorName(for: review.authorUserId),
+            photo: viewModel.dishPhotos[review.id],
+            imageDataProvider: viewModel.imageData
+        )
+
+        if viewModel.canEdit(review) {
+            Button {
+                viewModel.beginEditing(review)
+            } label: {
+                row
+            }
+            .buttonStyle(.plain)
+        } else {
+            row
         }
     }
 }

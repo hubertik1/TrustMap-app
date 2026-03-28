@@ -5,14 +5,17 @@ struct AddDishReviewView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: AddDishReviewViewModel
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var isDeleteConfirmationPresented = false
 
-    init(container: AppContainer, place: Place) {
+    init(container: AppContainer, place: Place, existingReview: DishReview? = nil, existingPhotoData: Data? = nil) {
         _viewModel = StateObject(
             wrappedValue: AddDishReviewViewModel(
                 place: place,
                 sessionStore: container.sessionStore,
                 placeReviewRepository: container.placeReviewRepository,
-                dishReviewRepository: container.dishReviewRepository
+                dishReviewRepository: container.dishReviewRepository,
+                existingReview: existingReview,
+                existingPhotoData: existingPhotoData
             )
         )
     }
@@ -49,8 +52,34 @@ struct AddDishReviewView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
             }
+
+            if viewModel.isEditing {
+                Section {
+                    Button(role: .destructive) {
+                        isDeleteConfirmationPresented = true
+                    } label: {
+                        Text("Delete Dish Review")
+                    }
+                    .disabled(viewModel.isSaving || viewModel.isDeleting)
+                    .confirmationDialog(
+                        "Delete this dish review?",
+                        isPresented: $isDeleteConfirmationPresented,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Delete Dish Review", role: .destructive) {
+                            Task { await viewModel.deleteReview() }
+                        }
+
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("This action can't be undone.")
+                    }
+                } header: {
+                    Text("Danger Zone")
+                }
+            }
         }
-        .navigationTitle("Add Dish Review")
+        .navigationTitle(viewModel.navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -58,7 +87,7 @@ struct AddDishReviewView: View {
             }
 
             ToolbarItem(placement: .confirmationAction) {
-                if viewModel.isSaving {
+                if viewModel.isSaving || viewModel.isDeleting {
                     ProgressView()
                 } else {
                     Button("Save") {
@@ -78,8 +107,13 @@ struct AddDishReviewView: View {
                 dismiss()
             }
         }
+        .onChange(of: viewModel.didDelete) { _, didDelete in
+            if didDelete {
+                dismiss()
+            }
+        }
         .alert(
-            "Unable to Save Dish Review",
+            viewModel.lastAction.errorTitle,
             isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { if !$0 { viewModel.errorMessage = nil } }
