@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct FeedView: View {
+    private let container: AppContainer
     @StateObject private var viewModel: FeedViewModel
 
     init(container: AppContainer) {
+        self.container = container
         _viewModel = StateObject(
             wrappedValue: FeedViewModel(
                 sessionStore: container.sessionStore,
@@ -32,19 +34,23 @@ struct FeedView: View {
                 )
             } else {
                 List(viewModel.feedItems) { item in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(item.title)
-                            .font(.headline)
+                    NavigationLink {
+                        PlaceDetailView(container: container, place: item.place)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(item.title)
+                                .font(.headline)
 
-                        Text(item.subtitle)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.secondary)
+                            Text(item.subtitle)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.secondary)
 
-                        Text(item.createdAt, style: .relative)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            Text(item.createdAt, style: .relative)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
                 }
                 .listStyle(.insetGrouped)
             }

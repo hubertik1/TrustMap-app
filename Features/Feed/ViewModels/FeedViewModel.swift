@@ -51,18 +51,20 @@ final class FeedViewModel: ObservableObject {
             let reviewsByID = Dictionary(uniqueKeysWithValues: visibleReviews.map { ($0.id, $0) })
             let placeIDs = Set(visibleReviews.map(\.placeId))
             let places = try placeRepository.places(withIDs: placeIDs)
-            let placeNames = Dictionary(uniqueKeysWithValues: places.map { ($0.id, $0.name) })
+            let placesByID = Dictionary(uniqueKeysWithValues: places.map { ($0.id, $0) })
 
             feedItems = activities.compactMap { activity in
                 guard let reviewID = UUID(uuidString: activity.referenceId),
-                      let review = reviewsByID[reviewID] else {
+                      let review = reviewsByID[reviewID],
+                      let place = placesByID[review.placeId] else {
                     return nil
                 }
 
                 return FeedPlaceActivityItem(
                     id: activity.id,
+                    place: place,
                     actorName: userNames[activity.actorUserId] ?? "Friend",
-                    placeName: placeNames[review.placeId] ?? "Place",
+                    placeName: place.name,
                     rating: review.ratingOverall,
                     createdAt: activity.createdAt
                 )
