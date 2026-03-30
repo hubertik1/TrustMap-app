@@ -37,6 +37,8 @@
 	<string>public.app-category.food-and-drink</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>TrustMap uses your location to center the map around you and help you discover nearby places.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
