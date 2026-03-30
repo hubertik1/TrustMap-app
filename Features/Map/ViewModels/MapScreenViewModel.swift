@@ -22,6 +22,7 @@ final class MapScreenViewModel: ObservableObject {
     @Published private(set) var locationAccessState: UserLocationAccessState = .idle
 
     private let sessionStore: SessionStore
+    private let cloudKitSyncService: CloudKitSyncService
     private let friendRepository: FriendRepository
     private let userRepository: UserProfileRepository
     private let categoryRepository: CategoryRepository
@@ -38,6 +39,7 @@ final class MapScreenViewModel: ObservableObject {
 
     init(
         sessionStore: SessionStore,
+        cloudKitSyncService: CloudKitSyncService,
         friendRepository: FriendRepository,
         userRepository: UserProfileRepository,
         categoryRepository: CategoryRepository,
@@ -47,6 +49,7 @@ final class MapScreenViewModel: ObservableObject {
         userLocationService: UserLocationServicing
     ) {
         self.sessionStore = sessionStore
+        self.cloudKitSyncService = cloudKitSyncService
         self.friendRepository = friendRepository
         self.userRepository = userRepository
         self.categoryRepository = categoryRepository
@@ -77,6 +80,7 @@ final class MapScreenViewModel: ObservableObject {
 
         do {
             let friends = try await friendRepository.acceptedFriends(for: currentUser.id)
+            try await cloudKitSyncService.refreshFriendVisibleContent(for: currentUser, friends: friends)
             let friendIDs = Set(friends.map(\.id))
             let defaultRestaurantCategory = try categoryRepository.defaultRestaurantCategory(for: currentUser.id)
             let ownedCategories = try categoryRepository.categories(for: currentUser.id)

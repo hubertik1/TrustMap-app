@@ -8,6 +8,9 @@ final class User {
     var displayName: String
     var avatarReference: String?
     var bio: String?
+    var cloudKitUserRecordName: String?
+    var sharedContentShareRecordName: String?
+    var sharedContentShareURL: String?
     var createdAt: Date
 
     init(
@@ -16,6 +19,9 @@ final class User {
         displayName: String,
         avatarReference: String? = nil,
         bio: String? = nil,
+        cloudKitUserRecordName: String? = nil,
+        sharedContentShareRecordName: String? = nil,
+        sharedContentShareURL: String? = nil,
         createdAt: Date = .now
     ) {
         self.id = id
@@ -23,6 +29,9 @@ final class User {
         self.displayName = displayName
         self.avatarReference = avatarReference
         self.bio = bio
+        self.cloudKitUserRecordName = cloudKitUserRecordName
+        self.sharedContentShareRecordName = sharedContentShareRecordName
+        self.sharedContentShareURL = sharedContentShareURL
         self.createdAt = createdAt
     }
 }

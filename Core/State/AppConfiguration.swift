@@ -2,7 +2,7 @@ import Foundation
 
 enum AppConfiguration {
     // Enable after adding iCloud + CloudKit capabilities and a real container.
-    static let cloudKitSyncEnabled = false
+    static let cloudKitSyncEnabled = true
     static let socialGraphCloudKitEnabled = true
     static let inviteURLScheme = "trustmap"
     static let inviteUniversalLinkBaseURL: URL? = nil

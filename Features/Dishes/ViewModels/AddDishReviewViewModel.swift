@@ -105,6 +105,7 @@ final class AddDishReviewViewModel: ObservableObject {
                 placeId: place.id,
                 authorUserId: currentUser.id,
                 placeReviewId: existingPlaceReviewID,
+                visibility: resolvedVisibility(currentUserID: currentUser.id),
                 dishName: trimmedDishName,
                 dishRating: dishRating,
                 dishReviewText: dishReviewText,
@@ -169,5 +170,17 @@ final class AddDishReviewViewModel: ObservableObject {
         if let price = review.price {
             priceText = String(price)
         }
+    }
+
+    private func resolvedVisibility(currentUserID: UUID) -> VisibilityStatus {
+        if let existingReview {
+            return existingReview.visibility
+        }
+
+        if let review = try? placeReviewRepository.reviews(authoredBy: currentUserID).first(where: { $0.placeId == place.id }) {
+            return review.visibility
+        }
+
+        return .friendsOnly
     }
 }

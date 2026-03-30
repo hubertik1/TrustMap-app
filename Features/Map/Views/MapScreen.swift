@@ -15,6 +15,7 @@ struct MapScreen: View {
         _viewModel = StateObject(
             wrappedValue: MapScreenViewModel(
                 sessionStore: container.sessionStore,
+                cloudKitSyncService: container.cloudKitSyncService,
                 friendRepository: container.friendRepository,
                 userRepository: container.userRepository,
                 categoryRepository: container.categoryRepository,

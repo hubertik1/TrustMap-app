@@ -5,12 +5,12 @@ import SwiftData
 final class PhotoAssetRepository {
     private let persistenceController: PersistenceController
     private let storageService: LocalPhotoStorageService
-    private let cloudKitSyncService: CloudKitSyncing
+    private let cloudKitSyncService: CloudKitSyncService
 
     init(
         persistenceController: PersistenceController,
         storageService: LocalPhotoStorageService,
-        cloudKitSyncService: CloudKitSyncing
+        cloudKitSyncService: CloudKitSyncService
     ) {
         self.persistenceController = persistenceController
         self.storageService = storageService
@@ -115,6 +115,10 @@ final class PhotoAssetRepository {
 
     func imageData(for asset: PhotoAsset) -> Data? {
         storageService.imageData(for: asset.assetReference)
+    }
+
+    func storageFileURL(for asset: PhotoAsset) -> URL {
+        storageService.fileURL(for: asset.assetReference)
     }
 
     func removeStoredFiles(for assets: [PhotoAsset]) {

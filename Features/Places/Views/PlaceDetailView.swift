@@ -11,6 +11,7 @@ struct PlaceDetailView: View {
             wrappedValue: PlaceDetailViewModel(
                 place: place,
                 sessionStore: container.sessionStore,
+                cloudKitSyncService: container.cloudKitSyncService,
                 friendRepository: container.friendRepository,
                 userRepository: container.userRepository,
                 categoryRepository: container.categoryRepository,

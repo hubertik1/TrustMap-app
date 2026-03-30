@@ -4,13 +4,13 @@ import SwiftData
 @MainActor
 final class PlaceReviewRepository {
     private let persistenceController: PersistenceController
-    private let cloudKitSyncService: CloudKitSyncing
+    private let cloudKitSyncService: CloudKitSyncService
     private let photoAssetRepository: PhotoAssetRepository
     private let categoryRepository: CategoryRepository
 
     init(
         persistenceController: PersistenceController,
-        cloudKitSyncService: CloudKitSyncing,
+        cloudKitSyncService: CloudKitSyncService,
         photoAssetRepository: PhotoAssetRepository,
         categoryRepository: CategoryRepository
     ) {
@@ -154,6 +154,10 @@ final class PlaceReviewRepository {
             Task { await cloudKitSyncService.syncActivity(photoActivity) }
         }
 
+        for asset in try photoAssetRepository.assets(forPlaceReviewID: review.id) {
+            Task { await cloudKitSyncService.syncPhotoAsset(asset, fileURL: photoAssetRepository.storageFileURL(for: asset)) }
+        }
+
         Task { await cloudKitSyncService.syncPlaceReview(review) }
         return review
     }
@@ -163,6 +167,17 @@ final class PlaceReviewRepository {
         let relatedActivities = try activities(
             for: review.id.uuidString,
             types: [.placeReviewAdded, .photoAdded]
+        )
+        let reviewSnapshot = PlaceReview(
+            id: review.id,
+            placeId: review.placeId,
+            authorUserId: review.authorUserId,
+            ratingOverall: review.ratingOverall,
+            reviewText: review.reviewText,
+            descriptionText: review.descriptionText,
+            visibility: review.visibility,
+            createdAt: review.createdAt,
+            updatedAt: review.updatedAt
         )
 
         try categoryRepository.removeAssignments(for: review.placeId, assignedBy: review.authorUserId)
@@ -178,6 +193,16 @@ final class PlaceReviewRepository {
         context.delete(review)
         try saveChanges(message: "Unable to delete the place review.")
         photoAssetRepository.removeStoredFiles(for: relatedAssets)
+
+        Task {
+            for asset in relatedAssets {
+                await cloudKitSyncService.deletePhotoAsset(asset)
+            }
+            for activity in relatedActivities {
+                await cloudKitSyncService.deleteActivity(activity, ownerUserID: reviewSnapshot.authorUserId)
+            }
+            await cloudKitSyncService.deletePlaceReview(reviewSnapshot)
+        }
     }
 
     func averageRating(for placeID: UUID, visibleTo viewerID: UUID, friendIDs: Set<UUID>) throws -> Double? {

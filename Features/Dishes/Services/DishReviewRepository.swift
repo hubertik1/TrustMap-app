@@ -4,12 +4,12 @@ import SwiftData
 @MainActor
 final class DishReviewRepository {
     private let persistenceController: PersistenceController
-    private let cloudKitSyncService: CloudKitSyncing
+    private let cloudKitSyncService: CloudKitSyncService
     private let photoAssetRepository: PhotoAssetRepository
 
     init(
         persistenceController: PersistenceController,
-        cloudKitSyncService: CloudKitSyncing,
+        cloudKitSyncService: CloudKitSyncService,
         photoAssetRepository: PhotoAssetRepository
     ) {
         self.persistenceController = persistenceController
@@ -25,7 +25,7 @@ final class DishReviewRepository {
         try allReviews()
             .filter {
                 $0.placeId == placeID
-                    && ($0.authorUserId == viewerID || friendIDs.contains($0.authorUserId))
+                    && isVisible($0, viewerID: viewerID, friendIDs: friendIDs)
             }
             .sorted { $0.dishRating > $1.dishRating }
     }
@@ -49,6 +49,7 @@ final class DishReviewRepository {
             placeId: draft.placeId,
             authorUserId: draft.authorUserId,
             placeReviewId: draft.placeReviewId,
+            visibility: draft.visibility,
             dishName: draft.dishName.trimmingCharacters(in: .whitespacesAndNewlines),
             dishRating: draft.dishRating,
             dishReviewText: draft.dishReviewText.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -96,6 +97,7 @@ final class DishReviewRepository {
         }
 
         review.placeReviewId = draft.placeReviewId
+        review.visibility = draft.visibility
         review.dishName = draft.dishName.trimmingCharacters(in: .whitespacesAndNewlines)
         review.dishRating = draft.dishRating
         review.dishReviewText = draft.dishReviewText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -130,6 +132,13 @@ final class DishReviewRepository {
             Task { await cloudKitSyncService.syncActivity(photoActivity) }
         }
 
+        if let existingAsset = try photoAssetRepository.assets(forDishReviewID: review.id).first {
+            let fileURL = photoAssetRepository.imageData(for: existingAsset).flatMap { _ in
+                photoAssetRepository.storageFileURL(for: existingAsset)
+            }
+            Task { await cloudKitSyncService.syncPhotoAsset(existingAsset, fileURL: fileURL) }
+        }
+
         Task { await cloudKitSyncService.syncDishReview(review) }
         return review
     }
@@ -139,6 +148,19 @@ final class DishReviewRepository {
         let relatedActivities = try activities(
             for: review.id.uuidString,
             types: [.dishReviewAdded, .photoAdded]
+        )
+        let reviewSnapshot = DishReview(
+            id: review.id,
+            placeId: review.placeId,
+            authorUserId: review.authorUserId,
+            placeReviewId: review.placeReviewId,
+            visibility: review.visibility,
+            dishName: review.dishName,
+            dishRating: review.dishRating,
+            dishReviewText: review.dishReviewText,
+            price: review.price,
+            createdAt: review.createdAt,
+            updatedAt: review.updatedAt
         )
 
         for asset in relatedAssets {
@@ -152,6 +174,16 @@ final class DishReviewRepository {
         context.delete(review)
         try saveChanges(message: "Unable to delete the dish review.")
         photoAssetRepository.removeStoredFiles(for: relatedAssets)
+
+        Task {
+            for asset in relatedAssets {
+                await cloudKitSyncService.deletePhotoAsset(asset)
+            }
+            for activity in relatedActivities {
+                await cloudKitSyncService.deleteActivity(activity, ownerUserID: reviewSnapshot.authorUserId)
+            }
+            await cloudKitSyncService.deleteDishReview(reviewSnapshot)
+        }
     }
 
     private func allReviews() throws -> [DishReview] {
@@ -163,6 +195,19 @@ final class DishReviewRepository {
         let descriptor = FetchDescriptor<ActivityItem>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
         return try context.fetch(descriptor).filter {
             $0.referenceId == referenceID && types.contains($0.type)
+        }
+    }
+
+    private func isVisible(_ review: DishReview, viewerID: UUID, friendIDs: Set<UUID>) -> Bool {
+        if review.authorUserId == viewerID {
+            return true
+        }
+
+        switch review.visibility {
+        case .friendsOnly:
+            return friendIDs.contains(review.authorUserId)
+        case .onlyMe:
+            return false
         }
     }
 

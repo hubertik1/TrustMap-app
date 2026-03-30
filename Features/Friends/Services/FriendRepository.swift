@@ -21,13 +21,13 @@ protocol FriendsRepository: AnyObject {
 @MainActor
 final class FriendRepository: FriendsRepository {
     private let persistenceController: PersistenceController
-    private let cloudKitSyncService: CloudKitSyncing
+    private let cloudKitSyncService: CloudKitSyncService
     private let socialGraphService: any SocialGraphCloudKitServicing
     private let userRepository: UserProfileRepository
 
     init(
         persistenceController: PersistenceController,
-        cloudKitSyncService: CloudKitSyncing,
+        cloudKitSyncService: CloudKitSyncService,
         socialGraphService: any SocialGraphCloudKitServicing,
         userRepository: UserProfileRepository
     ) {

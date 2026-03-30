@@ -7,6 +7,7 @@ final class DishReview {
     var placeId: UUID
     var authorUserId: UUID
     var placeReviewId: UUID?
+    var visibility: VisibilityStatus
     var dishName: String
     var dishRating: Int
     var dishReviewText: String
@@ -19,6 +20,7 @@ final class DishReview {
         placeId: UUID,
         authorUserId: UUID,
         placeReviewId: UUID? = nil,
+        visibility: VisibilityStatus = .friendsOnly,
         dishName: String,
         dishRating: Int,
         dishReviewText: String,
@@ -30,6 +32,7 @@ final class DishReview {
         self.placeId = placeId
         self.authorUserId = authorUserId
         self.placeReviewId = placeReviewId
+        self.visibility = visibility
         self.dishName = dishName
         self.dishRating = dishRating
         self.dishReviewText = dishReviewText

@@ -7,12 +7,12 @@ final class CategoryRepository {
     private static let hiddenCategoryIDsKeyPrefix = "hiddenCategoryIDs"
 
     private let persistenceController: PersistenceController
-    private let cloudKitSyncService: CloudKitSyncing
+    private let cloudKitSyncService: CloudKitSyncService
     private let defaults: UserDefaults
 
     init(
         persistenceController: PersistenceController,
-        cloudKitSyncService: CloudKitSyncing,
+        cloudKitSyncService: CloudKitSyncService,
         defaults: UserDefaults = .standard
     ) {
         self.persistenceController = persistenceController
@@ -129,6 +129,13 @@ final class CategoryRepository {
 
         let relatedAssignments = try context.fetch(FetchDescriptor<PlaceCategoryAssignment>())
             .filter { $0.categoryId == category.id }
+        let categorySnapshot = CustomCategory(
+            id: category.id,
+            ownerUserId: category.ownerUserId,
+            name: category.name,
+            iconName: category.iconName,
+            createdAt: category.createdAt
+        )
 
         for assignment in relatedAssignments {
             context.delete(assignment)
@@ -137,6 +144,13 @@ final class CategoryRepository {
         context.delete(category)
         try setHidden(false, for: category.id, ownerUserID: ownerUserID)
         try saveChanges(message: "Unable to delete the category.")
+
+        Task {
+            for assignment in relatedAssignments {
+                await cloudKitSyncService.deletePlaceCategoryAssignment(assignment)
+            }
+            await cloudKitSyncService.deleteCustomCategory(categorySnapshot)
+        }
     }
 
     func categoryNames(forPlace placeID: UUID) throws -> [String] {
@@ -194,8 +208,13 @@ final class CategoryRepository {
 
         try saveChanges(message: "Unable to assign the category to this place.")
 
-        if shouldSyncAssignment {
-            Task { await cloudKitSyncService.syncPlaceCategoryAssignment(assignmentToKeep) }
+        Task {
+            for assignment in staleAssignments {
+                await cloudKitSyncService.deletePlaceCategoryAssignment(assignment)
+            }
+            if shouldSyncAssignment {
+                await cloudKitSyncService.syncPlaceCategoryAssignment(assignmentToKeep)
+            }
         }
     }
 
@@ -210,6 +229,12 @@ final class CategoryRepository {
         }
 
         try saveChanges(message: "Unable to clear the category for this place.")
+
+        Task {
+            for assignment in assignments {
+                await cloudKitSyncService.deletePlaceCategoryAssignment(assignment)
+            }
+        }
     }
 
     private func saveChanges(message: String) throws {

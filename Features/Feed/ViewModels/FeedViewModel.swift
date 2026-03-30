@@ -7,6 +7,7 @@ final class FeedViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let sessionStore: SessionStore
+    private let cloudKitSyncService: CloudKitSyncService
     private let feedRepository: FeedRepository
     private let friendRepository: FriendRepository
     private let userRepository: UserProfileRepository
@@ -15,6 +16,7 @@ final class FeedViewModel: ObservableObject {
 
     init(
         sessionStore: SessionStore,
+        cloudKitSyncService: CloudKitSyncService,
         feedRepository: FeedRepository,
         friendRepository: FriendRepository,
         userRepository: UserProfileRepository,
@@ -22,6 +24,7 @@ final class FeedViewModel: ObservableObject {
         placeReviewRepository: PlaceReviewRepository
     ) {
         self.sessionStore = sessionStore
+        self.cloudKitSyncService = cloudKitSyncService
         self.feedRepository = feedRepository
         self.friendRepository = friendRepository
         self.userRepository = userRepository
@@ -40,7 +43,9 @@ final class FeedViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let friendIDs = try await friendRepository.acceptedFriendIDs(for: currentUser.id)
+            let friends = try await friendRepository.acceptedFriends(for: currentUser.id)
+            try await cloudKitSyncService.refreshFriendVisibleContent(for: currentUser, friends: friends)
+            let friendIDs = Set(friends.map(\.id))
             let actorIDs = friendIDs.union([currentUser.id])
             let activities = try feedRepository.placeFeed(actorIDs: actorIDs)
             let users = try userRepository.allKnownUsers()

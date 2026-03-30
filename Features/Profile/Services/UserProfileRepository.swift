@@ -7,12 +7,12 @@ final class UserProfileRepository {
     private static let genericFallbackDisplayName = "Apple User"
 
     private let persistenceController: PersistenceController
-    private let cloudKitSyncService: CloudKitSyncing
+    private let cloudKitSyncService: CloudKitSyncService
     private let socialGraphService: any SocialGraphCloudKitServicing
 
     init(
         persistenceController: PersistenceController,
-        cloudKitSyncService: CloudKitSyncing,
+        cloudKitSyncService: CloudKitSyncService,
         socialGraphService: any SocialGraphCloudKitServicing
     ) {
         self.persistenceController = persistenceController
@@ -63,10 +63,16 @@ final class UserProfileRepository {
         _ = try migrateLocalUserIfNeeded(appleUserID: appleUserID, stableUserID: stableUserID)
 
         if let remoteUser = try await socialGraphService.fetchUser(id: stableUserID) {
-            return try cacheRemoteUser(remoteUser)
+            if let cachedUser = try cacheRemoteUser(remoteUser) {
+                try await cloudKitSyncService.prepareSharingProfile(for: cachedUser)
+                try await socialGraphService.upsertUser(cachedUser)
+                return cachedUser
+            }
+            return nil
         }
 
         if let localUser = try user(withID: stableUserID) ?? user(forAppleUserID: appleUserID) {
+            try await cloudKitSyncService.prepareSharingProfile(for: localUser)
             try await socialGraphService.upsertUser(localUser)
             return localUser
         }
@@ -115,6 +121,7 @@ final class UserProfileRepository {
         }
 
         try saveChanges()
+        try await cloudKitSyncService.prepareSharingProfile(for: currentUser)
         try await socialGraphService.upsertUser(currentUser)
         Task { await cloudKitSyncService.syncUser(currentUser) }
         return currentUser
@@ -142,6 +149,7 @@ final class UserProfileRepository {
         user.bio = bio?.trimmingCharacters(in: .whitespacesAndNewlines)
         try saveChanges()
         Task {
+            try? await cloudKitSyncService.prepareSharingProfile(for: user)
             await cloudKitSyncService.syncUser(user)
             try? await socialGraphService.upsertUser(user)
         }
@@ -158,6 +166,9 @@ final class UserProfileRepository {
             existingUser.displayName = remoteUser.displayName
             existingUser.bio = remoteUser.bio
             existingUser.avatarReference = remoteUser.avatarReference
+            existingUser.cloudKitUserRecordName = remoteUser.cloudKitUserRecordName
+            existingUser.sharedContentShareRecordName = remoteUser.sharedContentShareRecordName
+            existingUser.sharedContentShareURL = remoteUser.sharedContentShareURL
             existingUser.createdAt = remoteUser.createdAt
             try saveChanges()
             return existingUser
@@ -172,6 +183,9 @@ final class UserProfileRepository {
             existingByAppleUserID.displayName = remoteUser.displayName
             existingByAppleUserID.bio = remoteUser.bio
             existingByAppleUserID.avatarReference = remoteUser.avatarReference
+            existingByAppleUserID.cloudKitUserRecordName = remoteUser.cloudKitUserRecordName
+            existingByAppleUserID.sharedContentShareRecordName = remoteUser.sharedContentShareRecordName
+            existingByAppleUserID.sharedContentShareURL = remoteUser.sharedContentShareURL
             existingByAppleUserID.createdAt = remoteUser.createdAt
             try saveChanges()
             return existingByAppleUserID
@@ -183,6 +197,9 @@ final class UserProfileRepository {
             displayName: remoteUser.displayName,
             avatarReference: remoteUser.avatarReference,
             bio: remoteUser.bio,
+            cloudKitUserRecordName: remoteUser.cloudKitUserRecordName,
+            sharedContentShareRecordName: remoteUser.sharedContentShareRecordName,
+            sharedContentShareURL: remoteUser.sharedContentShareURL,
             createdAt: remoteUser.createdAt
         )
         context.insert(user)

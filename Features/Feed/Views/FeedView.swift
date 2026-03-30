@@ -9,6 +9,7 @@ struct FeedView: View {
         _viewModel = StateObject(
             wrappedValue: FeedViewModel(
                 sessionStore: container.sessionStore,
+                cloudKitSyncService: container.cloudKitSyncService,
                 feedRepository: container.feedRepository,
                 friendRepository: container.friendRepository,
                 userRepository: container.userRepository,

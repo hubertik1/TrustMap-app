@@ -5,11 +5,11 @@ import SwiftData
 @MainActor
 final class PlaceRepository {
     private let persistenceController: PersistenceController
-    private let cloudKitSyncService: CloudKitSyncing
+    private let cloudKitSyncService: CloudKitSyncService
 
     init(
         persistenceController: PersistenceController,
-        cloudKitSyncService: CloudKitSyncing
+        cloudKitSyncService: CloudKitSyncService
     ) {
         self.persistenceController = persistenceController
         self.cloudKitSyncService = cloudKitSyncService

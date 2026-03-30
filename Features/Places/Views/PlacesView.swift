@@ -9,6 +9,7 @@ struct PlacesView: View {
         _viewModel = StateObject(
             wrappedValue: PlacesViewModel(
                 sessionStore: container.sessionStore,
+                cloudKitSyncService: container.cloudKitSyncService,
                 friendRepository: container.friendRepository,
                 userRepository: container.userRepository,
                 categoryRepository: container.categoryRepository,

@@ -26,6 +26,8 @@ final class AppContainer: ObservableObject {
         let persistenceController = PersistenceController(inMemory: inMemory)
         let photoStorageService = LocalPhotoStorageService()
         let cloudKitSyncService = CloudKitSyncService(
+            persistenceController: persistenceController,
+            photoStorageService: photoStorageService,
             forceDisabled: !AppConfiguration.cloudKitSyncEnabled || AppConfiguration.isRunningPreviews
         )
         let socialGraphCloudKitService = SocialGraphCloudKitService(

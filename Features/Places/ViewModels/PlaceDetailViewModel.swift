@@ -21,6 +21,7 @@ final class PlaceDetailViewModel: ObservableObject {
     let place: Place
 
     private let sessionStore: SessionStore
+    private let cloudKitSyncService: CloudKitSyncService
     private let friendRepository: FriendRepository
     private let userRepository: UserProfileRepository
     private let categoryRepository: CategoryRepository
@@ -31,6 +32,7 @@ final class PlaceDetailViewModel: ObservableObject {
     init(
         place: Place,
         sessionStore: SessionStore,
+        cloudKitSyncService: CloudKitSyncService,
         friendRepository: FriendRepository,
         userRepository: UserProfileRepository,
         categoryRepository: CategoryRepository,
@@ -40,6 +42,7 @@ final class PlaceDetailViewModel: ObservableObject {
     ) {
         self.place = place
         self.sessionStore = sessionStore
+        self.cloudKitSyncService = cloudKitSyncService
         self.friendRepository = friendRepository
         self.userRepository = userRepository
         self.categoryRepository = categoryRepository
@@ -61,7 +64,9 @@ final class PlaceDetailViewModel: ObservableObject {
         currentUserID = currentUser.id
 
         do {
-            let friendIDs = try await friendRepository.acceptedFriendIDs(for: currentUser.id)
+            let friends = try await friendRepository.acceptedFriends(for: currentUser.id)
+            try await cloudKitSyncService.refreshFriendVisibleContent(for: currentUser, friends: friends)
+            let friendIDs = Set(friends.map(\.id))
             placeReviews = try placeReviewRepository.reviews(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
             currentUserPlaceReview = placeReviews.first(where: { $0.authorUserId == currentUser.id })
             dishReviews = try dishReviewRepository.reviews(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)

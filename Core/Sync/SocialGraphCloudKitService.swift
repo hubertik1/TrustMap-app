@@ -30,6 +30,9 @@ final class SocialGraphCloudKitService: SocialGraphCloudKitServicing {
         static let displayName = "displayName"
         static let bio = "bio"
         static let avatarReference = "avatarReference"
+        static let cloudKitUserRecordName = "cloudKitUserRecordName"
+        static let sharedContentShareRecordName = "sharedContentShareRecordName"
+        static let sharedContentShareURL = "sharedContentShareURL"
         static let createdAt = "createdAt"
         static let token = "token"
         static let inviterUserID = "inviterUserId"
@@ -102,6 +105,9 @@ final class SocialGraphCloudKitService: SocialGraphCloudKitServicing {
             record[FieldKey.displayName] = user.displayName as CKRecordValue
             record[FieldKey.bio] = user.bio as CKRecordValue?
             record[FieldKey.avatarReference] = user.avatarReference as CKRecordValue?
+            record[FieldKey.cloudKitUserRecordName] = user.cloudKitUserRecordName as CKRecordValue?
+            record[FieldKey.sharedContentShareRecordName] = user.sharedContentShareRecordName as CKRecordValue?
+            record[FieldKey.sharedContentShareURL] = user.sharedContentShareURL as CKRecordValue?
             record[FieldKey.createdAt] = user.createdAt as CKRecordValue
             _ = try await saveRecord(in: database, record: record)
         } catch {
@@ -307,6 +313,9 @@ final class SocialGraphCloudKitService: SocialGraphCloudKitServicing {
             displayName: displayName,
             avatarReference: record[FieldKey.avatarReference] as? String,
             bio: record[FieldKey.bio] as? String,
+            cloudKitUserRecordName: record[FieldKey.cloudKitUserRecordName] as? String,
+            sharedContentShareRecordName: record[FieldKey.sharedContentShareRecordName] as? String,
+            sharedContentShareURL: record[FieldKey.sharedContentShareURL] as? String,
             createdAt: createdAt
         )
     }
