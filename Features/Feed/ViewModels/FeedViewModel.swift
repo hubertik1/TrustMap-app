@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 @MainActor
 final class FeedViewModel: ObservableObject {
@@ -6,6 +7,7 @@ final class FeedViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
+    private let logger = Logger(subsystem: "TrustMap", category: "FeedViewModel")
     private let sessionStore: SessionStore
     private let cloudKitSyncService: CloudKitSyncService
     private let feedRepository: FeedRepository
@@ -43,13 +45,15 @@ final class FeedViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let friends = try await friendRepository.acceptedFriends(for: currentUser.id)
-            try await cloudKitSyncService.refreshFriendVisibleContent(for: currentUser, friends: friends)
+            let friends = (try? await friendRepository.acceptedFriends(for: currentUser.id)) ?? []
+            await cloudKitSyncService.refreshFriendVisibleContentIfPossible(for: currentUser, friends: friends)
             let friendIDs = Set(friends.map(\.id))
             let actorIDs = friendIDs.union([currentUser.id])
             let activities = try feedRepository.placeFeed(actorIDs: actorIDs)
             let users = try userRepository.allKnownUsers()
-            var userNames = Dictionary(uniqueKeysWithValues: users.map { ($0.id, $0.displayName) })
+            var userNames: [UUID: String] = users.reduce(into: [:]) { result, user in
+                result[user.id] = user.displayName
+            }
             userNames[currentUser.id] = currentUser.displayName
 
             let visibleReviews = try placeReviewRepository.reviews(
@@ -58,10 +62,14 @@ final class FeedViewModel: ObservableObject {
                 friendIDs: friendIDs,
                 ratingRange: 1...10
             )
-            let reviewsByID = Dictionary(uniqueKeysWithValues: visibleReviews.map { ($0.id, $0) })
+            let reviewsByID: [UUID: PlaceReview] = visibleReviews.reduce(into: [:]) { result, review in
+                result[review.id] = review
+            }
             let placeIDs = Set(visibleReviews.map(\.placeId))
             let places = try placeRepository.places(withIDs: placeIDs)
-            let placesByID = Dictionary(uniqueKeysWithValues: places.map { ($0.id, $0) })
+            let placesByID: [UUID: Place] = places.reduce(into: [:]) { result, place in
+                result[place.id] = place
+            }
 
             feedItems = activities.compactMap { activity in
                 guard let reviewID = UUID(uuidString: activity.referenceId),
@@ -80,6 +88,7 @@ final class FeedViewModel: ObservableObject {
                 )
             }
         } catch {
+            logger.error("Unable to load feed: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
             feedItems = []
         }

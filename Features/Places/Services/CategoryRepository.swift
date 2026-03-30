@@ -27,8 +27,12 @@ final class CategoryRepository {
     func categories(for ownerUserID: UUID, includeHidden: Bool = false) throws -> [CustomCategory] {
         let descriptor = FetchDescriptor<CustomCategory>(sortBy: [SortDescriptor(\.name)])
         let hiddenIDs = hiddenCategoryIDs(for: ownerUserID)
+        var seenCategoryIDs = Set<UUID>()
         let filteredCategories = try context.fetch(descriptor).filter {
-            $0.ownerUserId == ownerUserID && (includeHidden || !hiddenIDs.contains($0.id))
+            guard seenCategoryIDs.insert($0.id).inserted else {
+                return false
+            }
+            return $0.ownerUserId == ownerUserID && (includeHidden || !hiddenIDs.contains($0.id))
         }
         return sortCategories(filteredCategories)
     }
@@ -39,8 +43,12 @@ final class CategoryRepository {
         }
 
         let descriptor = FetchDescriptor<CustomCategory>(sortBy: [SortDescriptor(\.name)])
+        var seenCategoryIDs = Set<UUID>()
         let filteredCategories = try context.fetch(descriptor).filter {
-            ownerUserIDs.contains($0.ownerUserId)
+            guard seenCategoryIDs.insert($0.id).inserted else {
+                return false
+            }
+            return ownerUserIDs.contains($0.ownerUserId)
         }
         return sortCategories(filteredCategories)
     }
@@ -61,7 +69,13 @@ final class CategoryRepository {
             .filter { $0.placeId == placeID }
         let categoryIDs = Set(assignments.map(\.categoryId))
         let categories = try context.fetch(FetchDescriptor<CustomCategory>(sortBy: [SortDescriptor(\.name)]))
-        return sortCategories(categories.filter { categoryIDs.contains($0.id) })
+        var seenCategoryIDs = Set<UUID>()
+        return sortCategories(categories.filter {
+            guard seenCategoryIDs.insert($0.id).inserted else {
+                return false
+            }
+            return categoryIDs.contains($0.id)
+        })
     }
 
     func createCategory(ownerUserID: UUID, name: String, iconName: String? = nil) throws -> CustomCategory {

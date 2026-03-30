@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 @MainActor
 final class PlacesViewModel: ObservableObject {
@@ -9,6 +10,7 @@ final class PlacesViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
+    private let logger = Logger(subsystem: "TrustMap", category: "PlacesViewModel")
     private let sessionStore: SessionStore
     private let cloudKitSyncService: CloudKitSyncService
     private let friendRepository: FriendRepository
@@ -50,8 +52,8 @@ final class PlacesViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let friends = try await friendRepository.acceptedFriends(for: currentUser.id)
-            try await cloudKitSyncService.refreshFriendVisibleContent(for: currentUser, friends: friends)
+            let friends = (try? await friendRepository.acceptedFriends(for: currentUser.id)) ?? []
+            await cloudKitSyncService.refreshFriendVisibleContentIfPossible(for: currentUser, friends: friends)
             let friendIDs = Set(friends.map(\.id))
             let authorIDs = resolvedAuthorIDs(currentUserID: currentUser.id, friendIDs: friendIDs)
             let visibleReviews = try placeReviewRepository.reviews(
@@ -74,13 +76,14 @@ final class PlacesViewModel: ObservableObject {
             }
 
             let allUsers = try userRepository.allKnownUsers()
-            var userNames = Dictionary(uniqueKeysWithValues: allUsers.map { ($0.id, $0.displayName) })
+            var userNames: [UUID: String] = allUsers.reduce(into: [:]) { result, user in
+                result[user.id] = user.displayName
+            }
             userNames[currentUser.id] = currentUser.displayName
 
-            let categoryNamesByPlace = try Dictionary(uniqueKeysWithValues: visiblePlaces.map { place in
-                let names = try categoryRepository.categoryNames(forPlace: place.id)
-                return (place.id, names)
-            })
+            let categoryNamesByPlace = try visiblePlaces.reduce(into: [UUID: [String]]()) { result, place in
+                result[place.id] = try categoryRepository.categoryNames(forPlace: place.id)
+            }
 
             let groupedReviews = Dictionary(grouping: visibleReviews, by: \.placeId)
 
@@ -128,6 +131,7 @@ final class PlacesViewModel: ObservableObject {
                 return lhs.averageRating > rhs.averageRating
             }
         } catch {
+            logger.error("Unable to load places: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
             placeItems = []
         }

@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 @MainActor
 final class ProfileViewModel: ObservableObject {
@@ -10,6 +11,7 @@ final class ProfileViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
+    private let logger = Logger(subsystem: "TrustMap", category: "ProfileViewModel")
     private let sessionStore: SessionStore
     private let userRepository: UserProfileRepository
     private let categoryRepository: CategoryRepository
@@ -45,9 +47,10 @@ final class ProfileViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            user = try await userRepository.refreshUser(withID: currentUser.id) ?? currentUser
+            user = (try? await userRepository.refreshUser(withID: currentUser.id)) ?? currentUser
             try reloadReviewData(for: currentUser.id)
         } catch {
+            logger.error("Unable to load profile: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
         }
 
@@ -92,7 +95,9 @@ final class ProfileViewModel: ObservableObject {
 
         let placeIDs = Set(placeReviews.map(\.placeId) + dishReviews.map(\.placeId))
         let places = try placeRepository.places(withIDs: placeIDs)
-        placeNames = Dictionary(uniqueKeysWithValues: places.map { ($0.id, $0.name) })
+        placeNames = places.reduce(into: [:]) { result, place in
+            result[place.id] = place.name
+        }
     }
 }
 
@@ -110,6 +115,7 @@ final class CategoriesViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
+    private let logger = Logger(subsystem: "TrustMap", category: "CategoriesViewModel")
     private let sessionStore: SessionStore
     private let categoryRepository: CategoryRepository
     private let friendRepository: FriendRepository
@@ -145,10 +151,12 @@ final class CategoriesViewModel: ObservableObject {
             myCategories = try categoryRepository.categories(for: currentUser.id)
             hiddenCategories = try categoryRepository.hiddenCategories(for: currentUser.id)
 
-            let friends = try await friendRepository.acceptedFriends(for: currentUser.id)
+            let friends = (try? await friendRepository.acceptedFriends(for: currentUser.id)) ?? []
             let friendIDs = Set(friends.map(\.id))
             let friendCategories = try categoryRepository.categories(createdBy: friendIDs)
-            let ownerNames = Dictionary(uniqueKeysWithValues: friends.map { ($0.id, $0.displayName) })
+            let ownerNames = friends.reduce(into: [UUID: String]()) { result, friend in
+                result[friend.id] = friend.displayName
+            }
             let ownCategoryNames = Set((myCategories + hiddenCategories).map { normalizedName($0.name) })
             var seenFriendNames = Set<String>()
 
@@ -167,6 +175,7 @@ final class CategoriesViewModel: ObservableObject {
                 )
             }
         } catch {
+            logger.error("Unable to load categories: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
             myCategories = []
             hiddenCategories = []

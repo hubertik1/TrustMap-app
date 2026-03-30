@@ -77,7 +77,13 @@ final class PhotoAssetRepository {
 
     func photos(for placeID: UUID) throws -> [PhotoAsset] {
         let descriptor = FetchDescriptor<PhotoAsset>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        return try context.fetch(descriptor).filter { $0.placeId == placeID }
+        var seenAssetIDs = Set<UUID>()
+        return try context.fetch(descriptor).filter {
+            guard seenAssetIDs.insert($0.id).inserted else {
+                return false
+            }
+            return $0.placeId == placeID
+        }
     }
 
     func photos(
@@ -86,7 +92,11 @@ final class PhotoAssetRepository {
         visibleDishReviewIDs: Set<UUID>
     ) throws -> [PhotoAsset] {
         let descriptor = FetchDescriptor<PhotoAsset>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        var seenAssetIDs = Set<UUID>()
         return try context.fetch(descriptor).filter { asset in
+            guard seenAssetIDs.insert(asset.id).inserted else {
+                return false
+            }
             guard asset.placeId == placeID else {
                 return false
             }
@@ -105,12 +115,24 @@ final class PhotoAssetRepository {
 
     func assets(forPlaceReviewID reviewID: UUID) throws -> [PhotoAsset] {
         let descriptor = FetchDescriptor<PhotoAsset>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        return try context.fetch(descriptor).filter { $0.placeReviewId == reviewID }
+        var seenAssetIDs = Set<UUID>()
+        return try context.fetch(descriptor).filter {
+            guard seenAssetIDs.insert($0.id).inserted else {
+                return false
+            }
+            return $0.placeReviewId == reviewID
+        }
     }
 
     func assets(forDishReviewID reviewID: UUID) throws -> [PhotoAsset] {
         let descriptor = FetchDescriptor<PhotoAsset>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        return try context.fetch(descriptor).filter { $0.dishReviewId == reviewID }
+        var seenAssetIDs = Set<UUID>()
+        return try context.fetch(descriptor).filter {
+            guard seenAssetIDs.insert($0.id).inserted else {
+                return false
+            }
+            return $0.dishReviewId == reviewID
+        }
     }
 
     func imageData(for asset: PhotoAsset) -> Data? {

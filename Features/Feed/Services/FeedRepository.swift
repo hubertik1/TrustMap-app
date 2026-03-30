@@ -15,7 +15,9 @@ final class FeedRepository {
 
     func placeFeed(actorIDs: Set<UUID>) throws -> [ActivityItem] {
         let descriptor = FetchDescriptor<ActivityItem>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        var seenActivityIDs = Set<UUID>()
         return try context.fetch(descriptor)
+            .filter { seenActivityIDs.insert($0.id).inserted }
             .filter { actorIDs.contains($0.actorUserId) && $0.type == .placeReviewAdded }
     }
 }

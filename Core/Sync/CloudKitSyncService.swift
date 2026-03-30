@@ -71,11 +71,18 @@ final class CloudKitSyncService {
         let binaryAssetURL: URL?
     }
 
+    private struct RefreshState {
+        let timestamp: Date
+        let friendIDs: Set<UUID>
+    }
+
     private let logger = Logger(subsystem: "TrustMap", category: "CloudKitSync")
+    private let refreshCooldown: TimeInterval = 20
     private let persistenceController: PersistenceController
     private let photoStorageService: LocalPhotoStorageService
     private let forceDisabled: Bool
     private let container: CKContainer
+    private var refreshStatesByViewerID: [UUID: RefreshState] = [:]
 
     init(
         persistenceController: PersistenceController,
@@ -129,6 +136,13 @@ final class CloudKitSyncService {
             return
         }
 
+        let friendIDs = Set(friends.map(\.id))
+        if let existingState = refreshStatesByViewerID[viewer.id],
+           existingState.friendIDs == friendIDs,
+           Date().timeIntervalSince(existingState.timestamp) < refreshCooldown {
+            return
+        }
+
         try await prepareSharingProfile(for: viewer)
         await syncUser(viewer)
         await backfillLocalContent(for: viewer)
@@ -136,6 +150,15 @@ final class CloudKitSyncService {
         await acceptFriendSharesIfNeeded(friends)
         try await mergeSharedContent(from: friends)
         try purgeStaleSharedCache(viewerID: viewer.id, friendIDs: Set(friends.map(\.id)))
+        refreshStatesByViewerID[viewer.id] = RefreshState(timestamp: .now, friendIDs: friendIDs)
+    }
+
+    func refreshFriendVisibleContentIfPossible(for viewer: User, friends: [User]) async {
+        do {
+            try await refreshFriendVisibleContent(for: viewer, friends: friends)
+        } catch {
+            logger.error("Unable to refresh friend-visible content: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     func syncUser(_ user: User) async {
@@ -496,7 +519,7 @@ final class CloudKitSyncService {
     }
 
     private func mergePlaces(_ remotePlaces: [Place]) throws {
-        let existingPlaces = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<Place>()).map { ($0.id, $0) })
+        let existingPlaces = try existingModelsByID(Place.self, id: \.id)
 
         for remotePlace in remotePlaces {
             if let existingPlace = existingPlaces[remotePlace.id] {
@@ -527,9 +550,7 @@ final class CloudKitSyncService {
     }
 
     private func mergeCategories(_ remoteCategories: [CustomCategory]) throws {
-        let existingCategories = Dictionary(
-            uniqueKeysWithValues: try context.fetch(FetchDescriptor<CustomCategory>()).map { ($0.id, $0) }
-        )
+        let existingCategories = try existingModelsByID(CustomCategory.self, id: \.id)
 
         for remoteCategory in remoteCategories {
             if let existingCategory = existingCategories[remoteCategory.id] {
@@ -552,9 +573,7 @@ final class CloudKitSyncService {
     }
 
     private func mergeAssignments(_ remoteAssignments: [PlaceCategoryAssignment]) throws {
-        let existingAssignments = Dictionary(
-            uniqueKeysWithValues: try context.fetch(FetchDescriptor<PlaceCategoryAssignment>()).map { ($0.id, $0) }
-        )
+        let existingAssignments = try existingModelsByID(PlaceCategoryAssignment.self, id: \.id)
 
         for remoteAssignment in remoteAssignments {
             if let existingAssignment = existingAssignments[remoteAssignment.id] {
@@ -575,7 +594,7 @@ final class CloudKitSyncService {
     }
 
     private func mergePlaceReviews(_ remoteReviews: [PlaceReview]) throws {
-        let existingReviews = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<PlaceReview>()).map { ($0.id, $0) })
+        let existingReviews = try existingModelsByID(PlaceReview.self, id: \.id)
 
         for remoteReview in remoteReviews {
             if let existingReview = existingReviews[remoteReview.id] {
@@ -606,7 +625,7 @@ final class CloudKitSyncService {
     }
 
     private func mergeDishReviews(_ remoteReviews: [DishReview]) throws {
-        let existingReviews = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<DishReview>()).map { ($0.id, $0) })
+        let existingReviews = try existingModelsByID(DishReview.self, id: \.id)
 
         for remoteReview in remoteReviews {
             if let existingReview = existingReviews[remoteReview.id] {
@@ -641,7 +660,7 @@ final class CloudKitSyncService {
     }
 
     private func mergeActivities(_ remoteActivities: [ActivityItem]) throws {
-        let existingActivities = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<ActivityItem>()).map { ($0.id, $0) })
+        let existingActivities = try existingModelsByID(ActivityItem.self, id: \.id)
 
         for remoteActivity in remoteActivities {
             if let existingActivity = existingActivities[remoteActivity.id] {
@@ -664,7 +683,7 @@ final class CloudKitSyncService {
     }
 
     private func mergePhotoAssets(_ remoteAssets: [RemotePhotoRecord]) throws {
-        let existingAssets = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<PhotoAsset>()).map { ($0.id, $0) })
+        let existingAssets = try existingModelsByID(PhotoAsset.self, id: \.id)
 
         for remoteAsset in remoteAssets {
             let localReference: String
@@ -836,6 +855,24 @@ final class CloudKitSyncService {
             }
             throw error
         }
+    }
+
+    private func existingModelsByID<Model: PersistentModel>(
+        _ modelType: Model.Type,
+        id: KeyPath<Model, UUID>
+    ) throws -> [UUID: Model] {
+        var modelsByID: [UUID: Model] = [:]
+
+        for model in try context.fetch(FetchDescriptor<Model>()) {
+            let modelID = model[keyPath: id]
+            if modelsByID[modelID] == nil {
+                modelsByID[modelID] = model
+            } else {
+                context.delete(model)
+            }
+        }
+
+        return modelsByID
     }
 
     private func place(from record: CKRecord) -> Place? {

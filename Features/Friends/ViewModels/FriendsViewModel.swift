@@ -77,7 +77,9 @@ final class FriendsViewModel: ObservableObject {
             let incomingInvites = try await friendRepository.fetchIncomingInvites(for: currentUser.id)
             let outgoingInvites = try await friendRepository.fetchOutgoingInvites(for: currentUser.id)
             let knownUsers = try userRepository.allKnownUsers()
-            let userLookup = Dictionary(uniqueKeysWithValues: knownUsers.map { ($0.id, $0) })
+            let userLookup: [UUID: User] = knownUsers.reduce(into: [:]) { result, user in
+                result[user.id] = user
+            }
 
             friends = friendships.compactMap { friendship in
                 guard let otherUserID = friendship.otherUserID(for: currentUser.id) else {

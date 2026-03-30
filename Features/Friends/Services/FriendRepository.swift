@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import Security
 import SwiftData
 
@@ -20,6 +21,7 @@ protocol FriendsRepository: AnyObject {
 
 @MainActor
 final class FriendRepository: FriendsRepository {
+    private let logger = Logger(subsystem: "TrustMap", category: "FriendRepository")
     private let persistenceController: PersistenceController
     private let cloudKitSyncService: CloudKitSyncService
     private let socialGraphService: any SocialGraphCloudKitServicing
@@ -42,11 +44,16 @@ final class FriendRepository: FriendsRepository {
     }
 
     func fetchFriends(for userID: UUID) async throws -> [Friendship] {
-        let friendships = try await socialGraphService.fetchFriendships(for: userID)
-        let cachedFriendships = try cacheFriendships(friendships)
-        let participantIDs = Set(cachedFriendships.flatMap { [$0.userAId, $0.userBId] })
-        _ = try await userRepository.refreshUsers(withIDs: participantIDs)
-        return cachedFriendships.sorted { $0.createdAt > $1.createdAt }
+        do {
+            let friendships = try await socialGraphService.fetchFriendships(for: userID)
+            let cachedFriendships = try cacheFriendships(friendships)
+            let participantIDs = Set(cachedFriendships.flatMap { [$0.userAId, $0.userBId] })
+            _ = try? await userRepository.refreshUsers(withIDs: participantIDs)
+            return cachedFriendships.sorted { $0.createdAt > $1.createdAt }
+        } catch {
+            logger.error("Unable to refresh friendships from CloudKit: \(error.localizedDescription, privacy: .public)")
+            return try cachedFriendships(for: userID)
+        }
     }
 
     func acceptedFriendIDs(for userID: UUID) async throws -> Set<UUID> {
@@ -64,8 +71,10 @@ final class FriendRepository: FriendsRepository {
 
     func acceptedFriends(for userID: UUID) async throws -> [User] {
         let friendIDs = try await acceptedFriendIDs(for: userID)
-        let cachedRemoteUsers = try await userRepository.refreshUsers(withIDs: friendIDs)
-        var usersByID = Dictionary(uniqueKeysWithValues: cachedRemoteUsers.map { ($0.id, $0) })
+        let cachedRemoteUsers = (try? await userRepository.refreshUsers(withIDs: friendIDs)) ?? []
+        var usersByID: [UUID: User] = cachedRemoteUsers.reduce(into: [:]) { result, user in
+            result[user.id] = user
+        }
 
         for localUser in try userRepository.allKnownUsers() {
             usersByID[localUser.id] = localUser
@@ -77,23 +86,37 @@ final class FriendRepository: FriendsRepository {
     }
 
     func fetchIncomingInvites(for userID: UUID) async throws -> [FriendInvite] {
-        let remoteInvites = try await socialGraphService.fetchPendingIncomingInvites(for: userID)
-        let invites = try await normalizeInvites(remoteInvites)
-        let participantIDs = Set(invites.compactMap(\.inviterUserId) + invites.compactMap(\.inviteeUserId))
-        _ = try await userRepository.refreshUsers(withIDs: participantIDs)
-        return invites
-            .filter { $0.status == .pending && $0.inviteeUserId == userID }
-            .sorted { $0.createdAt > $1.createdAt }
+        do {
+            let remoteInvites = try await socialGraphService.fetchPendingIncomingInvites(for: userID)
+            let invites = try await normalizeInvites(remoteInvites)
+            let participantIDs = Set(invites.compactMap(\.inviterUserId) + invites.compactMap(\.inviteeUserId))
+            _ = try? await userRepository.refreshUsers(withIDs: participantIDs)
+            return invites
+                .filter { $0.status == .pending && $0.inviteeUserId == userID }
+                .sorted { $0.createdAt > $1.createdAt }
+        } catch {
+            logger.error("Unable to refresh incoming invites from CloudKit: \(error.localizedDescription, privacy: .public)")
+            return try allInvites()
+                .filter { $0.status == .pending && $0.inviteeUserId == userID }
+                .sorted { $0.createdAt > $1.createdAt }
+        }
     }
 
     func fetchOutgoingInvites(for userID: UUID) async throws -> [FriendInvite] {
-        let remoteInvites = try await socialGraphService.fetchPendingOutgoingInvites(for: userID)
-        let invites = try await normalizeInvites(remoteInvites)
-        let participantIDs = Set(invites.compactMap(\.inviterUserId) + invites.compactMap(\.inviteeUserId))
-        _ = try await userRepository.refreshUsers(withIDs: participantIDs)
-        return invites
-            .filter { $0.status == .pending && $0.inviterUserId == userID }
-            .sorted { $0.createdAt > $1.createdAt }
+        do {
+            let remoteInvites = try await socialGraphService.fetchPendingOutgoingInvites(for: userID)
+            let invites = try await normalizeInvites(remoteInvites)
+            let participantIDs = Set(invites.compactMap(\.inviterUserId) + invites.compactMap(\.inviteeUserId))
+            _ = try? await userRepository.refreshUsers(withIDs: participantIDs)
+            return invites
+                .filter { $0.status == .pending && $0.inviterUserId == userID }
+                .sorted { $0.createdAt > $1.createdAt }
+        } catch {
+            logger.error("Unable to refresh outgoing invites from CloudKit: \(error.localizedDescription, privacy: .public)")
+            return try allInvites()
+                .filter { $0.status == .pending && $0.inviterUserId == userID }
+                .sorted { $0.createdAt > $1.createdAt }
+        }
     }
 
     func createInvite(from inviterUserID: UUID) async throws -> FriendInvite {
@@ -284,12 +307,20 @@ final class FriendRepository: FriendsRepository {
 
     private func allInvites() throws -> [FriendInvite] {
         let descriptor = FetchDescriptor<FriendInvite>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        return try context.fetch(descriptor)
+        var seenInviteIDs = Set<UUID>()
+        return try context.fetch(descriptor).filter { seenInviteIDs.insert($0.id).inserted }
     }
 
     private func allFriendships() throws -> [Friendship] {
         let descriptor = FetchDescriptor<Friendship>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        return try context.fetch(descriptor)
+        var seenFriendshipIDs = Set<UUID>()
+        return try context.fetch(descriptor).filter { seenFriendshipIDs.insert($0.id).inserted }
+    }
+
+    private func cachedFriendships(for userID: UUID) throws -> [Friendship] {
+        try allFriendships()
+            .filter { $0.userAId == userID || $0.userBId == userID }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     private func normalizeInvites(_ invites: [FriendInvite]) async throws -> [FriendInvite] {

@@ -97,7 +97,8 @@ final class PlaceRepository {
 
     private func allPlaces() throws -> [Place] {
         let descriptor = FetchDescriptor<Place>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        return try context.fetch(descriptor)
+        var seenPlaceIDs = Set<UUID>()
+        return try context.fetch(descriptor).filter { seenPlaceIDs.insert($0.id).inserted }
     }
 
     private func saveChanges() throws {

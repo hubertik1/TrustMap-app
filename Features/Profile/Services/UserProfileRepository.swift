@@ -38,7 +38,8 @@ final class UserProfileRepository {
 
     func allKnownUsers(excluding userID: UUID? = nil) throws -> [User] {
         let descriptor = FetchDescriptor<User>(sortBy: [SortDescriptor(\.displayName)])
-        let users = try context.fetch(descriptor)
+        var seenUserIDs = Set<UUID>()
+        let users = try context.fetch(descriptor).filter { seenUserIDs.insert($0.id).inserted }
 
         guard let userID else {
             return users

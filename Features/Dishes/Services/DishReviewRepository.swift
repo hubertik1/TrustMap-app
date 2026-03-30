@@ -188,7 +188,8 @@ final class DishReviewRepository {
 
     private func allReviews() throws -> [DishReview] {
         let descriptor = FetchDescriptor<DishReview>(sortBy: [SortDescriptor(\.updatedAt, order: .reverse)])
-        return try context.fetch(descriptor)
+        var seenReviewIDs = Set<UUID>()
+        return try context.fetch(descriptor).filter { seenReviewIDs.insert($0.id).inserted }
     }
 
     private func activities(for referenceID: String, types: Set<ActivityItemType>) throws -> [ActivityItem] {

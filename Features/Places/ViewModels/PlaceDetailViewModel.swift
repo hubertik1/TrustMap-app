@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 @MainActor
 final class PlaceDetailViewModel: ObservableObject {
@@ -20,6 +21,7 @@ final class PlaceDetailViewModel: ObservableObject {
 
     let place: Place
 
+    private let logger = Logger(subsystem: "TrustMap", category: "PlaceDetailViewModel")
     private let sessionStore: SessionStore
     private let cloudKitSyncService: CloudKitSyncService
     private let friendRepository: FriendRepository
@@ -64,8 +66,8 @@ final class PlaceDetailViewModel: ObservableObject {
         currentUserID = currentUser.id
 
         do {
-            let friends = try await friendRepository.acceptedFriends(for: currentUser.id)
-            try await cloudKitSyncService.refreshFriendVisibleContent(for: currentUser, friends: friends)
+            let friends = (try? await friendRepository.acceptedFriends(for: currentUser.id)) ?? []
+            await cloudKitSyncService.refreshFriendVisibleContentIfPossible(for: currentUser, friends: friends)
             let friendIDs = Set(friends.map(\.id))
             placeReviews = try placeReviewRepository.reviews(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
             currentUserPlaceReview = placeReviews.first(where: { $0.authorUserId == currentUser.id })
@@ -80,20 +82,24 @@ final class PlaceDetailViewModel: ObservableObject {
             reviewPhotos = Dictionary(grouping: placePhotos.compactMap { asset in
                 asset.placeReviewId.map { (reviewID: $0, asset: asset) }
             }, by: \.reviewID).mapValues { $0.map(\.asset) }
-            dishPhotos = Dictionary(uniqueKeysWithValues: placePhotos.compactMap { asset in
-                guard let dishReviewId = asset.dishReviewId else {
-                    return nil
+            dishPhotos = placePhotos.reduce(into: [:]) { result, asset in
+                guard let dishReviewId = asset.dishReviewId, result[dishReviewId] == nil else {
+                    return
                 }
-                return (dishReviewId, asset)
-            })
+                result[dishReviewId] = asset
+            }
 
             let visibleAuthorIDs = Set(placeReviews.map(\.authorUserId) + dishReviews.map(\.authorUserId))
             let allUsers = try userRepository.allKnownUsers()
-            authorNames = Dictionary(uniqueKeysWithValues: allUsers.compactMap { user in
-                visibleAuthorIDs.contains(user.id) ? (user.id, user.displayName) : nil
-            })
+            authorNames = allUsers.reduce(into: [:]) { result, user in
+                guard visibleAuthorIDs.contains(user.id) else {
+                    return
+                }
+                result[user.id] = user.displayName
+            }
             authorNames[currentUser.id] = currentUser.displayName
         } catch {
+            logger.error("Unable to load place details: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
         }
 

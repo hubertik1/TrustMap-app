@@ -1,6 +1,7 @@
 import CoreLocation
 import Foundation
 import MapKit
+import OSLog
 
 @MainActor
 final class MapScreenViewModel: ObservableObject {
@@ -22,6 +23,7 @@ final class MapScreenViewModel: ObservableObject {
     @Published private(set) var locationAccessState: UserLocationAccessState = .idle
 
     private let sessionStore: SessionStore
+    private let logger = Logger(subsystem: "TrustMap", category: "MapScreenViewModel")
     private let cloudKitSyncService: CloudKitSyncService
     private let friendRepository: FriendRepository
     private let userRepository: UserProfileRepository
@@ -79,8 +81,8 @@ final class MapScreenViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let friends = try await friendRepository.acceptedFriends(for: currentUser.id)
-            try await cloudKitSyncService.refreshFriendVisibleContent(for: currentUser, friends: friends)
+            let friends = (try? await friendRepository.acceptedFriends(for: currentUser.id)) ?? []
+            await cloudKitSyncService.refreshFriendVisibleContentIfPossible(for: currentUser, friends: friends)
             let friendIDs = Set(friends.map(\.id))
             let defaultRestaurantCategory = try categoryRepository.defaultRestaurantCategory(for: currentUser.id)
             let ownedCategories = try categoryRepository.categories(for: currentUser.id)
@@ -106,16 +108,16 @@ final class MapScreenViewModel: ObservableObject {
                 ratingRange: filterState.ratingRange
             )
             let places = try placeRepository.places(withIDs: Set(reviews.map(\.placeId)))
-            let categoryNamesByPlace = try Dictionary(uniqueKeysWithValues: places.map { place in
-                let names = try categoryRepository.categoryNames(forPlace: place.id)
-                return (place.id, names)
-            })
+            let categoryNamesByPlace = try places.reduce(into: [UUID: [String]]()) { result, place in
+                result[place.id] = try categoryRepository.categoryNames(forPlace: place.id)
+            }
             let filteredPlaces = places.filter { place in
                 let categoryNames = categoryNamesByPlace[place.id] ?? []
                 return filterState.selectedCategoryOption.matches(categoryNames: categoryNames)
             }
             annotations = buildAnnotations(from: reviews, places: filteredPlaces)
         } catch {
+            logger.error("Unable to load map content: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
         }
 
