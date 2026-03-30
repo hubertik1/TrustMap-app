@@ -1130,17 +1130,59 @@ final class CloudKitSyncService {
 
         let zoneID = try await zoneID(for: user.id, scope: .shared)
 
-        if let shareRecordName = user.sharedContentShareRecordName {
-            let recordID = CKRecord.ID(recordName: shareRecordName, zoneID: zoneID)
-            if let existingRecord = try await fetchRecord(in: privateDatabase, with: recordID) as? CKShare {
-                return existingRecord
-            }
+        if let existingShare = try await fetchSharedContentShare(
+            in: privateDatabase,
+            zoneID: zoneID,
+            preferredRecordName: user.sharedContentShareRecordName
+        ) {
+            return existingShare
         }
+
+        user.sharedContentShareRecordName = nil
+        user.sharedContentShareURL = nil
 
         let share = CKShare(recordZoneID: zoneID)
         share.publicPermission = .none
         share[CKShare.SystemFieldKey.title] = "\(user.displayName)'s TrustMap" as CKRecordValue
-        return try await saveRecord(in: privateDatabase, record: share) as! CKShare
+        let savedRecord = try await saveRecord(in: privateDatabase, record: share)
+        guard let savedShare = savedRecord as? CKShare else {
+            throw AppError.validationFailure("CloudKit returned an unexpected share record.")
+        }
+
+        if savedShare.url != nil {
+            return savedShare
+        }
+
+        return try await fetchSharedContentShare(
+            in: privateDatabase,
+            zoneID: zoneID,
+            preferredRecordName: savedShare.recordID.recordName
+        ) ?? savedShare
+    }
+
+    private func fetchSharedContentShare(
+        in database: CKDatabase,
+        zoneID: CKRecordZone.ID,
+        preferredRecordName: String?
+    ) async throws -> CKShare? {
+        var candidateRecordNames: [String] = []
+
+        if let preferredRecordName, !preferredRecordName.isEmpty {
+            candidateRecordNames.append(preferredRecordName)
+        }
+
+        if !candidateRecordNames.contains(CKRecordNameZoneWideShare) {
+            candidateRecordNames.append(CKRecordNameZoneWideShare)
+        }
+
+        for recordName in candidateRecordNames {
+            let recordID = CKRecord.ID(recordName: recordName, zoneID: zoneID)
+            if let share = try await fetchRecord(in: database, with: recordID) as? CKShare {
+                return share
+            }
+        }
+
+        return nil
     }
 
     private func ensureRecordZoneExists(zoneID: CKRecordZone.ID) async throws {
@@ -1192,10 +1234,14 @@ final class CloudKitSyncService {
             let lookupInfo = CKUserIdentity.LookupInfo(userRecordID: userRecordID)
             let operation = CKFetchShareParticipantsOperation(userIdentityLookupInfos: [lookupInfo])
             var participant: CKShare.Participant?
+            var participantError: Error?
 
             operation.perShareParticipantResultBlock = { _, result in
-                if case .success(let fetchedParticipant) = result {
+                switch result {
+                case .success(let fetchedParticipant):
                     participant = fetchedParticipant
+                case .failure(let error):
+                    participantError = error
                 }
             }
 
@@ -1204,6 +1250,8 @@ final class CloudKitSyncService {
                 case .success:
                     if let participant {
                         continuation.resume(returning: participant)
+                    } else if let participantError {
+                        continuation.resume(throwing: participantError)
                     } else {
                         continuation.resume(throwing: AppError.validationFailure("Unable to resolve the CloudKit participant."))
                     }
@@ -1220,13 +1268,14 @@ final class CloudKitSyncService {
         try await withCheckedThrowingContinuation { continuation in
             let operation = CKFetchShareMetadataOperation(shareURLs: [shareURL])
             var fetchedMetadata: CKShare.Metadata?
+            var metadataError: Error?
 
             operation.perShareMetadataResultBlock = { _, result in
                 switch result {
                 case .success(let metadata):
                     fetchedMetadata = metadata
                 case .failure(let error):
-                    continuation.resume(throwing: error)
+                    metadataError = error
                 }
             }
 
@@ -1235,6 +1284,8 @@ final class CloudKitSyncService {
                 case .success:
                     if let fetchedMetadata {
                         continuation.resume(returning: fetchedMetadata)
+                    } else if let metadataError {
+                        continuation.resume(throwing: metadataError)
                     } else {
                         continuation.resume(throwing: AppError.validationFailure("Unable to fetch share metadata."))
                     }
@@ -1273,7 +1324,7 @@ final class CloudKitSyncService {
     private func fetchRecord(in database: CKDatabase, with recordID: CKRecord.ID) async throws -> CKRecord? {
         try await withCheckedThrowingContinuation { continuation in
             database.fetch(withRecordID: recordID) { record, error in
-                if let ckError = error as? CKError, ckError.code == .unknownItem {
+                if let error, Self.isRecordNotFoundError(error) {
                     continuation.resume(returning: nil)
                     return
                 }
@@ -1329,7 +1380,7 @@ final class CloudKitSyncService {
     private func deleteRecord(in database: CKDatabase, with recordID: CKRecord.ID) async throws {
         try await withCheckedThrowingContinuation { continuation in
             database.delete(withRecordID: recordID) { _, error in
-                if let ckError = error as? CKError, ckError.code == .unknownItem {
+                if let error, Self.isRecordNotFoundError(error) {
                     continuation.resume()
                     return
                 }
@@ -1367,6 +1418,24 @@ final class CloudKitSyncService {
     private func isMissingSchemaError(_ error: Error, recordType: String) -> Bool {
         let description = (error as NSError).localizedDescription.lowercased()
         return description.contains("did not find record type") && description.contains(recordType.lowercased())
+    }
+
+    private nonisolated static func isRecordNotFoundError(_ error: Error) -> Bool {
+        if let ckError = error as? CKError, ckError.code == .unknownItem {
+            return true
+        }
+
+        let nsError = error as NSError
+        let messages = [
+            nsError.localizedDescription,
+            nsError.localizedFailureReason,
+            nsError.localizedRecoverySuggestion
+        ]
+        .compactMap { $0?.lowercased() }
+
+        return messages.contains { message in
+            message.contains("record not found") || message.contains("unknown item")
+        }
     }
 
     private func saveChanges(message: String) throws {

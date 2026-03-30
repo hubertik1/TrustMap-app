@@ -375,7 +375,7 @@ final class SocialGraphCloudKitService: SocialGraphCloudKitServicing {
     private func fetchRecord(in database: CKDatabase, with recordID: CKRecord.ID) async throws -> CKRecord? {
         try await withCheckedThrowingContinuation { continuation in
             database.fetch(withRecordID: recordID) { record, error in
-                if let ckError = error as? CKError, ckError.code == .unknownItem {
+                if let error, Self.isRecordNotFoundError(error) {
                     continuation.resume(returning: nil)
                     return
                 }
@@ -541,5 +541,25 @@ final class SocialGraphCloudKitService: SocialGraphCloudKitServicing {
         }
 
         return messages
+    }
+
+    private nonisolated static func isRecordNotFoundError(_ error: Error) -> Bool {
+        if let ckError = error as? CKError, ckError.code == .unknownItem {
+            return true
+        }
+
+        let nsError = error as NSError
+        let messages = [
+            nsError.localizedDescription,
+            nsError.localizedFailureReason,
+            nsError.localizedRecoverySuggestion
+        ]
+        .compactMap { $0?.lowercased() }
+
+        return messages.contains { message in
+            let normalizedMessage = message.lowercased()
+            return normalizedMessage.contains("record not found")
+                || normalizedMessage.contains("unknown item")
+        }
     }
 }
