@@ -51,12 +51,20 @@ final class AcceptInviteViewModel: ObservableObject {
         state = .loading
 
         do {
-            guard let invite = try friendRepository.prepareInvite(token: token, for: currentUser.id) else {
+            guard let invite = try await friendRepository.prepareInvite(token: token, for: currentUser.id) else {
                 state = .invalid
                 return
             }
 
-            guard let inviter = try userRepository.user(withID: invite.inviterUserId) else {
+            let inviter: User? =
+                if invite.inviterUserId == currentUser.id {
+                    currentUser
+                } else {
+                    try await userRepository.refreshUser(withID: invite.inviterUserId)
+                        ?? userRepository.user(withID: invite.inviterUserId)
+                }
+
+            guard let inviter else {
                 state = .invalid
                 return
             }
@@ -66,7 +74,15 @@ final class AcceptInviteViewModel: ObservableObject {
                 inviterBio: inviter.bio,
                 createdAt: invite.createdAt
             )
-            state = try resolveState(invite: invite, context: context, currentUserID: currentUser.id)
+            let resolvedState = try await resolveState(invite: invite, context: context, currentUserID: currentUser.id)
+
+            switch resolvedState {
+            case .valid:
+                await autoAcceptInvite(currentUserID: currentUser.id, context: context)
+
+            default:
+                state = resolvedState
+            }
         } catch {
             state = .genericError(AppError.wrap(error).errorDescription ?? "Something went wrong.")
         }
@@ -78,7 +94,7 @@ final class AcceptInviteViewModel: ObservableObject {
                 throw AppError.missingCurrentUser
             }
 
-            try friendRepository.acceptInvite(token: token, by: currentUser.id)
+            try await friendRepository.acceptInvite(token: token, by: currentUser.id)
         }
     }
 
@@ -88,7 +104,7 @@ final class AcceptInviteViewModel: ObservableObject {
                 throw AppError.missingCurrentUser
             }
 
-            try friendRepository.declineInvite(token: token, by: currentUser.id)
+            try await friendRepository.declineInvite(token: token, by: currentUser.id)
         }
     }
 
@@ -96,7 +112,7 @@ final class AcceptInviteViewModel: ObservableObject {
         invite: FriendInvite,
         context: InviteContext,
         currentUserID: UUID
-    ) throws -> State {
+    ) async throws -> State {
         if invite.isExpired {
             return .expired(context)
         }
@@ -122,14 +138,14 @@ final class AcceptInviteViewModel: ObservableObject {
             return .genericError("This invite is already reserved for someone else.")
         }
 
-        if try friendRepository.areFriends(invite.inviterUserId, currentUserID) {
+        if try await friendRepository.areFriends(invite.inviterUserId, currentUserID) {
             return .alreadyFriends(context)
         }
 
         return .valid(context)
     }
 
-    private func performAction(_ action: () throws -> Void) async {
+    private func performAction(_ action: () async throws -> Void) async {
         guard !isPerformingAction else {
             return
         }
@@ -138,8 +154,33 @@ final class AcceptInviteViewModel: ObservableObject {
         defer { isPerformingAction = false }
 
         do {
-            try action()
+            try await action()
             await load()
+        } catch {
+            state = .genericError(AppError.wrap(error).errorDescription ?? "Something went wrong.")
+        }
+    }
+
+    private func autoAcceptInvite(currentUserID: UUID, context: InviteContext) async {
+        guard !isPerformingAction else {
+            return
+        }
+
+        isPerformingAction = true
+        defer { isPerformingAction = false }
+
+        do {
+            try await friendRepository.acceptInvite(token: token, by: currentUserID)
+
+            if let acceptedInvite = try await friendRepository.findInvite(by: token) {
+                state = try await resolveState(
+                    invite: acceptedInvite,
+                    context: context,
+                    currentUserID: currentUserID
+                )
+            } else {
+                state = .alreadyAccepted(context)
+            }
         } catch {
             state = .genericError(AppError.wrap(error).errorDescription ?? "Something went wrong.")
         }

@@ -39,7 +39,8 @@ final class SessionStore: ObservableObject {
 
         do {
             let credentialState = try await authService.credentialState(for: appleUserID)
-            guard credentialState == .authorized, let user = try userRepository.user(forAppleUserID: appleUserID) else {
+            guard credentialState == .authorized,
+                  let user = try await userRepository.restoreAuthorizedUser(forAppleUserID: appleUserID) else {
                 authService.persistActiveAppleUserID(nil)
                 state = .signedOut
                 return
@@ -56,7 +57,7 @@ final class SessionStore: ObservableObject {
     func signIn(with result: Result<ASAuthorization, any Error>) async {
         do {
             let credential = try authService.credential(from: result)
-            let user = try userRepository.createOrUpdateSignedInUser(credential: credential)
+            let user = try await userRepository.createOrUpdateSignedInUser(credential: credential)
             authService.persistActiveAppleUserID(credential.userID)
             state = .signedIn(user)
         } catch {
@@ -70,9 +71,7 @@ final class SessionStore: ObservableObject {
         state = .signedOut
     }
 
-    #if DEBUG
     func setPreviewState(_ state: State) {
         self.state = state
     }
-    #endif
 }

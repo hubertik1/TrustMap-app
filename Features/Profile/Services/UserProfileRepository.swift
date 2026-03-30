@@ -8,13 +8,16 @@ final class UserProfileRepository {
 
     private let persistenceController: PersistenceController
     private let cloudKitSyncService: CloudKitSyncing
+    private let socialGraphService: any SocialGraphCloudKitServicing
 
     init(
         persistenceController: PersistenceController,
-        cloudKitSyncService: CloudKitSyncing
+        cloudKitSyncService: CloudKitSyncing,
+        socialGraphService: any SocialGraphCloudKitServicing
     ) {
         self.persistenceController = persistenceController
         self.cloudKitSyncService = cloudKitSyncService
+        self.socialGraphService = socialGraphService
     }
 
     private var context: ModelContext {
@@ -55,36 +58,79 @@ final class UserProfileRepository {
         }
     }
 
-    func createOrUpdateSignedInUser(credential: AppleSignInCredential) throws -> User {
-        let resolvedDisplayName = Self.resolvedDisplayName(from: credential)
+    func restoreAuthorizedUser(forAppleUserID appleUserID: String) async throws -> User? {
+        let stableUserID = StableIdentifier.userID(forAppleUserID: appleUserID)
+        _ = try migrateLocalUserIfNeeded(appleUserID: appleUserID, stableUserID: stableUserID)
 
-        if let existingUser = try user(forAppleUserID: credential.userID) {
-            let normalizedCurrentDisplayName = existingUser.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-            let shouldUpdateDisplayName =
-                normalizedCurrentDisplayName.isEmpty
-                || normalizedCurrentDisplayName == Self.legacyFallbackDisplayName
-                || normalizedCurrentDisplayName == Self.genericFallbackDisplayName
-                || credential.displayName != nil
-
-            if let resolvedDisplayName,
-               !resolvedDisplayName.isEmpty,
-               shouldUpdateDisplayName {
-                existingUser.displayName = resolvedDisplayName
-            }
-
-            try saveChanges()
-            Task { await cloudKitSyncService.syncUser(existingUser) }
-            return existingUser
+        if let remoteUser = try await socialGraphService.fetchUser(id: stableUserID) {
+            return try cacheRemoteUser(remoteUser)
         }
 
-        let user = User(
-            appleUserId: credential.userID,
-            displayName: resolvedDisplayName ?? Self.genericFallbackDisplayName
+        if let localUser = try user(withID: stableUserID) ?? user(forAppleUserID: appleUserID) {
+            try await socialGraphService.upsertUser(localUser)
+            return localUser
+        }
+
+        return nil
+    }
+
+    func createOrUpdateSignedInUser(credential: AppleSignInCredential) async throws -> User {
+        let stableUserID = StableIdentifier.userID(forAppleUserID: credential.userID)
+        let resolvedDisplayName = Self.resolvedDisplayName(from: credential)
+
+        let migratedLocalUser = try migrateLocalUserIfNeeded(
+            appleUserID: credential.userID,
+            stableUserID: stableUserID
         )
-        context.insert(user)
+
+        let remoteUser = try await socialGraphService.fetchUser(id: stableUserID)
+        let currentUser = try cacheRemoteUser(remoteUser)
+            ?? migratedLocalUser
+            ?? user(withID: stableUserID)
+            ?? user(forAppleUserID: credential.userID)
+            ?? {
+                let user = User(
+                    id: stableUserID,
+                    appleUserId: credential.userID,
+                    displayName: resolvedDisplayName ?? Self.genericFallbackDisplayName
+                )
+                context.insert(user)
+                return user
+            }()
+
+        currentUser.id = stableUserID
+        currentUser.appleUserId = credential.userID
+
+        let normalizedCurrentDisplayName = currentUser.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let shouldUpdateDisplayName =
+            normalizedCurrentDisplayName.isEmpty
+            || normalizedCurrentDisplayName == Self.legacyFallbackDisplayName
+            || normalizedCurrentDisplayName == Self.genericFallbackDisplayName
+            || credential.displayName != nil
+
+        if let resolvedDisplayName,
+           !resolvedDisplayName.isEmpty,
+           shouldUpdateDisplayName {
+            currentUser.displayName = resolvedDisplayName
+        }
+
         try saveChanges()
-        Task { await cloudKitSyncService.syncUser(user) }
-        return user
+        try await socialGraphService.upsertUser(currentUser)
+        Task { await cloudKitSyncService.syncUser(currentUser) }
+        return currentUser
+    }
+
+    func refreshUsers(withIDs ids: Set<UUID>) async throws -> [User] {
+        let remoteUsers = try await socialGraphService.fetchUsers(ids: ids)
+        return try cacheRemoteUsers(remoteUsers)
+    }
+
+    func refreshUser(withID userID: UUID) async throws -> User? {
+        guard let remoteUser = try await socialGraphService.fetchUser(id: userID) else {
+            return try user(withID: userID)
+        }
+
+        return try cacheRemoteUser(remoteUser)
     }
 
     func updateProfile(userID: UUID, displayName: String, bio: String?) throws {
@@ -95,7 +141,139 @@ final class UserProfileRepository {
         user.displayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         user.bio = bio?.trimmingCharacters(in: .whitespacesAndNewlines)
         try saveChanges()
-        Task { await cloudKitSyncService.syncUser(user) }
+        Task {
+            await cloudKitSyncService.syncUser(user)
+            try? await socialGraphService.upsertUser(user)
+        }
+    }
+
+    @discardableResult
+    func cacheRemoteUser(_ remoteUser: User?) throws -> User? {
+        guard let remoteUser else {
+            return nil
+        }
+
+        if let existingUser = try user(withID: remoteUser.id) {
+            existingUser.appleUserId = remoteUser.appleUserId
+            existingUser.displayName = remoteUser.displayName
+            existingUser.bio = remoteUser.bio
+            existingUser.avatarReference = remoteUser.avatarReference
+            existingUser.createdAt = remoteUser.createdAt
+            try saveChanges()
+            return existingUser
+        }
+
+        if let existingByAppleUserID = try user(forAppleUserID: remoteUser.appleUserId) {
+            if existingByAppleUserID.id != remoteUser.id {
+                try migrateUserReferences(from: existingByAppleUserID.id, to: remoteUser.id)
+            }
+
+            existingByAppleUserID.id = remoteUser.id
+            existingByAppleUserID.displayName = remoteUser.displayName
+            existingByAppleUserID.bio = remoteUser.bio
+            existingByAppleUserID.avatarReference = remoteUser.avatarReference
+            existingByAppleUserID.createdAt = remoteUser.createdAt
+            try saveChanges()
+            return existingByAppleUserID
+        }
+
+        let user = User(
+            id: remoteUser.id,
+            appleUserId: remoteUser.appleUserId,
+            displayName: remoteUser.displayName,
+            avatarReference: remoteUser.avatarReference,
+            bio: remoteUser.bio,
+            createdAt: remoteUser.createdAt
+        )
+        context.insert(user)
+        try saveChanges()
+        return user
+    }
+
+    func cacheRemoteUsers(_ remoteUsers: [User]) throws -> [User] {
+        var cachedUsers: [User] = []
+        cachedUsers.reserveCapacity(remoteUsers.count)
+
+        for remoteUser in remoteUsers {
+            if let cachedUser = try cacheRemoteUser(remoteUser) {
+                cachedUsers.append(cachedUser)
+            }
+        }
+
+        return cachedUsers
+    }
+
+    private func migrateLocalUserIfNeeded(appleUserID: String, stableUserID: UUID) throws -> User? {
+        guard let existingUser = try user(forAppleUserID: appleUserID) else {
+            return nil
+        }
+
+        guard existingUser.id != stableUserID else {
+            return existingUser
+        }
+
+        try migrateUserReferences(from: existingUser.id, to: stableUserID)
+        existingUser.id = stableUserID
+        try saveChanges()
+        return existingUser
+    }
+
+    private func migrateUserReferences(from oldUserID: UUID, to newUserID: UUID) throws {
+        guard oldUserID != newUserID else {
+            return
+        }
+
+        try reassign(\Place.createdByUserId, from: oldUserID, to: newUserID)
+        try reassign(\CustomCategory.ownerUserId, from: oldUserID, to: newUserID)
+        try reassign(\PlaceCategoryAssignment.assignedByUserId, from: oldUserID, to: newUserID)
+        try reassign(\PlaceReview.authorUserId, from: oldUserID, to: newUserID)
+        try reassign(\DishReview.authorUserId, from: oldUserID, to: newUserID)
+        try reassign(\PhotoAsset.ownerUserId, from: oldUserID, to: newUserID)
+        try reassign(\ActivityItem.actorUserId, from: oldUserID, to: newUserID)
+
+        let friendshipDescriptor = FetchDescriptor<Friendship>()
+        for friendship in try context.fetch(friendshipDescriptor) {
+            if friendship.userAId == oldUserID {
+                friendship.userAId = newUserID
+            }
+            if friendship.userBId == oldUserID {
+                friendship.userBId = newUserID
+            }
+        }
+
+        let inviteDescriptor = FetchDescriptor<FriendInvite>()
+        for invite in try context.fetch(inviteDescriptor) {
+            if invite.inviterUserId == oldUserID {
+                invite.inviterUserId = newUserID
+            }
+            if invite.inviteeUserId == oldUserID {
+                invite.inviteeUserId = newUserID
+            }
+        }
+
+        try saveChanges()
+    }
+
+    private func reassign<Model: PersistentModel>(
+        _ keyPath: ReferenceWritableKeyPath<Model, UUID>,
+        from oldUserID: UUID,
+        to newUserID: UUID
+    ) throws {
+        let descriptor = FetchDescriptor<Model>()
+        for model in try context.fetch(descriptor) where model[keyPath: keyPath] == oldUserID {
+            model[keyPath: keyPath] = newUserID
+        }
+    }
+
+    private func reassign<Model: PersistentModel>(
+        _ keyPath: ReferenceWritableKeyPath<Model, UUID?>,
+        from oldUserID: UUID,
+        to newUserID: UUID
+    ) throws {
+        let descriptor = FetchDescriptor<Model>()
+        for model in try context.fetch(descriptor) where model[keyPath: keyPath] == oldUserID {
+            model[keyPath: keyPath] = newUserID
+        }
     }
 
     private func saveChanges() throws {

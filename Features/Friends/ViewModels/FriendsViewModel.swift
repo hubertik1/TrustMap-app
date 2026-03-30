@@ -30,7 +30,7 @@ final class FriendsViewModel: ObservableObject {
         let url: URL
 
         var activityItems: [Any] {
-            [message, url]
+            [url, message]
         }
     }
 
@@ -73,11 +73,11 @@ final class FriendsViewModel: ObservableObject {
         errorMessage = nil
 
         do {
+            let friendships = try await friendRepository.fetchFriends(for: currentUser.id)
+            let incomingInvites = try await friendRepository.fetchIncomingInvites(for: currentUser.id)
+            let outgoingInvites = try await friendRepository.fetchOutgoingInvites(for: currentUser.id)
             let knownUsers = try userRepository.allKnownUsers()
             let userLookup = Dictionary(uniqueKeysWithValues: knownUsers.map { ($0.id, $0) })
-            let friendships = try friendRepository.fetchFriends(for: currentUser.id)
-            let incomingInvites = try friendRepository.fetchIncomingInvites(for: currentUser.id)
-            let outgoingInvites = try friendRepository.fetchOutgoingInvites(for: currentUser.id)
 
             friends = friendships.compactMap { friendship in
                 guard let otherUserID = friendship.otherUserID(for: currentUser.id) else {
@@ -137,7 +137,7 @@ final class FriendsViewModel: ObservableObject {
         defer { isPreparingInvite = false }
 
         do {
-            let invite = try friendRepository.createInvite(from: currentUser.id)
+            let invite = try await friendRepository.createInvite(from: currentUser.id)
             let inviteURL = try inviteLinkBuilder.inviteURL(for: invite.token)
             await load()
             sharePayload = InviteSharePayload(
@@ -151,13 +151,13 @@ final class FriendsViewModel: ObservableObject {
 
     func accept(_ invite: IncomingInviteListItem) async {
         await performInviteAction(inviteID: invite.id) { currentUserID in
-            try friendRepository.acceptInvite(token: invite.token, by: currentUserID)
+            try await friendRepository.acceptInvite(token: invite.token, by: currentUserID)
         }
     }
 
     func decline(_ invite: IncomingInviteListItem) async {
         await performInviteAction(inviteID: invite.id) { currentUserID in
-            try friendRepository.declineInvite(token: invite.token, by: currentUserID)
+            try await friendRepository.declineInvite(token: invite.token, by: currentUserID)
         }
     }
 
@@ -176,7 +176,7 @@ final class FriendsViewModel: ObservableObject {
         defer { activeInviteID = nil }
 
         do {
-            try friendRepository.revokeInvite(inviteID: invite.id, by: currentUser.id)
+            try await friendRepository.revokeInvite(inviteID: invite.id, by: currentUser.id)
             await load()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
@@ -193,7 +193,7 @@ final class FriendsViewModel: ObservableObject {
 
     private func performInviteAction(
         inviteID: UUID,
-        _ action: (_ currentUserID: UUID) throws -> Void
+        _ action: (_ currentUserID: UUID) async throws -> Void
     ) async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
@@ -209,7 +209,7 @@ final class FriendsViewModel: ObservableObject {
         defer { activeInviteID = nil }
 
         do {
-            try action(currentUser.id)
+            try await action(currentUser.id)
             await load()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription

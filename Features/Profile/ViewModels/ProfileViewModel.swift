@@ -45,7 +45,7 @@ final class ProfileViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            user = try userRepository.user(withID: currentUser.id) ?? currentUser
+            user = try await userRepository.refreshUser(withID: currentUser.id) ?? currentUser
             try reloadReviewData(for: currentUser.id)
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
@@ -145,7 +145,7 @@ final class CategoriesViewModel: ObservableObject {
             myCategories = try categoryRepository.categories(for: currentUser.id)
             hiddenCategories = try categoryRepository.hiddenCategories(for: currentUser.id)
 
-            let friends = try friendRepository.acceptedFriends(for: currentUser.id)
+            let friends = try await friendRepository.acceptedFriends(for: currentUser.id)
             let friendIDs = Set(friends.map(\.id))
             let friendCategories = try categoryRepository.categories(createdBy: friendIDs)
             let ownerNames = Dictionary(uniqueKeysWithValues: friends.map { ($0.id, $0.displayName) })

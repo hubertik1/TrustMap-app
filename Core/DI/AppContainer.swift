@@ -5,6 +5,7 @@ final class AppContainer: ObservableObject {
     let persistenceController: PersistenceController
     let photoStorageService: LocalPhotoStorageService
     let cloudKitSyncService: CloudKitSyncService
+    let socialGraphCloudKitService: SocialGraphCloudKitService
     let authService: AppleAuthenticationService
     let pendingDeepLinkStore: PendingDeepLinkStore
     let inviteLinkBuilder: InviteLinkBuilder
@@ -27,6 +28,9 @@ final class AppContainer: ObservableObject {
         let cloudKitSyncService = CloudKitSyncService(
             forceDisabled: !AppConfiguration.cloudKitSyncEnabled || AppConfiguration.isRunningPreviews
         )
+        let socialGraphCloudKitService = SocialGraphCloudKitService(
+            forceDisabled: !AppConfiguration.socialGraphCloudKitEnabled || AppConfiguration.isRunningPreviews || inMemory
+        )
         let authService = AppleAuthenticationService()
         let pendingDeepLinkStore = PendingDeepLinkStore()
         let inviteLinkBuilder = InviteLinkBuilder()
@@ -36,11 +40,13 @@ final class AppContainer: ObservableObject {
         )
         let userRepository = UserProfileRepository(
             persistenceController: persistenceController,
-            cloudKitSyncService: cloudKitSyncService
+            cloudKitSyncService: cloudKitSyncService,
+            socialGraphService: socialGraphCloudKitService
         )
         let friendRepository = FriendRepository(
             persistenceController: persistenceController,
             cloudKitSyncService: cloudKitSyncService,
+            socialGraphService: socialGraphCloudKitService,
             userRepository: userRepository
         )
         let categoryRepository = CategoryRepository(
@@ -78,6 +84,7 @@ final class AppContainer: ObservableObject {
         self.persistenceController = persistenceController
         self.photoStorageService = photoStorageService
         self.cloudKitSyncService = cloudKitSyncService
+        self.socialGraphCloudKitService = socialGraphCloudKitService
         self.authService = authService
         self.pendingDeepLinkStore = pendingDeepLinkStore
         self.inviteLinkBuilder = inviteLinkBuilder

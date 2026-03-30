@@ -40,7 +40,7 @@ final class FeedViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let friendIDs = try friendRepository.acceptedFriendIDs(for: currentUser.id)
+            let friendIDs = try await friendRepository.acceptedFriendIDs(for: currentUser.id)
             let actorIDs = friendIDs.union([currentUser.id])
             let activities = try feedRepository.placeFeed(actorIDs: actorIDs)
             let users = try userRepository.allKnownUsers()

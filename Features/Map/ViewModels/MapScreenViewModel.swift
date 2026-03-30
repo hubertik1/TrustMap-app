@@ -76,7 +76,7 @@ final class MapScreenViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let friends = try friendRepository.acceptedFriends(for: currentUser.id)
+            let friends = try await friendRepository.acceptedFriends(for: currentUser.id)
             let friendIDs = Set(friends.map(\.id))
             let defaultRestaurantCategory = try categoryRepository.defaultRestaurantCategory(for: currentUser.id)
             let ownedCategories = try categoryRepository.categories(for: currentUser.id)

@@ -47,7 +47,7 @@ final class PlacesViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let friends = try friendRepository.acceptedFriends(for: currentUser.id)
+            let friends = try await friendRepository.acceptedFriends(for: currentUser.id)
             let friendIDs = Set(friends.map(\.id))
             let authorIDs = resolvedAuthorIDs(currentUserID: currentUser.id, friendIDs: friendIDs)
             let visibleReviews = try placeReviewRepository.reviews(

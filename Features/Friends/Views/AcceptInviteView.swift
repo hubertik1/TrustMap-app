@@ -19,7 +19,7 @@ struct AcceptInviteView: View {
         Group {
             switch viewModel.state {
             case .loading:
-                LoadingStateView(title: "Loading invite")
+                LoadingStateView(title: "Adding friend")
 
             case .valid(let context):
                 InviteStateCard(
