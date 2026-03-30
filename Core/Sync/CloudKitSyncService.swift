@@ -1359,12 +1359,14 @@ final class CloudKitSyncService {
                         continuation.resume(returning: savedRecord)
                     } else {
                         database.fetch(withRecordID: record.recordID) { fetchedRecord, error in
-                            if let error {
+                            if let error, Self.isRecordNotFoundError(error) {
+                                continuation.resume(returning: record)
+                            } else if let error {
                                 continuation.resume(throwing: error)
                             } else if let fetchedRecord {
                                 continuation.resume(returning: fetchedRecord)
                             } else {
-                                continuation.resume(throwing: AppError.validationFailure("CloudKit did not return the saved record."))
+                                continuation.resume(returning: record)
                             }
                         }
                     }

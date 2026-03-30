@@ -418,12 +418,14 @@ final class SocialGraphCloudKitService: SocialGraphCloudKitServicing {
                     continuation.resume(returning: savedRecord)
                 } else {
                     database.fetch(withRecordID: record.recordID) { fetchedRecord, fetchError in
-                        if let fetchError {
+                        if let fetchError, Self.isRecordNotFoundError(fetchError) {
+                            continuation.resume(returning: record)
+                        } else if let fetchError {
                             continuation.resume(throwing: fetchError)
                         } else if let fetchedRecord {
                             continuation.resume(returning: fetchedRecord)
                         } else {
-                            continuation.resume(throwing: AppError.syncFailure("CloudKit did not return the saved record."))
+                            continuation.resume(returning: record)
                         }
                     }
                 }

@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import SwiftData
 
 @MainActor
@@ -6,6 +7,7 @@ final class UserProfileRepository {
     private static let legacyFallbackDisplayName = "My TrustMap"
     private static let genericFallbackDisplayName = "Apple User"
 
+    private let logger = Logger(subsystem: "TrustMap", category: "UserProfileRepository")
     private let persistenceController: PersistenceController
     private let cloudKitSyncService: CloudKitSyncService
     private let socialGraphService: any SocialGraphCloudKitServicing
@@ -62,18 +64,24 @@ final class UserProfileRepository {
         let stableUserID = StableIdentifier.userID(forAppleUserID: appleUserID)
         _ = try migrateLocalUserIfNeeded(appleUserID: appleUserID, stableUserID: stableUserID)
 
-        if let remoteUser = try await socialGraphService.fetchUser(id: stableUserID) {
+        let remoteUser: User?
+        do {
+            remoteUser = try await socialGraphService.fetchUser(id: stableUserID)
+        } catch {
+            logger.error("Unable to fetch remote user during restore: \(error.localizedDescription, privacy: .public)")
+            remoteUser = nil
+        }
+
+        if let remoteUser {
             if let cachedUser = try cacheRemoteUser(remoteUser) {
-                try await cloudKitSyncService.prepareSharingProfile(for: cachedUser)
-                try await socialGraphService.upsertUser(cachedUser)
+                await synchronizeRemoteStateIfPossible(for: cachedUser)
                 return cachedUser
             }
             return nil
         }
 
         if let localUser = try user(withID: stableUserID) ?? user(forAppleUserID: appleUserID) {
-            try await cloudKitSyncService.prepareSharingProfile(for: localUser)
-            try await socialGraphService.upsertUser(localUser)
+            await synchronizeRemoteStateIfPossible(for: localUser)
             return localUser
         }
 
@@ -89,7 +97,13 @@ final class UserProfileRepository {
             stableUserID: stableUserID
         )
 
-        let remoteUser = try await socialGraphService.fetchUser(id: stableUserID)
+        let remoteUser: User?
+        do {
+            remoteUser = try await socialGraphService.fetchUser(id: stableUserID)
+        } catch {
+            logger.error("Unable to fetch remote user during sign in: \(error.localizedDescription, privacy: .public)")
+            remoteUser = nil
+        }
         let currentUser = try cacheRemoteUser(remoteUser)
             ?? migratedLocalUser
             ?? user(withID: stableUserID)
@@ -121,8 +135,7 @@ final class UserProfileRepository {
         }
 
         try saveChanges()
-        try await cloudKitSyncService.prepareSharingProfile(for: currentUser)
-        try await socialGraphService.upsertUser(currentUser)
+        await synchronizeRemoteStateIfPossible(for: currentUser)
         Task { await cloudKitSyncService.syncUser(currentUser) }
         return currentUser
     }
@@ -149,9 +162,22 @@ final class UserProfileRepository {
         user.bio = bio?.trimmingCharacters(in: .whitespacesAndNewlines)
         try saveChanges()
         Task {
-            try? await cloudKitSyncService.prepareSharingProfile(for: user)
+            await synchronizeRemoteStateIfPossible(for: user)
             await cloudKitSyncService.syncUser(user)
-            try? await socialGraphService.upsertUser(user)
+        }
+    }
+
+    private func synchronizeRemoteStateIfPossible(for user: User) async {
+        do {
+            try await cloudKitSyncService.prepareSharingProfile(for: user)
+        } catch {
+            logger.error("Unable to prepare CloudKit sharing profile: \(error.localizedDescription, privacy: .public)")
+        }
+
+        do {
+            try await socialGraphService.upsertUser(user)
+        } catch {
+            logger.error("Unable to upsert public user profile: \(error.localizedDescription, privacy: .public)")
         }
     }
 
