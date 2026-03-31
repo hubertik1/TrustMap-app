@@ -18,6 +18,9 @@ protocol FriendsRepository: AnyObject {
     func acceptedFriends(for userID: UUID) async throws -> [User]
     func cachedAcceptedFriendIDs(for userID: UUID) throws -> Set<UUID>
     func cachedAcceptedFriends(for userID: UUID) throws -> [User]
+    func cachedFriends(for userID: UUID) throws -> [Friendship]
+    func cachedIncomingInvites(for userID: UUID) throws -> [FriendInvite]
+    func cachedOutgoingInvites(for userID: UUID) throws -> [FriendInvite]
     func areFriends(_ firstUserID: UUID, _ secondUserID: UUID) async throws -> Bool
 }
 
@@ -109,6 +112,22 @@ final class FriendRepository: FriendsRepository {
         return friendIDs
             .compactMap { usersByID[$0] }
             .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+    }
+
+    func cachedFriends(for userID: UUID) throws -> [Friendship] {
+        try cachedFriendships(for: userID)
+    }
+
+    func cachedIncomingInvites(for userID: UUID) throws -> [FriendInvite] {
+        try allInvites()
+            .filter { $0.status == .pending && $0.inviteeUserId == userID }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    func cachedOutgoingInvites(for userID: UUID) throws -> [FriendInvite] {
+        try allInvites()
+            .filter { $0.status == .pending && $0.inviterUserId == userID }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     func fetchIncomingInvites(for userID: UUID) async throws -> [FriendInvite] {

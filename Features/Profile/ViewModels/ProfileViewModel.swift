@@ -18,6 +18,7 @@ final class ProfileViewModel: ObservableObject {
     private let placeRepository: PlaceRepository
     private let placeReviewRepository: PlaceReviewRepository
     private let dishReviewRepository: DishReviewRepository
+    private var refreshTask: Task<Void, Never>?
 
     init(
         sessionStore: SessionStore,
@@ -36,6 +37,10 @@ final class ProfileViewModel: ObservableObject {
         self.user = sessionStore.currentUser
     }
 
+    deinit {
+        refreshTask?.cancel()
+    }
+
     func load() async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
@@ -43,11 +48,13 @@ final class ProfileViewModel: ObservableObject {
             return
         }
 
-        isLoading = true
         errorMessage = nil
+        if user == nil && placeReviews.isEmpty && dishReviews.isEmpty {
+            isLoading = true
+        }
 
         do {
-            user = (try? await userRepository.refreshUser(withID: currentUser.id)) ?? currentUser
+            user = (try? userRepository.user(withID: currentUser.id)) ?? currentUser
             try reloadReviewData(for: currentUser.id)
         } catch {
             logger.error("Unable to load profile: \(error.localizedDescription, privacy: .public)")
@@ -55,6 +62,7 @@ final class ProfileViewModel: ObservableObject {
         }
 
         isLoading = false
+        scheduleBackgroundRefresh(for: currentUser.id)
     }
 
     func deletePlaceReview(_ review: PlaceReview) async throws {
@@ -99,6 +107,28 @@ final class ProfileViewModel: ObservableObject {
             result[place.id] = place.name
         }
     }
+
+    private func scheduleBackgroundRefresh(for userID: UUID) {
+        refreshTask?.cancel()
+
+        refreshTask = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
+            do {
+                let refreshedUser = try await self.userRepository.refreshUser(withID: userID)
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                self.user = refreshedUser ?? self.user ?? self.sessionStore.currentUser
+                self.errorMessage = nil
+            } catch {
+                self.logger.error("Unable to refresh profile in background: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
 }
 
 struct FriendCategorySuggestion: Identifiable {
@@ -120,6 +150,7 @@ final class CategoriesViewModel: ObservableObject {
     private let categoryRepository: CategoryRepository
     private let friendRepository: FriendRepository
     private let userRepository: UserProfileRepository
+    private var refreshTask: Task<Void, Never>?
 
     init(
         sessionStore: SessionStore,
@@ -133,6 +164,10 @@ final class CategoriesViewModel: ObservableObject {
         self.userRepository = userRepository
     }
 
+    deinit {
+        refreshTask?.cancel()
+    }
+
     func load() async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
@@ -142,38 +177,13 @@ final class CategoriesViewModel: ObservableObject {
             return
         }
 
-        isLoading = true
         errorMessage = nil
+        if myCategories.isEmpty && hiddenCategories.isEmpty && friendCategories.isEmpty {
+            isLoading = true
+        }
 
         do {
-            _ = try categoryRepository.defaultRestaurantCategory(for: currentUser.id)
-
-            myCategories = try categoryRepository.categories(for: currentUser.id)
-            hiddenCategories = try categoryRepository.hiddenCategories(for: currentUser.id)
-
-            let friends = (try? await friendRepository.acceptedFriends(for: currentUser.id)) ?? []
-            let friendIDs = Set(friends.map(\.id))
-            let friendCategories = try categoryRepository.categories(createdBy: friendIDs)
-            let ownerNames = friends.reduce(into: [UUID: String]()) { result, friend in
-                result[friend.id] = friend.displayName
-            }
-            let ownCategoryNames = Set((myCategories + hiddenCategories).map { normalizedName($0.name) })
-            var seenFriendNames = Set<String>()
-
-            self.friendCategories = friendCategories.compactMap { category in
-                let normalizedName = normalizedName(category.name)
-                guard !isDefaultCategory(category),
-                      !ownCategoryNames.contains(normalizedName),
-                      seenFriendNames.insert(normalizedName).inserted else {
-                    return nil
-                }
-
-                return FriendCategorySuggestion(
-                    id: category.id,
-                    category: category,
-                    ownerName: ownerNames[category.ownerUserId] ?? "Friend"
-                )
-            }
+            try reloadCategories(for: currentUser.id, friends: (try? friendRepository.cachedAcceptedFriends(for: currentUser.id)) ?? [])
         } catch {
             logger.error("Unable to load categories: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
@@ -183,6 +193,7 @@ final class CategoriesViewModel: ObservableObject {
         }
 
         isLoading = false
+        scheduleBackgroundRefresh(for: currentUser.id)
     }
 
     func createCategory(named name: String) async {
@@ -273,5 +284,57 @@ final class CategoriesViewModel: ObservableObject {
         name
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func reloadCategories(for currentUserID: UUID, friends: [User]) throws {
+        _ = try categoryRepository.defaultRestaurantCategory(for: currentUserID)
+
+        myCategories = try categoryRepository.categories(for: currentUserID)
+        hiddenCategories = try categoryRepository.hiddenCategories(for: currentUserID)
+
+        let friendIDs = Set(friends.map(\.id))
+        let friendCategories = try categoryRepository.categories(createdBy: friendIDs)
+        let ownerNames = friends.reduce(into: [UUID: String]()) { result, friend in
+            result[friend.id] = friend.displayName
+        }
+        let ownCategoryNames = Set((myCategories + hiddenCategories).map { normalizedName($0.name) })
+        var seenFriendNames = Set<String>()
+
+        self.friendCategories = friendCategories.compactMap { category in
+            let normalizedName = normalizedName(category.name)
+            guard !isDefaultCategory(category),
+                  !ownCategoryNames.contains(normalizedName),
+                  seenFriendNames.insert(normalizedName).inserted else {
+                return nil
+            }
+
+            return FriendCategorySuggestion(
+                id: category.id,
+                category: category,
+                ownerName: ownerNames[category.ownerUserId] ?? "Friend"
+            )
+        }
+    }
+
+    private func scheduleBackgroundRefresh(for currentUserID: UUID) {
+        refreshTask?.cancel()
+
+        refreshTask = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
+            let friends = (try? await self.friendRepository.acceptedFriends(for: currentUserID)) ?? []
+            guard !Task.isCancelled else {
+                return
+            }
+
+            do {
+                try self.reloadCategories(for: currentUserID, friends: friends)
+                self.errorMessage = nil
+            } catch {
+                self.logger.error("Unable to refresh categories in background: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 }

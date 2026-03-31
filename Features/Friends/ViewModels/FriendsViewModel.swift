@@ -47,6 +47,7 @@ final class FriendsViewModel: ObservableObject {
     private let userRepository: UserProfileRepository
     private let friendRepository: any FriendsRepository
     private let inviteLinkBuilder: any InviteLinkBuilding
+    private var refreshTask: Task<Void, Never>?
 
     init(
         sessionStore: SessionStore,
@@ -60,6 +61,10 @@ final class FriendsViewModel: ObservableObject {
         self.inviteLinkBuilder = inviteLinkBuilder
     }
 
+    deinit {
+        refreshTask?.cancel()
+    }
+
     func load() async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
@@ -69,51 +74,13 @@ final class FriendsViewModel: ObservableObject {
             return
         }
 
-        isLoading = true
         errorMessage = nil
+        if !hasAnyEntries {
+            isLoading = true
+        }
 
         do {
-            let friendships = try await friendRepository.fetchFriends(for: currentUser.id)
-            let incomingInvites = try await friendRepository.fetchIncomingInvites(for: currentUser.id)
-            let outgoingInvites = try await friendRepository.fetchOutgoingInvites(for: currentUser.id)
-            let knownUsers = try userRepository.allKnownUsers()
-            let userLookup: [UUID: User] = knownUsers.reduce(into: [:]) { result, user in
-                result[user.id] = user
-            }
-
-            friends = friendships.compactMap { friendship in
-                guard let otherUserID = friendship.otherUserID(for: currentUser.id) else {
-                    return nil
-                }
-
-                let user = userLookup[otherUserID]
-                return FriendListItem(
-                    id: friendship.id,
-                    displayName: user?.displayName ?? "TrustMap User",
-                    bio: user?.bio,
-                    addedAt: friendship.createdAt
-                )
-            }
-
-            self.incomingInvites = incomingInvites.map { invite in
-                let inviter = userLookup[invite.inviterUserId]
-                return IncomingInviteListItem(
-                    id: invite.id,
-                    token: invite.token,
-                    inviterName: inviter?.displayName ?? "TrustMap User",
-                    inviterBio: inviter?.bio,
-                    createdAt: invite.createdAt
-                )
-            }
-
-            self.outgoingInvites = outgoingInvites.map { invite in
-                OutgoingInviteListItem(
-                    id: invite.id,
-                    recipientName: invite.inviteeUserId.flatMap { userLookup[$0]?.displayName },
-                    createdAt: invite.createdAt,
-                    statusLabel: invite.inviteeUserId == nil ? "Waiting for someone to open your link." : "Waiting for a response."
-                )
-            }
+            try reloadCachedState(for: currentUser.id)
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
             friends = []
@@ -122,6 +89,7 @@ final class FriendsViewModel: ObservableObject {
         }
 
         isLoading = false
+        scheduleBackgroundRefresh(for: currentUser.id)
     }
 
     func addFriend() async {
@@ -215,6 +183,74 @@ final class FriendsViewModel: ObservableObject {
             await load()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
+        }
+    }
+
+    private func reloadCachedState(for currentUserID: UUID) throws {
+        let friendships = try friendRepository.cachedFriends(for: currentUserID)
+        let incomingInvites = try friendRepository.cachedIncomingInvites(for: currentUserID)
+        let outgoingInvites = try friendRepository.cachedOutgoingInvites(for: currentUserID)
+        let knownUsers = try userRepository.allKnownUsers()
+        let userLookup: [UUID: User] = knownUsers.reduce(into: [:]) { result, user in
+            result[user.id] = user
+        }
+
+        friends = friendships.compactMap { friendship in
+            guard let otherUserID = friendship.otherUserID(for: currentUserID) else {
+                return nil
+            }
+
+            let user = userLookup[otherUserID]
+            return FriendListItem(
+                id: friendship.id,
+                displayName: user?.displayName ?? "TrustMap User",
+                bio: user?.bio,
+                addedAt: friendship.createdAt
+            )
+        }
+
+        self.incomingInvites = incomingInvites.map { invite in
+            let inviter = userLookup[invite.inviterUserId]
+            return IncomingInviteListItem(
+                id: invite.id,
+                token: invite.token,
+                inviterName: inviter?.displayName ?? "TrustMap User",
+                inviterBio: inviter?.bio,
+                createdAt: invite.createdAt
+            )
+        }
+
+        self.outgoingInvites = outgoingInvites.map { invite in
+            OutgoingInviteListItem(
+                id: invite.id,
+                recipientName: invite.inviteeUserId.flatMap { userLookup[$0]?.displayName },
+                createdAt: invite.createdAt,
+                statusLabel: invite.inviteeUserId == nil ? "Waiting for someone to open your link." : "Waiting for a response."
+            )
+        }
+    }
+
+    private func scheduleBackgroundRefresh(for currentUserID: UUID) {
+        refreshTask?.cancel()
+
+        refreshTask = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
+            do {
+                _ = try await self.friendRepository.fetchFriends(for: currentUserID)
+                _ = try await self.friendRepository.fetchIncomingInvites(for: currentUserID)
+                _ = try await self.friendRepository.fetchOutgoingInvites(for: currentUserID)
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                try self.reloadCachedState(for: currentUserID)
+                self.errorMessage = nil
+            } catch {
+                self.errorMessage = AppError.wrap(error).errorDescription
+            }
         }
     }
 }
