@@ -78,12 +78,17 @@ final class CloudKitSyncService {
 
     private let logger = Logger(subsystem: "TrustMap", category: "CloudKitSync")
     private let refreshCooldown: TimeInterval = 60
+    private let refreshFailureCooldown: TimeInterval = 90
+    private let shareAcceptanceFailureCooldown: TimeInterval = 300
     private let persistenceController: PersistenceController
     private let photoStorageService: LocalPhotoStorageService
     private let forceDisabled: Bool
     private let container: CKContainer
     private var refreshStatesByViewerID: [UUID: RefreshState] = [:]
     private var backfilledViewerIDs = Set<UUID>()
+    private var refreshFailureTimestampsByViewerID: [UUID: Date] = [:]
+    private var acceptedShareURLs = Set<String>()
+    private var shareAcceptanceFailureTimestampsByURL: [String: Date] = [:]
 
     init(
         persistenceController: PersistenceController,
@@ -158,9 +163,16 @@ final class CloudKitSyncService {
     }
 
     func refreshFriendVisibleContentIfPossible(for viewer: User, friends: [User]) async {
+        if let lastFailure = refreshFailureTimestampsByViewerID[viewer.id],
+           Date().timeIntervalSince(lastFailure) < refreshFailureCooldown {
+            return
+        }
+
         do {
             try await refreshFriendVisibleContent(for: viewer, friends: friends)
+            refreshFailureTimestampsByViewerID[viewer.id] = nil
         } catch {
+            refreshFailureTimestampsByViewerID[viewer.id] = .now
             logger.error("Unable to refresh friend-visible content: \(error.localizedDescription, privacy: .public)")
         }
     }
@@ -488,10 +500,28 @@ final class CloudKitSyncService {
                 continue
             }
 
+            if acceptedShareURLs.contains(shareURLString) {
+                continue
+            }
+
+            if let lastFailure = shareAcceptanceFailureTimestampsByURL[shareURLString],
+               Date().timeIntervalSince(lastFailure) < shareAcceptanceFailureCooldown {
+                continue
+            }
+
             do {
                 let metadata = try await fetchShareMetadata(for: shareURL)
                 try await accept(metadata: metadata)
+                acceptedShareURLs.insert(shareURLString)
+                shareAcceptanceFailureTimestampsByURL[shareURLString] = nil
             } catch {
+                if Self.isAlreadyAcceptedShareError(error) {
+                    acceptedShareURLs.insert(shareURLString)
+                    shareAcceptanceFailureTimestampsByURL[shareURLString] = nil
+                    continue
+                }
+
+                shareAcceptanceFailureTimestampsByURL[shareURLString] = .now
                 logger.debug("Skipping share acceptance for \(friend.id.uuidString, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
@@ -1482,6 +1512,21 @@ final class CloudKitSyncService {
 
         return messages.contains { message in
             message.contains("record not found") || message.contains("unknown item")
+        }
+    }
+
+    private nonisolated static func isAlreadyAcceptedShareError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        let messages = [
+            nsError.localizedDescription,
+            nsError.localizedFailureReason,
+            nsError.localizedRecoverySuggestion
+        ]
+        .compactMap { $0?.lowercased() }
+
+        return messages.contains { message in
+            (message.contains("already") && message.contains("accepted"))
+                || (message.contains("accepted") && message.contains("share"))
         }
     }
 
