@@ -37,6 +37,14 @@ final class LocalPhotoStorageService {
         baseDirectory.appendingPathComponent(reference)
     }
 
+    func deleteAllImages() {
+        guard fileManager.fileExists(atPath: baseDirectory.path) else {
+            return
+        }
+
+        try? fileManager.removeItem(at: baseDirectory)
+    }
+
     private var baseDirectory: URL {
         let applicationSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         return applicationSupport.appendingPathComponent("TrustMapPhotos", isDirectory: true)

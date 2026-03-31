@@ -44,6 +44,7 @@ final class FriendsViewModel: ObservableObject {
     @Published var sharePayload: InviteSharePayload?
 
     private let sessionStore: SessionStore
+    private let cloudKitSyncService: CloudKitSyncService
     private let userRepository: UserProfileRepository
     private let friendRepository: any FriendsRepository
     private let inviteLinkBuilder: any InviteLinkBuilding
@@ -51,11 +52,13 @@ final class FriendsViewModel: ObservableObject {
 
     init(
         sessionStore: SessionStore,
+        cloudKitSyncService: CloudKitSyncService,
         userRepository: UserProfileRepository,
         friendRepository: any FriendsRepository,
         inviteLinkBuilder: any InviteLinkBuilding
     ) {
         self.sessionStore = sessionStore
+        self.cloudKitSyncService = cloudKitSyncService
         self.userRepository = userRepository
         self.friendRepository = friendRepository
         self.inviteLinkBuilder = inviteLinkBuilder
@@ -242,6 +245,19 @@ final class FriendsViewModel: ObservableObject {
                 _ = try await self.friendRepository.fetchFriends(for: currentUserID)
                 _ = try await self.friendRepository.fetchIncomingInvites(for: currentUserID)
                 _ = try await self.friendRepository.fetchOutgoingInvites(for: currentUserID)
+                guard !Task.isCancelled,
+                      let currentUser = self.sessionStore.currentUser,
+                      currentUser.id == currentUserID else {
+                    return
+                }
+
+                let friends: [User]
+                if let cachedFriends = try? self.friendRepository.cachedAcceptedFriends(for: currentUserID) {
+                    friends = cachedFriends
+                } else {
+                    friends = (try? await self.friendRepository.acceptedFriends(for: currentUserID)) ?? []
+                }
+                await self.cloudKitSyncService.refreshFriendVisibleContentIfPossible(for: currentUser, friends: friends)
                 guard !Task.isCancelled else {
                     return
                 }

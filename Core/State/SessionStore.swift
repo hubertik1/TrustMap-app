@@ -14,13 +14,16 @@ final class SessionStore: ObservableObject {
 
     private let authService: AuthServicing
     private let userRepository: UserProfileRepository
+    private let signOutCleanup: @MainActor () -> Void
 
     init(
         authService: AuthServicing,
-        userRepository: UserProfileRepository
+        userRepository: UserProfileRepository,
+        signOutCleanup: @escaping @MainActor () -> Void = {}
     ) {
         self.authService = authService
         self.userRepository = userRepository
+        self.signOutCleanup = signOutCleanup
     }
 
     var currentUser: User? {
@@ -33,6 +36,7 @@ final class SessionStore: ObservableObject {
 
     func bootstrap() async {
         guard let appleUserID = authService.persistedAppleUserID() else {
+            signOutCleanup()
             state = .signedOut
             return
         }
@@ -42,6 +46,7 @@ final class SessionStore: ObservableObject {
             guard credentialState == .authorized,
                   let user = try await userRepository.restoreAuthorizedUser(forAppleUserID: appleUserID) else {
                 authService.persistActiveAppleUserID(nil)
+                signOutCleanup()
                 state = .signedOut
                 return
             }
@@ -49,6 +54,7 @@ final class SessionStore: ObservableObject {
             state = .signedIn(user)
         } catch {
             authService.persistActiveAppleUserID(nil)
+            signOutCleanup()
             state = .signedOut
             alertMessage = AppError.wrap(error).errorDescription
         }
@@ -61,6 +67,7 @@ final class SessionStore: ObservableObject {
             authService.persistActiveAppleUserID(credential.userID)
             state = .signedIn(user)
         } catch {
+            signOutCleanup()
             alertMessage = AppError.wrap(error).errorDescription
             state = .signedOut
         }
@@ -68,6 +75,7 @@ final class SessionStore: ObservableObject {
 
     func signOut() {
         authService.persistActiveAppleUserID(nil)
+        signOutCleanup()
         state = .signedOut
     }
 

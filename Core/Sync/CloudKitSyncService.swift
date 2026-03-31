@@ -200,32 +200,33 @@ final class CloudKitSyncService {
         }
     }
 
-    func syncFriendInvite(_ invite: FriendInvite) async {
-        _ = invite
+    func resetEphemeralState() {
+        refreshStatesByViewerID.removeAll()
+        backfilledViewerIDs.removeAll()
+        refreshFailureTimestampsByViewerID.removeAll()
+        acceptedShareURLs.removeAll()
+        shareAcceptanceFailureTimestampsByURL.removeAll()
     }
 
-    func syncFriendship(_ friendship: Friendship) async {
-        _ = friendship
-    }
-
-    func syncPlace(_ place: Place) async {
-        guard let ownerUserID = place.createdByUserId else {
+    func syncPlace(_ place: Place, ownerUserID: UUID? = nil) async {
+        guard let resolvedOwnerUserID = ownerUserID ?? place.createdByUserId else {
             return
         }
 
         await upsertContentRecord(
             recordType: RecordType.place,
             recordID: place.id.uuidString,
-            ownerUserID: ownerUserID,
+            ownerUserID: resolvedOwnerUserID,
             scopes: Set(Scope.allCases)
         ) { record in
+            record[FieldKey.id] = place.id.uuidString as CKRecordValue
             record[FieldKey.appleMapsPlaceId] = place.appleMapsPlaceId as CKRecordValue?
             record[FieldKey.name] = place.name as CKRecordValue
             record[FieldKey.latitude] = place.latitude as CKRecordValue
             record[FieldKey.longitude] = place.longitude as CKRecordValue
             record[FieldKey.address] = place.address as CKRecordValue
             record[FieldKey.sourceType] = place.sourceType.rawValue as CKRecordValue
-            record[FieldKey.createdByUserId] = ownerUserID.uuidString as CKRecordValue
+            record[FieldKey.createdByUserId] = resolvedOwnerUserID.uuidString as CKRecordValue
             record[FieldKey.createdAt] = place.createdAt as CKRecordValue
         }
     }
@@ -419,27 +420,46 @@ final class CloudKitSyncService {
 
     private func backfillLocalContent(for viewer: User) async {
         do {
-            for place in try context.fetch(FetchDescriptor<Place>()).filter({ $0.createdByUserId == viewer.id }) {
-                await syncPlace(place)
+            let places = try context.fetch(FetchDescriptor<Place>())
+            let placesByID = Dictionary(uniqueKeysWithValues: places.map { ($0.id, $0) })
+            let placeReviews = try context.fetch(FetchDescriptor<PlaceReview>()).filter({ $0.authorUserId == viewer.id })
+            let dishReviews = try context.fetch(FetchDescriptor<DishReview>()).filter({ $0.authorUserId == viewer.id })
+            let assignments = try context.fetch(FetchDescriptor<PlaceCategoryAssignment>()).filter({ $0.assignedByUserId == viewer.id })
+            let assets = try context.fetch(FetchDescriptor<PhotoAsset>()).filter({ $0.ownerUserId == viewer.id })
+
+            let referencedPlaceIDs = Set(
+                places.filter { $0.createdByUserId == viewer.id }.map(\.id)
+                    + placeReviews.map(\.placeId)
+                    + dishReviews.map(\.placeId)
+                    + assignments.map(\.placeId)
+                    + assets.compactMap(\.placeId)
+            )
+
+            for placeID in referencedPlaceIDs {
+                guard let place = placesByID[placeID] else {
+                    continue
+                }
+
+                await syncPlace(place, ownerUserID: viewer.id)
             }
 
             for category in try context.fetch(FetchDescriptor<CustomCategory>()).filter({ $0.ownerUserId == viewer.id }) {
                 await syncCustomCategory(category)
             }
 
-            for assignment in try context.fetch(FetchDescriptor<PlaceCategoryAssignment>()).filter({ $0.assignedByUserId == viewer.id }) {
+            for assignment in assignments {
                 await syncPlaceCategoryAssignment(assignment)
             }
 
-            for review in try context.fetch(FetchDescriptor<PlaceReview>()).filter({ $0.authorUserId == viewer.id }) {
+            for review in placeReviews {
                 await syncPlaceReview(review)
             }
 
-            for review in try context.fetch(FetchDescriptor<DishReview>()).filter({ $0.authorUserId == viewer.id }) {
+            for review in dishReviews {
                 await syncDishReview(review)
             }
 
-            for asset in try context.fetch(FetchDescriptor<PhotoAsset>()).filter({ $0.ownerUserId == viewer.id }) {
+            for asset in assets {
                 await syncPhotoAsset(asset, fileURL: photoStorageService.fileURL(for: asset.assetReference))
             }
 
@@ -543,8 +563,14 @@ final class CloudKitSyncService {
         let activities = try await fetchActivities(actorIDs: friendIDStrings, in: sharedDatabase)
         let categories = try await fetchCategories(ownerIDs: friendIDStrings, in: sharedDatabase)
         let assignments = try await fetchAssignments(assignedBy: friendIDStrings, in: sharedDatabase)
-        let places = try await fetchPlaces(createdBy: friendIDStrings, in: sharedDatabase)
         let photoRecords = try await fetchPhotoAssets(ownerIDs: friendIDStrings, in: sharedDatabase)
+        let referencedPlaceIDs = Set(
+            placeReviews.map(\.placeId)
+                + dishReviews.map(\.placeId)
+                + assignments.map(\.placeId)
+                + photoRecords.compactMap(\.placeId)
+        )
+        let places = try await fetchAllPlaces(in: sharedDatabase).filter { referencedPlaceIDs.contains($0.id) }
 
         try mergePlaces(places)
         try mergeCategories(categories)
@@ -856,10 +882,10 @@ final class CloudKitSyncService {
         .compactMap(assignment(from:))
     }
 
-    private func fetchPlaces(createdBy userIDs: [String], in database: CKDatabase) async throws -> [Place] {
+    private func fetchAllPlaces(in database: CKDatabase) async throws -> [Place] {
         try await fetchRecords(
             recordType: RecordType.place,
-            predicate: NSPredicate(format: "%K IN %@", FieldKey.createdByUserId, userIDs),
+            predicate: NSPredicate(value: true),
             sortDescriptors: [NSSortDescriptor(key: FieldKey.createdAt, ascending: false)],
             in: database
         )

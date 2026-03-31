@@ -112,7 +112,7 @@ final class PlaceReviewRepository {
 
         Task {
             if let place = try? place(withID: review.placeId) {
-                await cloudKitSyncService.syncPlace(place)
+                await cloudKitSyncService.syncPlace(place, ownerUserID: review.authorUserId)
             }
             await cloudKitSyncService.syncPlaceReview(review)
             await cloudKitSyncService.syncActivity(reviewActivity)
@@ -163,7 +163,7 @@ final class PlaceReviewRepository {
 
         Task {
             if let place = try? place(withID: review.placeId) {
-                await cloudKitSyncService.syncPlace(place)
+                await cloudKitSyncService.syncPlace(place, ownerUserID: review.authorUserId)
             }
             await cloudKitSyncService.syncPlaceReview(review)
         }

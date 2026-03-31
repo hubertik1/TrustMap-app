@@ -100,7 +100,7 @@ final class DishReviewRepository {
 
         Task {
             if let place = try? place(withID: review.placeId) {
-                await cloudKitSyncService.syncPlace(place)
+                await cloudKitSyncService.syncPlace(place, ownerUserID: review.authorUserId)
             }
             await cloudKitSyncService.syncDishReview(review)
             await cloudKitSyncService.syncActivity(reviewActivity)
@@ -159,7 +159,7 @@ final class DishReviewRepository {
 
         Task {
             if let place = try? place(withID: review.placeId) {
-                await cloudKitSyncService.syncPlace(place)
+                await cloudKitSyncService.syncPlace(place, ownerUserID: review.authorUserId)
             }
             await cloudKitSyncService.syncDishReview(review)
         }

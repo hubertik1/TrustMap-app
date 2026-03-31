@@ -8,6 +8,7 @@ struct FriendsView: View {
         _viewModel = StateObject(
             wrappedValue: FriendsViewModel(
                 sessionStore: container.sessionStore,
+                cloudKitSyncService: container.cloudKitSyncService,
                 userRepository: container.userRepository,
                 friendRepository: container.friendRepository,
                 inviteLinkBuilder: container.inviteLinkBuilder

@@ -68,7 +68,15 @@ final class PlaceRepository {
     ) throws -> Place {
         if let appleMapsPlaceID,
            let existingPlace = try allPlaces().first(where: { $0.appleMapsPlaceId == appleMapsPlaceID }) {
-            return existingPlace
+            return try refreshExistingPlace(
+                existingPlace,
+                appleMapsPlaceID: appleMapsPlaceID,
+                name: name,
+                coordinate: coordinate,
+                address: address,
+                sourceType: sourceType,
+                currentUserID: createdByUserID
+            )
         }
 
         if let existingManualPlace = try allPlaces().first(where: {
@@ -77,7 +85,15 @@ final class PlaceRepository {
                 && abs($0.latitude - coordinate.latitude) < 0.0003
                 && abs($0.longitude - coordinate.longitude) < 0.0003
         }) {
-            return existingManualPlace
+            return try refreshExistingPlace(
+                existingManualPlace,
+                appleMapsPlaceID: appleMapsPlaceID,
+                name: name,
+                coordinate: coordinate,
+                address: address,
+                sourceType: sourceType,
+                currentUserID: createdByUserID
+            )
         }
 
         let place = Place(
@@ -91,7 +107,11 @@ final class PlaceRepository {
         )
         context.insert(place)
         try saveChanges()
-        Task { await cloudKitSyncService.syncPlace(place) }
+        if let createdByUserID {
+            Task { await cloudKitSyncService.syncPlace(place, ownerUserID: createdByUserID) }
+        } else {
+            Task { await cloudKitSyncService.syncPlace(place) }
+        }
         return place
     }
 
@@ -99,6 +119,63 @@ final class PlaceRepository {
         let descriptor = FetchDescriptor<Place>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
         var seenPlaceIDs = Set<UUID>()
         return try context.fetch(descriptor).filter { seenPlaceIDs.insert($0.id).inserted }
+    }
+
+    private func refreshExistingPlace(
+        _ place: Place,
+        appleMapsPlaceID: String?,
+        name: String,
+        coordinate: CLLocationCoordinate2D,
+        address: String,
+        sourceType: PlaceSourceType,
+        currentUserID: UUID?
+    ) throws -> Place {
+        var didChange = false
+
+        if place.appleMapsPlaceId == nil, let appleMapsPlaceID {
+            place.appleMapsPlaceId = appleMapsPlaceID
+            didChange = true
+        }
+
+        if place.name != name {
+            place.name = name
+            didChange = true
+        }
+
+        if place.latitude != coordinate.latitude {
+            place.latitude = coordinate.latitude
+            didChange = true
+        }
+
+        if place.longitude != coordinate.longitude {
+            place.longitude = coordinate.longitude
+            didChange = true
+        }
+
+        if place.address != address {
+            place.address = address
+            didChange = true
+        }
+
+        if place.sourceType != sourceType {
+            place.sourceType = sourceType
+            didChange = true
+        }
+
+        if place.createdByUserId == nil, let currentUserID {
+            place.createdByUserId = currentUserID
+            didChange = true
+        }
+
+        if didChange {
+            try saveChanges()
+        }
+
+        if let currentUserID {
+            Task { await cloudKitSyncService.syncPlace(place, ownerUserID: currentUserID) }
+        }
+
+        return place
     }
 
     private func saveChanges() throws {

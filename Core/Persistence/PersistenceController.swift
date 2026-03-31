@@ -25,6 +25,34 @@ final class PersistenceController {
         modelContainer.mainContext
     }
 
+    func resetAllData() {
+        do {
+            try deleteAll(User.self)
+            try deleteAll(FriendInvite.self)
+            try deleteAll(Friendship.self)
+            try deleteAll(Place.self)
+            try deleteAll(PlaceReview.self)
+            try deleteAll(DishReview.self)
+            try deleteAll(PhotoAsset.self)
+            try deleteAll(CustomCategory.self)
+            try deleteAll(PlaceCategoryAssignment.self)
+            try deleteAll(ActivityItem.self)
+
+            if mainContext.hasChanges {
+                try mainContext.save()
+            }
+        } catch {
+            logger.error("Unable to reset the local SwiftData cache: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func deleteAll<Model: PersistentModel>(_ modelType: Model.Type) throws {
+        let descriptor = FetchDescriptor<Model>()
+        for model in try mainContext.fetch(descriptor) {
+            mainContext.delete(model)
+        }
+    }
+
     private static func makeModelContainer(inMemory: Bool) throws -> ModelContainer {
         let configuration: ModelConfiguration
 

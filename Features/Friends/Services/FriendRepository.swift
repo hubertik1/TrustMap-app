@@ -187,7 +187,6 @@ final class FriendRepository: FriendsRepository {
         )
         let cachedInvite = try cacheInvite(invite)
         try await socialGraphService.upsertInvite(cachedInvite)
-        Task { await cloudKitSyncService.syncFriendInvite(cachedInvite) }
         return cachedInvite
     }
 
@@ -227,7 +226,6 @@ final class FriendRepository: FriendsRepository {
             invite.inviteeUserId = inviteeUserID
             try saveChanges()
             try await socialGraphService.upsertInvite(invite)
-            Task { await cloudKitSyncService.syncFriendInvite(invite) }
         }
 
         return invite
@@ -279,9 +277,6 @@ final class FriendRepository: FriendsRepository {
         try await socialGraphService.upsertFriendship(friendship)
 
         Task {
-            await cloudKitSyncService.syncFriendInvite(invite)
-            await cloudKitSyncService.syncFriendship(friendship)
-
             if let currentUser = try? userRepository.user(withID: inviteeUserID) {
                 let friends =
                     (try? await acceptedFriends(for: inviteeUserID))
@@ -318,7 +313,6 @@ final class FriendRepository: FriendsRepository {
         invite.respondedAt = .now
         try saveChanges()
         try await socialGraphService.upsertInvite(invite)
-        Task { await cloudKitSyncService.syncFriendInvite(invite) }
     }
 
     func revokeInvite(inviteID: UUID, by inviterUserID: UUID) async throws {
@@ -338,7 +332,6 @@ final class FriendRepository: FriendsRepository {
         invite.respondedAt = .now
         try saveChanges()
         try await socialGraphService.upsertInvite(invite)
-        Task { await cloudKitSyncService.syncFriendInvite(invite) }
     }
 
     func areFriends(_ firstUserID: UUID, _ secondUserID: UUID) async throws -> Bool {
@@ -398,7 +391,6 @@ final class FriendRepository: FriendsRepository {
             cachedInvite.status = .expired
             try saveChanges()
             try await socialGraphService.upsertInvite(cachedInvite)
-            Task { await cloudKitSyncService.syncFriendInvite(cachedInvite) }
         }
 
         return cachedInvite

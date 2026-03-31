@@ -80,7 +80,13 @@ final class AppContainer: ObservableObject {
         let userLocationService = UserLocationService()
         let sessionStore = SessionStore(
             authService: authService,
-            userRepository: userRepository
+            userRepository: userRepository,
+            signOutCleanup: {
+                pendingDeepLinkStore.clearInviteToken()
+                cloudKitSyncService.resetEphemeralState()
+                persistenceController.resetAllData()
+                photoStorageService.deleteAllImages()
+            }
         )
 
         self.persistenceController = persistenceController

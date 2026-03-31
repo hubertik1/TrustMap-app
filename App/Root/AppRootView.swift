@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct AppRootView: View {
+    @Environment(\.scenePhase) private var scenePhase
+
     @ObservedObject private var container: AppContainer
     @ObservedObject private var deepLinkRouter: DeepLinkRouter
     @ObservedObject private var sessionStore: SessionStore
@@ -34,24 +36,21 @@ struct AppRootView: View {
                 await sessionStore.bootstrap()
             }
         }
-        .task(id: sessionStore.currentUser?.id) {
-            deepLinkRouter.resumePendingInviteIfNeeded(isAuthenticated: sessionStore.currentUser != nil)
-
-            guard let currentUser = sessionStore.currentUser else {
+        .task(id: sessionRefreshTaskID) {
+            guard scenePhase == .active else {
                 return
             }
 
-            await container.userRepository.synchronizeCurrentUserIfPossible(userID: currentUser.id)
+            deepLinkRouter.resumePendingInviteIfNeeded(isAuthenticated: sessionStore.currentUser != nil)
+            await refreshSignedInSessionContext()
 
-            let friends =
-                (try? await container.friendRepository.acceptedFriends(for: currentUser.id))
-                ?? (try? container.friendRepository.cachedAcceptedFriends(for: currentUser.id))
-                ?? []
-
-            await container.cloudKitSyncService.refreshFriendVisibleContentIfPossible(
-                for: currentUser,
-                friends: friends
-            )
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(45))
+                guard !Task.isCancelled else {
+                    return
+                }
+                await refreshSignedInSessionContext()
+            }
         }
         .onOpenURL { url in
             deepLinkRouter.handleIncomingURL(url, isAuthenticated: sessionStore.currentUser != nil)
@@ -67,6 +66,30 @@ struct AppRootView: View {
         } message: {
             Text(sessionStore.alertMessage ?? "")
         }
+    }
+
+    private var sessionRefreshTaskID: String {
+        let userID = sessionStore.currentUser?.id.uuidString ?? "signed-out"
+        let phase = scenePhase == .active ? "active" : "inactive"
+        return "\(userID)-\(phase)"
+    }
+
+    private func refreshSignedInSessionContext() async {
+        guard let currentUser = sessionStore.currentUser else {
+            return
+        }
+
+        await container.userRepository.synchronizeCurrentUserIfPossible(userID: currentUser.id)
+
+        let friends =
+            (try? await container.friendRepository.acceptedFriends(for: currentUser.id))
+            ?? (try? container.friendRepository.cachedAcceptedFriends(for: currentUser.id))
+            ?? []
+
+        await container.cloudKitSyncService.refreshFriendVisibleContentIfPossible(
+            for: currentUser,
+            friends: friends
+        )
     }
 }
 
