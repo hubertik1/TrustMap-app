@@ -111,6 +111,9 @@ final class PlaceReviewRepository {
         try saveChanges(message: "Unable to save the activity for this review.")
 
         Task {
+            if let place = try? place(withID: review.placeId) {
+                await cloudKitSyncService.syncPlace(place)
+            }
             await cloudKitSyncService.syncPlaceReview(review)
             await cloudKitSyncService.syncActivity(reviewActivity)
         }
@@ -158,7 +161,12 @@ final class PlaceReviewRepository {
             Task { await cloudKitSyncService.syncPhotoAsset(asset, fileURL: photoAssetRepository.storageFileURL(for: asset)) }
         }
 
-        Task { await cloudKitSyncService.syncPlaceReview(review) }
+        Task {
+            if let place = try? place(withID: review.placeId) {
+                await cloudKitSyncService.syncPlace(place)
+            }
+            await cloudKitSyncService.syncPlaceReview(review)
+        }
         return review
     }
 
@@ -239,6 +247,11 @@ final class PlaceReviewRepository {
         return try context.fetch(descriptor).filter {
             $0.referenceId == referenceID && types.contains($0.type)
         }
+    }
+
+    private func place(withID placeID: UUID) throws -> Place? {
+        let descriptor = FetchDescriptor<Place>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        return try context.fetch(descriptor).first(where: { $0.id == placeID })
     }
 
     private func saveChanges(message: String) throws {

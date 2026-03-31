@@ -281,6 +281,18 @@ final class FriendRepository: FriendsRepository {
         Task {
             await cloudKitSyncService.syncFriendInvite(invite)
             await cloudKitSyncService.syncFriendship(friendship)
+
+            if let currentUser = try? userRepository.user(withID: inviteeUserID) {
+                let friends =
+                    (try? await acceptedFriends(for: inviteeUserID))
+                    ?? (try? cachedAcceptedFriends(for: inviteeUserID))
+                    ?? []
+
+                await cloudKitSyncService.refreshFriendVisibleContentIfPossible(
+                    for: currentUser,
+                    friends: friends
+                )
+            }
         }
     }
 

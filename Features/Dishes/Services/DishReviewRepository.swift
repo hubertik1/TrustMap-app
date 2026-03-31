@@ -84,6 +84,9 @@ final class DishReviewRepository {
         try saveChanges(message: "Unable to save the dish activity.")
 
         Task {
+            if let place = try? place(withID: review.placeId) {
+                await cloudKitSyncService.syncPlace(place)
+            }
             await cloudKitSyncService.syncDishReview(review)
             await cloudKitSyncService.syncActivity(reviewActivity)
         }
@@ -139,7 +142,12 @@ final class DishReviewRepository {
             Task { await cloudKitSyncService.syncPhotoAsset(existingAsset, fileURL: fileURL) }
         }
 
-        Task { await cloudKitSyncService.syncDishReview(review) }
+        Task {
+            if let place = try? place(withID: review.placeId) {
+                await cloudKitSyncService.syncPlace(place)
+            }
+            await cloudKitSyncService.syncDishReview(review)
+        }
         return review
     }
 
@@ -197,6 +205,11 @@ final class DishReviewRepository {
         return try context.fetch(descriptor).filter {
             $0.referenceId == referenceID && types.contains($0.type)
         }
+    }
+
+    private func place(withID placeID: UUID) throws -> Place? {
+        let descriptor = FetchDescriptor<Place>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+        return try context.fetch(descriptor).first(where: { $0.id == placeID })
     }
 
     private func isVisible(_ review: DishReview, viewerID: UUID, friendIDs: Set<UUID>) -> Bool {

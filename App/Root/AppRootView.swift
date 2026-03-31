@@ -36,6 +36,20 @@ struct AppRootView: View {
         }
         .task(id: sessionStore.currentUser?.id) {
             deepLinkRouter.resumePendingInviteIfNeeded(isAuthenticated: sessionStore.currentUser != nil)
+
+            guard let currentUser = sessionStore.currentUser else {
+                return
+            }
+
+            let friends =
+                (try? await container.friendRepository.acceptedFriends(for: currentUser.id))
+                ?? (try? container.friendRepository.cachedAcceptedFriends(for: currentUser.id))
+                ?? []
+
+            await container.cloudKitSyncService.refreshFriendVisibleContentIfPossible(
+                for: currentUser,
+                friends: friends
+            )
         }
         .onOpenURL { url in
             deepLinkRouter.handleIncomingURL(url, isAuthenticated: sessionStore.currentUser != nil)
