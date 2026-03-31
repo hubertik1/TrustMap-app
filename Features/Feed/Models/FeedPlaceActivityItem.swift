@@ -3,16 +3,7 @@ import Foundation
 struct FeedPlaceActivityItem: Identifiable {
     let id: UUID
     let place: Place
-    let actorName: String
-    let placeName: String
-    let rating: Int
+    let title: String
+    let subtitle: String
     let createdAt: Date
-
-    var title: String {
-        "\(actorName) added \(placeName)"
-    }
-
-    var subtitle: String {
-        "Rated \(rating)/10"
-    }
 }

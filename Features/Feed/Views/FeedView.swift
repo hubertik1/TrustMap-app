@@ -14,7 +14,8 @@ struct FeedView: View {
                 friendRepository: container.friendRepository,
                 userRepository: container.userRepository,
                 placeRepository: container.placeRepository,
-                placeReviewRepository: container.placeReviewRepository
+                placeReviewRepository: container.placeReviewRepository,
+                dishReviewRepository: container.dishReviewRepository
             )
         )
     }
@@ -30,7 +31,7 @@ struct FeedView: View {
             } else if viewModel.feedItems.isEmpty {
                 EmptyStateView(
                     title: "No New Places Yet",
-                    message: "When you or your friends add new restaurant reviews, they will show up here.",
+                    message: "When you or your friends add new restaurant or dish reviews, they will show up here.",
                     systemImage: "bell.slash"
                 )
             } else {

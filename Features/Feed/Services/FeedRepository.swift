@@ -18,6 +18,9 @@ final class FeedRepository {
         var seenActivityIDs = Set<UUID>()
         return try context.fetch(descriptor)
             .filter { seenActivityIDs.insert($0.id).inserted }
-            .filter { actorIDs.contains($0.actorUserId) && $0.type == .placeReviewAdded }
+            .filter {
+                actorIDs.contains($0.actorUserId)
+                    && ($0.type == .placeReviewAdded || $0.type == .dishReviewAdded)
+            }
     }
 }

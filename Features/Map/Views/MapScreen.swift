@@ -20,6 +20,7 @@ struct MapScreen: View {
                 categoryRepository: container.categoryRepository,
                 placeRepository: container.placeRepository,
                 placeReviewRepository: container.placeReviewRepository,
+                dishReviewRepository: container.dishReviewRepository,
                 mapSearchService: container.mapSearchService,
                 userLocationService: container.userLocationService
             )

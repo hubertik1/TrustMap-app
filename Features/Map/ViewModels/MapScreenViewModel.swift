@@ -30,6 +30,7 @@ final class MapScreenViewModel: ObservableObject {
     private let categoryRepository: CategoryRepository
     private let placeRepository: PlaceRepository
     private let placeReviewRepository: PlaceReviewRepository
+    private let dishReviewRepository: DishReviewRepository
     private let mapSearchService: MapSearchService
     private let userLocationService: UserLocationServicing
     private var hasCenteredOnUserLocation = false
@@ -48,6 +49,7 @@ final class MapScreenViewModel: ObservableObject {
         categoryRepository: CategoryRepository,
         placeRepository: PlaceRepository,
         placeReviewRepository: PlaceReviewRepository,
+        dishReviewRepository: DishReviewRepository,
         mapSearchService: MapSearchService,
         userLocationService: UserLocationServicing
     ) {
@@ -58,6 +60,7 @@ final class MapScreenViewModel: ObservableObject {
         self.categoryRepository = categoryRepository
         self.placeRepository = placeRepository
         self.placeReviewRepository = placeReviewRepository
+        self.dishReviewRepository = dishReviewRepository
         self.mapSearchService = mapSearchService
         self.userLocationService = userLocationService
 
@@ -312,20 +315,35 @@ final class MapScreenViewModel: ObservableObject {
         return "Friend"
     }
 
-    private func buildAnnotations(from reviews: [PlaceReview], places: [Place]) -> [MapPlaceAnnotation] {
-        let groupedReviews = Dictionary(grouping: reviews, by: \.placeId)
+    private func buildAnnotations(
+        from placeReviews: [PlaceReview],
+        dishReviews: [DishReview],
+        places: [Place]
+    ) -> [MapPlaceAnnotation] {
+        let groupedPlaceReviews = Dictionary(grouping: placeReviews, by: \.placeId)
+        let groupedDishReviews = Dictionary(grouping: dishReviews, by: \.placeId)
 
         return places.compactMap { place in
-            guard let grouped = groupedReviews[place.id], !grouped.isEmpty else {
+            let groupedPlace = groupedPlaceReviews[place.id] ?? []
+            let groupedDish = groupedDishReviews[place.id] ?? []
+
+            guard !groupedPlace.isEmpty || !groupedDish.isEmpty else {
                 return nil
             }
 
-            let total = grouped.reduce(0) { $0 + $1.ratingOverall }
+            let ratings: [Int]
+            if !groupedPlace.isEmpty {
+                ratings = groupedPlace.map(\.ratingOverall)
+            } else {
+                ratings = groupedDish.map(\.dishRating)
+            }
+
+            let total = ratings.reduce(0, +)
             return MapPlaceAnnotation(
                 id: place.id,
                 place: place,
-                averageRating: Double(total) / Double(grouped.count),
-                reviewCount: grouped.count
+                averageRating: Double(total) / Double(ratings.count),
+                reviewCount: ratings.count
             )
         }
         .sorted { $0.averageRating > $1.averageRating }
@@ -420,7 +438,13 @@ final class MapScreenViewModel: ObservableObject {
             friendIDs: friendIDs,
             ratingRange: filterState.ratingRange
         )
-        let places = try placeRepository.places(withIDs: Set(reviews.map(\.placeId)))
+        let dishReviews = try dishReviewRepository.reviews(
+            authoredBy: authorIDs,
+            visibleTo: currentUser.id,
+            friendIDs: friendIDs,
+            ratingRange: filterState.ratingRange
+        )
+        let places = try placeRepository.places(withIDs: Set(reviews.map(\.placeId)).union(dishReviews.map(\.placeId)))
         let categoryNamesByPlace = try places.reduce(into: [UUID: [String]]()) { result, place in
             result[place.id] = try categoryRepository.categoryNames(forPlace: place.id)
         }
@@ -428,7 +452,7 @@ final class MapScreenViewModel: ObservableObject {
             let categoryNames = categoryNamesByPlace[place.id] ?? []
             return filterState.selectedCategoryOption.matches(categoryNames: categoryNames)
         }
-        annotations = buildAnnotations(from: reviews, places: filteredPlaces)
+        annotations = buildAnnotations(from: reviews, dishReviews: dishReviews, places: filteredPlaces)
     }
 
     private func scheduleBackgroundRefresh(for currentUser: User) {

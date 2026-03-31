@@ -18,6 +18,7 @@ final class PlacesViewModel: ObservableObject {
     private let categoryRepository: CategoryRepository
     private let placeRepository: PlaceRepository
     private let placeReviewRepository: PlaceReviewRepository
+    private let dishReviewRepository: DishReviewRepository
     private var refreshTask: Task<Void, Never>?
 
     init(
@@ -27,7 +28,8 @@ final class PlacesViewModel: ObservableObject {
         userRepository: UserProfileRepository,
         categoryRepository: CategoryRepository,
         placeRepository: PlaceRepository,
-        placeReviewRepository: PlaceReviewRepository
+        placeReviewRepository: PlaceReviewRepository,
+        dishReviewRepository: DishReviewRepository
     ) {
         self.sessionStore = sessionStore
         self.cloudKitSyncService = cloudKitSyncService
@@ -36,6 +38,7 @@ final class PlacesViewModel: ObservableObject {
         self.categoryRepository = categoryRepository
         self.placeRepository = placeRepository
         self.placeReviewRepository = placeReviewRepository
+        self.dishReviewRepository = dishReviewRepository
     }
 
     deinit {
@@ -108,7 +111,13 @@ final class PlacesViewModel: ObservableObject {
             friendIDs: friendIDs,
             ratingRange: 1...10
         )
-        let placeIDs = Set(visibleReviews.map(\.placeId))
+        let visibleDishReviews = try dishReviewRepository.reviews(
+            authoredBy: authorIDs,
+            visibleTo: currentUser.id,
+            friendIDs: friendIDs,
+            ratingRange: 1...10
+        )
+        let placeIDs = Set(visibleReviews.map(\.placeId)).union(visibleDishReviews.map(\.placeId))
         let visiblePlaces = try placeRepository.places(withIDs: placeIDs)
 
         _ = try categoryRepository.defaultRestaurantCategory(for: currentUser.id)
@@ -132,9 +141,13 @@ final class PlacesViewModel: ObservableObject {
         }
 
         let groupedReviews = Dictionary(grouping: visibleReviews, by: \.placeId)
+        let groupedDishReviews = Dictionary(grouping: visibleDishReviews, by: \.placeId)
 
         placeItems = visiblePlaces.compactMap { place in
-            guard let reviews = groupedReviews[place.id], !reviews.isEmpty else {
+            let reviews = groupedReviews[place.id] ?? []
+            let dishReviews = groupedDishReviews[place.id] ?? []
+
+            guard !reviews.isEmpty || !dishReviews.isEmpty else {
                 return nil
             }
 
@@ -143,29 +156,55 @@ final class PlacesViewModel: ObservableObject {
                 return nil
             }
 
-            let average = Double(reviews.reduce(0) { $0 + $1.ratingOverall }) / Double(reviews.count)
-            let reviewerRatings = reviews
-                .sorted { lhs, rhs in
-                    if lhs.ratingOverall == rhs.ratingOverall {
-                        return lhs.updatedAt > rhs.updatedAt
+            let average: Double
+            let reviewCount: Int
+            let reviewerRatings: [PlaceReviewerRating]
+
+            if !reviews.isEmpty {
+                average = Double(reviews.reduce(0) { $0 + $1.ratingOverall }) / Double(reviews.count)
+                reviewCount = reviews.count
+                reviewerRatings = reviews
+                    .sorted { lhs, rhs in
+                        if lhs.ratingOverall == rhs.ratingOverall {
+                            return lhs.updatedAt > rhs.updatedAt
+                        }
+                        return lhs.ratingOverall > rhs.ratingOverall
                     }
-                    return lhs.ratingOverall > rhs.ratingOverall
-                }
-                .map {
-                    PlaceReviewerRating(
-                        id: $0.id,
-                        reviewerID: $0.authorUserId,
-                        reviewerName: userNames[$0.authorUserId] ?? "Friend",
-                        rating: $0.ratingOverall,
-                        descriptionText: $0.descriptionText
-                    )
-                }
+                    .map {
+                        PlaceReviewerRating(
+                            id: $0.id,
+                            reviewerID: $0.authorUserId,
+                            reviewerName: userNames[$0.authorUserId] ?? "Friend",
+                            rating: $0.ratingOverall,
+                            descriptionText: $0.descriptionText
+                        )
+                    }
+            } else {
+                average = Double(dishReviews.reduce(0) { $0 + $1.dishRating }) / Double(dishReviews.count)
+                reviewCount = dishReviews.count
+                reviewerRatings = dishReviews
+                    .sorted { lhs, rhs in
+                        if lhs.dishRating == rhs.dishRating {
+                            return lhs.updatedAt > rhs.updatedAt
+                        }
+                        return lhs.dishRating > rhs.dishRating
+                    }
+                    .map {
+                        PlaceReviewerRating(
+                            id: $0.id,
+                            reviewerID: $0.authorUserId,
+                            reviewerName: userNames[$0.authorUserId] ?? "Friend",
+                            rating: $0.dishRating,
+                            descriptionText: $0.dishReviewText.isEmpty ? $0.dishName : $0.dishReviewText
+                        )
+                    }
+            }
 
             return PlaceListItem(
                 id: place.id,
                 place: place,
                 averageRating: average,
-                reviewCount: reviews.count,
+                reviewCount: reviewCount,
                 categoryNames: categoryNames,
                 reviewerRatings: reviewerRatings
             )

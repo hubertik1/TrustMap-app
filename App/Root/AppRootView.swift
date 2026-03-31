@@ -41,6 +41,8 @@ struct AppRootView: View {
                 return
             }
 
+            await container.userRepository.synchronizeCurrentUserIfPossible(userID: currentUser.id)
+
             let friends =
                 (try? await container.friendRepository.acceptedFriends(for: currentUser.id))
                 ?? (try? container.friendRepository.cachedAcceptedFriends(for: currentUser.id))

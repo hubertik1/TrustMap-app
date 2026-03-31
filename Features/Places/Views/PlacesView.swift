@@ -14,7 +14,8 @@ struct PlacesView: View {
                 userRepository: container.userRepository,
                 categoryRepository: container.categoryRepository,
                 placeRepository: container.placeRepository,
-                placeReviewRepository: container.placeReviewRepository
+                placeReviewRepository: container.placeReviewRepository,
+                dishReviewRepository: container.dishReviewRepository
             )
         )
     }
@@ -30,7 +31,7 @@ struct PlacesView: View {
             } else if viewModel.placeItems.isEmpty {
                 EmptyStateView(
                     title: "No Places Yet",
-                    message: "Add your first restaurant review or switch the filter to include more people.",
+                    message: "Add your first restaurant or dish review, or switch the filter to include more people.",
                     systemImage: "fork.knife.circle"
                 )
             } else {

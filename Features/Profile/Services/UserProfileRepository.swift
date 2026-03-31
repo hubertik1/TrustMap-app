@@ -168,6 +168,15 @@ final class UserProfileRepository {
         }
     }
 
+    func synchronizeCurrentUserIfPossible(userID: UUID) async {
+        guard let user = try? user(withID: userID) else {
+            return
+        }
+
+        await synchronizeRemoteStateIfPossible(for: user)
+        Task { await cloudKitSyncService.syncUser(user) }
+    }
+
     private func synchronizeRemoteStateIfPossible(for user: User) async {
         do {
             try await cloudKitSyncService.prepareSharingProfile(for: user)

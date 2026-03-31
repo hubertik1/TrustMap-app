@@ -30,6 +30,21 @@ final class DishReviewRepository {
             .sorted { $0.dishRating > $1.dishRating }
     }
 
+    func reviews(
+        authoredBy authorIDs: Set<UUID>,
+        visibleTo viewerID: UUID,
+        friendIDs: Set<UUID>,
+        ratingRange: ClosedRange<Int>
+    ) throws -> [DishReview] {
+        try allReviews()
+            .filter {
+                authorIDs.contains($0.authorUserId)
+                    && ratingRange.contains($0.dishRating)
+                    && isVisible($0, viewerID: viewerID, friendIDs: friendIDs)
+            }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
     func reviews(authoredBy userID: UUID) throws -> [DishReview] {
         try allReviews()
             .filter { $0.authorUserId == userID }

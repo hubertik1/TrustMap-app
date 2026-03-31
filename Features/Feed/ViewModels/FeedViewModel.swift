@@ -15,6 +15,7 @@ final class FeedViewModel: ObservableObject {
     private let userRepository: UserProfileRepository
     private let placeRepository: PlaceRepository
     private let placeReviewRepository: PlaceReviewRepository
+    private let dishReviewRepository: DishReviewRepository
     private var refreshTask: Task<Void, Never>?
 
     init(
@@ -24,7 +25,8 @@ final class FeedViewModel: ObservableObject {
         friendRepository: FriendRepository,
         userRepository: UserProfileRepository,
         placeRepository: PlaceRepository,
-        placeReviewRepository: PlaceReviewRepository
+        placeReviewRepository: PlaceReviewRepository,
+        dishReviewRepository: DishReviewRepository
     ) {
         self.sessionStore = sessionStore
         self.cloudKitSyncService = cloudKitSyncService
@@ -33,6 +35,7 @@ final class FeedViewModel: ObservableObject {
         self.userRepository = userRepository
         self.placeRepository = placeRepository
         self.placeReviewRepository = placeReviewRepository
+        self.dishReviewRepository = dishReviewRepository
     }
 
     deinit {
@@ -78,30 +81,61 @@ final class FeedViewModel: ObservableObject {
             friendIDs: friendIDs,
             ratingRange: 1...10
         )
+        let visibleDishReviews = try dishReviewRepository.reviews(
+            authoredBy: actorIDs,
+            visibleTo: currentUser.id,
+            friendIDs: friendIDs,
+            ratingRange: 1...10
+        )
         let reviewsByID: [UUID: PlaceReview] = visibleReviews.reduce(into: [:]) { result, review in
             result[review.id] = review
         }
-        let placeIDs = Set(visibleReviews.map(\.placeId))
+        let dishReviewsByID: [UUID: DishReview] = visibleDishReviews.reduce(into: [:]) { result, review in
+            result[review.id] = review
+        }
+        let placeIDs = Set(visibleReviews.map(\.placeId)).union(visibleDishReviews.map(\.placeId))
         let places = try placeRepository.places(withIDs: placeIDs)
         let placesByID: [UUID: Place] = places.reduce(into: [:]) { result, place in
             result[place.id] = place
         }
 
         feedItems = activities.compactMap { activity in
-            guard let reviewID = UUID(uuidString: activity.referenceId),
-                  let review = reviewsByID[reviewID],
-                  let place = placesByID[review.placeId] else {
+            guard let reviewID = UUID(uuidString: activity.referenceId) else {
                 return nil
             }
 
-            return FeedPlaceActivityItem(
-                id: activity.id,
-                place: place,
-                actorName: userNames[activity.actorUserId] ?? "Friend",
-                placeName: place.name,
-                rating: review.ratingOverall,
-                createdAt: activity.createdAt
-            )
+            let actorName = userNames[activity.actorUserId] ?? "Friend"
+
+            switch activity.type {
+            case .placeReviewAdded:
+                guard let review = reviewsByID[reviewID],
+                      let place = placesByID[review.placeId] else {
+                    return nil
+                }
+
+                return FeedPlaceActivityItem(
+                    id: activity.id,
+                    place: place,
+                    title: "\(actorName) added \(place.name)",
+                    subtitle: "Rated \(review.ratingOverall)/10",
+                    createdAt: activity.createdAt
+                )
+            case .dishReviewAdded:
+                guard let review = dishReviewsByID[reviewID],
+                      let place = placesByID[review.placeId] else {
+                    return nil
+                }
+
+                return FeedPlaceActivityItem(
+                    id: activity.id,
+                    place: place,
+                    title: "\(actorName) added \(review.dishName) at \(place.name)",
+                    subtitle: "Rated \(review.dishRating)/10",
+                    createdAt: activity.createdAt
+                )
+            case .photoAdded:
+                return nil
+            }
         }
     }
 
