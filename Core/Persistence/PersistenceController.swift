@@ -1,37 +1,74 @@
 import Foundation
+import OSLog
 import SwiftData
 
 @MainActor
 final class PersistenceController {
     let modelContainer: ModelContainer
+    private let logger = Logger(subsystem: "TrustMap", category: "Persistence")
 
     init(inMemory: Bool = false) {
-        let configuration = ModelConfiguration(
-            "TrustMap",
-            isStoredInMemoryOnly: inMemory,
-            cloudKitDatabase: .none
-        )
-
         do {
-            modelContainer = try ModelContainer(
-                for: User.self,
-                FriendInvite.self,
-                Friendship.self,
-                Place.self,
-                PlaceReview.self,
-                DishReview.self,
-                PhotoAsset.self,
-                CustomCategory.self,
-                PlaceCategoryAssignment.self,
-                ActivityItem.self,
-                configurations: configuration
-            )
+            modelContainer = try Self.makeModelContainer(inMemory: inMemory)
         } catch {
-            fatalError("Failed to create SwiftData container: \(error.localizedDescription)")
+            logger.error("Unable to open persistent SwiftData store. Falling back to in-memory store: \(error.localizedDescription, privacy: .public)")
+
+            do {
+                modelContainer = try Self.makeModelContainer(inMemory: true)
+            } catch {
+                fatalError("Failed to create SwiftData container: \(error.localizedDescription)")
+            }
         }
     }
 
     var mainContext: ModelContext {
         modelContainer.mainContext
+    }
+
+    private static func makeModelContainer(inMemory: Bool) throws -> ModelContainer {
+        let configuration: ModelConfiguration
+
+        if inMemory {
+            configuration = ModelConfiguration(
+                "TrustMap",
+                isStoredInMemoryOnly: true,
+                cloudKitDatabase: .none
+            )
+        } else {
+            let storeURL = try persistentStoreURL()
+            configuration = ModelConfiguration(
+                "TrustMap",
+                url: storeURL,
+                cloudKitDatabase: .none
+            )
+        }
+
+        return try ModelContainer(
+            for: User.self,
+            FriendInvite.self,
+            Friendship.self,
+            Place.self,
+            PlaceReview.self,
+            DishReview.self,
+            PhotoAsset.self,
+            CustomCategory.self,
+            PlaceCategoryAssignment.self,
+            ActivityItem.self,
+            configurations: configuration
+        )
+    }
+
+    private static func persistentStoreURL() throws -> URL {
+        let applicationSupportURL = try FileManager.default.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        try FileManager.default.createDirectory(
+            at: applicationSupportURL,
+            withIntermediateDirectories: true
+        )
+        return applicationSupportURL.appendingPathComponent("TrustMap.store")
     }
 }

@@ -7,7 +7,7 @@ final class DishReview {
     var placeId: UUID
     var authorUserId: UUID
     var placeReviewId: UUID?
-    var visibility: VisibilityStatus
+    @Attribute(originalName: "visibility") var visibilityRawValue: String?
     var dishName: String
     var dishRating: Int
     var dishReviewText: String
@@ -32,12 +32,21 @@ final class DishReview {
         self.placeId = placeId
         self.authorUserId = authorUserId
         self.placeReviewId = placeReviewId
-        self.visibility = visibility
+        self.visibilityRawValue = visibility.rawValue
         self.dishName = dishName
         self.dishRating = dishRating
         self.dishReviewText = dishReviewText
         self.price = price
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+
+    var visibility: VisibilityStatus {
+        get {
+            visibilityRawValue.flatMap(VisibilityStatus.init(rawValue:)) ?? .friendsOnly
+        }
+        set {
+            visibilityRawValue = newValue.rawValue
+        }
     }
 }

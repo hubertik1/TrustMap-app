@@ -30,6 +30,7 @@ final class PlaceDetailViewModel: ObservableObject {
     private let photoAssetRepository: PhotoAssetRepository
     private let placeReviewRepository: PlaceReviewRepository
     private let dishReviewRepository: DishReviewRepository
+    private var refreshTask: Task<Void, Never>?
 
     init(
         place: Place,
@@ -53,6 +54,10 @@ final class PlaceDetailViewModel: ObservableObject {
         self.dishReviewRepository = dishReviewRepository
     }
 
+    deinit {
+        refreshTask?.cancel()
+    }
+
     func load() async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
@@ -61,49 +66,21 @@ final class PlaceDetailViewModel: ObservableObject {
             return
         }
 
-        isLoading = true
         errorMessage = nil
         currentUserID = currentUser.id
+        if placeReviews.isEmpty && dishReviews.isEmpty && placePhotos.isEmpty {
+            isLoading = true
+        }
 
         do {
-            let friends = (try? await friendRepository.acceptedFriends(for: currentUser.id)) ?? []
-            await cloudKitSyncService.refreshFriendVisibleContentIfPossible(for: currentUser, friends: friends)
-            let friendIDs = Set(friends.map(\.id))
-            placeReviews = try placeReviewRepository.reviews(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
-            currentUserPlaceReview = placeReviews.first(where: { $0.authorUserId == currentUser.id })
-            dishReviews = try dishReviewRepository.reviews(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
-            averageRating = try placeReviewRepository.averageRating(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
-            categoryNames = try categoryRepository.categoryNames(forPlace: place.id)
-            placePhotos = try photoAssetRepository.photos(
-                for: place.id,
-                visiblePlaceReviewIDs: Set(placeReviews.map(\.id)),
-                visibleDishReviewIDs: Set(dishReviews.map(\.id))
-            )
-            reviewPhotos = Dictionary(grouping: placePhotos.compactMap { asset in
-                asset.placeReviewId.map { (reviewID: $0, asset: asset) }
-            }, by: \.reviewID).mapValues { $0.map(\.asset) }
-            dishPhotos = placePhotos.reduce(into: [:]) { result, asset in
-                guard let dishReviewId = asset.dishReviewId, result[dishReviewId] == nil else {
-                    return
-                }
-                result[dishReviewId] = asset
-            }
-
-            let visibleAuthorIDs = Set(placeReviews.map(\.authorUserId) + dishReviews.map(\.authorUserId))
-            let allUsers = try userRepository.allKnownUsers()
-            authorNames = allUsers.reduce(into: [:]) { result, user in
-                guard visibleAuthorIDs.contains(user.id) else {
-                    return
-                }
-                result[user.id] = user.displayName
-            }
-            authorNames[currentUser.id] = currentUser.displayName
+            try reloadPlaceDetails(for: currentUser, friendIDs: friendRepository.cachedAcceptedFriendIDs(for: currentUser.id))
         } catch {
             logger.error("Unable to load place details: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
         }
 
         isLoading = false
+        scheduleBackgroundRefresh(for: currentUser)
     }
 
     var placeReviewButtonTitle: String {
@@ -136,5 +113,71 @@ final class PlaceDetailViewModel: ObservableObject {
 
     func imageData(for asset: PhotoAsset) -> Data? {
         photoAssetRepository.imageData(for: asset)
+    }
+
+    private func reloadPlaceDetails(for currentUser: User, friendIDs: Set<UUID>) throws {
+        placeReviews = try placeReviewRepository.reviews(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
+        currentUserPlaceReview = placeReviews.first(where: { $0.authorUserId == currentUser.id })
+        dishReviews = try dishReviewRepository.reviews(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
+        averageRating = try placeReviewRepository.averageRating(for: place.id, visibleTo: currentUser.id, friendIDs: friendIDs)
+        categoryNames = try categoryRepository.categoryNames(forPlace: place.id)
+        placePhotos = try photoAssetRepository.photos(
+            for: place.id,
+            visiblePlaceReviewIDs: Set(placeReviews.map(\.id)),
+            visibleDishReviewIDs: Set(dishReviews.map(\.id))
+        )
+        reviewPhotos = Dictionary(grouping: placePhotos.compactMap { asset in
+            asset.placeReviewId.map { (reviewID: $0, asset: asset) }
+        }, by: \.reviewID).mapValues { $0.map(\.asset) }
+        dishPhotos = placePhotos.reduce(into: [:]) { result, asset in
+            guard let dishReviewId = asset.dishReviewId, result[dishReviewId] == nil else {
+                return
+            }
+            result[dishReviewId] = asset
+        }
+
+        let visibleAuthorIDs = Set(placeReviews.map(\.authorUserId) + dishReviews.map(\.authorUserId))
+        let allUsers = try userRepository.allKnownUsers()
+        authorNames = allUsers.reduce(into: [:]) { result, user in
+            guard visibleAuthorIDs.contains(user.id) else {
+                return
+            }
+            result[user.id] = user.displayName
+        }
+        authorNames[currentUser.id] = currentUser.displayName
+    }
+
+    private func scheduleBackgroundRefresh(for currentUser: User) {
+        refreshTask?.cancel()
+        let currentUserID = currentUser.id
+
+        refreshTask = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
+            let cachedFriendIDs = (try? self.friendRepository.cachedAcceptedFriendIDs(for: currentUserID)) ?? Set<UUID>()
+            let friends = (try? await self.friendRepository.acceptedFriends(for: currentUserID)) ?? []
+            guard !Task.isCancelled,
+                  let sessionUser = self.sessionStore.currentUser,
+                  sessionUser.id == currentUserID else {
+                return
+            }
+
+            await self.cloudKitSyncService.refreshFriendVisibleContentIfPossible(for: sessionUser, friends: friends)
+            guard !Task.isCancelled else {
+                return
+            }
+
+            do {
+                try self.reloadPlaceDetails(
+                    for: sessionUser,
+                    friendIDs: (try? self.friendRepository.cachedAcceptedFriendIDs(for: currentUserID)) ?? cachedFriendIDs
+                )
+                self.errorMessage = nil
+            } catch {
+                self.logger.error("Unable to refresh place details in background: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 }

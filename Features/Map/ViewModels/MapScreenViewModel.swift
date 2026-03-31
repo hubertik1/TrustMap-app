@@ -36,6 +36,7 @@ final class MapScreenViewModel: ObservableObject {
     private var hasStartedLocationFlow = false
     private var shouldCenterOnNextLocationUpdate = true
     private var searchTask: Task<Void, Never>?
+    private var refreshTask: Task<Void, Never>?
     private var pendingPromptPlace: Place?
     private var pendingPromptCoordinate: CLLocationCoordinate2D?
 
@@ -71,57 +72,31 @@ final class MapScreenViewModel: ObservableObject {
         }
     }
 
+    deinit {
+        searchTask?.cancel()
+        refreshTask?.cancel()
+    }
+
     func load() async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription
             return
         }
 
-        isLoading = true
         errorMessage = nil
+        if annotations.isEmpty {
+            isLoading = true
+        }
 
         do {
-            let friends = (try? await friendRepository.acceptedFriends(for: currentUser.id)) ?? []
-            await cloudKitSyncService.refreshFriendVisibleContentIfPossible(for: currentUser, friends: friends)
-            let friendIDs = Set(friends.map(\.id))
-            let defaultRestaurantCategory = try categoryRepository.defaultRestaurantCategory(for: currentUser.id)
-            let ownedCategories = try categoryRepository.categories(for: currentUser.id)
-            availableCategoryOptions = [.all, .restaurants] + ownedCategories
-                .filter {
-                    $0.id != defaultRestaurantCategory.id
-                        && $0.name.caseInsensitiveCompare(PlaceCategoryOption.restaurants.title) != .orderedSame
-                }
-                .map(PlaceCategoryOption.init(category:))
-
-            if !availableCategoryOptions.contains(filterState.selectedCategoryOption) {
-                filterState.selectedCategoryOption = .restaurants
-            }
-
-            availablePeople = [FilterPerson(id: currentUser.id, name: "Me", isCurrentUser: true)]
-                + friends.map { FilterPerson(id: $0.id, name: $0.displayName, isCurrentUser: false) }
-
-            let authorIDs = filterState.resolvedAuthorIDs(currentUserID: currentUser.id, friendIDs: friendIDs)
-            let reviews = try placeReviewRepository.reviews(
-                authoredBy: authorIDs,
-                visibleTo: currentUser.id,
-                friendIDs: friendIDs,
-                ratingRange: filterState.ratingRange
-            )
-            let places = try placeRepository.places(withIDs: Set(reviews.map(\.placeId)))
-            let categoryNamesByPlace = try places.reduce(into: [UUID: [String]]()) { result, place in
-                result[place.id] = try categoryRepository.categoryNames(forPlace: place.id)
-            }
-            let filteredPlaces = places.filter { place in
-                let categoryNames = categoryNamesByPlace[place.id] ?? []
-                return filterState.selectedCategoryOption.matches(categoryNames: categoryNames)
-            }
-            annotations = buildAnnotations(from: reviews, places: filteredPlaces)
+            try reloadVisibleContent(for: currentUser, friends: try friendRepository.cachedAcceptedFriends(for: currentUser.id))
         } catch {
             logger.error("Unable to load map content: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
         }
 
         isLoading = false
+        scheduleBackgroundRefresh(for: currentUser)
     }
 
     func performSearch() async {
@@ -129,7 +104,17 @@ final class MapScreenViewModel: ObservableObject {
     }
 
     func applyFilters() async {
-        await load()
+        guard let currentUser = sessionStore.currentUser else {
+            errorMessage = AppError.missingCurrentUser.errorDescription
+            return
+        }
+
+        do {
+            try reloadVisibleContent(for: currentUser, friends: friendRepository.cachedAcceptedFriends(for: currentUser.id))
+        } catch {
+            logger.error("Unable to apply map filters: \(error.localizedDescription, privacy: .public)")
+            errorMessage = AppError.wrap(error).errorDescription
+        }
     }
 
     func handleSearchTextChange() {
@@ -273,6 +258,10 @@ final class MapScreenViewModel: ObservableObject {
     }
 
     func handleCameraChangeDidEnd(_ region: MKCoordinateRegion) {
+        if let currentRegion = self.region, regionsApproximatelyEqual(currentRegion, region) {
+            return
+        }
+
         self.region = region
 
         guard let pendingPromptPlace,
@@ -288,7 +277,31 @@ final class MapScreenViewModel: ObservableObject {
 
     private func focus(on coordinate: CLLocationCoordinate2D) {
         let span = region?.span ?? Self.defaultSpan
-        requestedCameraRegion = MKCoordinateRegion(center: coordinate, span: span)
+        let nextRegion = MKCoordinateRegion(center: coordinate, span: span)
+        if let requestedCameraRegion, regionsApproximatelyEqual(requestedCameraRegion, nextRegion) {
+            return
+        }
+
+        requestedCameraRegion = nextRegion
+    }
+
+    func clearRequestedCameraRegion() {
+        requestedCameraRegion = nil
+    }
+
+    var requestedCameraRegionToken: String {
+        guard let requestedCameraRegion else {
+            return ""
+        }
+
+        return [
+            requestedCameraRegion.center.latitude,
+            requestedCameraRegion.center.longitude,
+            requestedCameraRegion.span.latitudeDelta,
+            requestedCameraRegion.span.longitudeDelta
+        ]
+        .map { String($0) }
+        .joined(separator: "|")
     }
 
     func userName(for userID: UUID) -> String {
@@ -382,12 +395,89 @@ final class MapScreenViewModel: ObservableObject {
         focus(on: coordinate)
     }
 
+    private func reloadVisibleContent(for currentUser: User, friends: [User]) throws {
+        let friendIDs = Set(friends.map(\.id))
+        let defaultRestaurantCategory = try categoryRepository.defaultRestaurantCategory(for: currentUser.id)
+        let ownedCategories = try categoryRepository.categories(for: currentUser.id)
+        availableCategoryOptions = [.all, .restaurants] + ownedCategories
+            .filter {
+                $0.id != defaultRestaurantCategory.id
+                    && $0.name.caseInsensitiveCompare(PlaceCategoryOption.restaurants.title) != .orderedSame
+            }
+            .map(PlaceCategoryOption.init(category:))
+
+        if !availableCategoryOptions.contains(filterState.selectedCategoryOption) {
+            filterState.selectedCategoryOption = .restaurants
+        }
+
+        availablePeople = [FilterPerson(id: currentUser.id, name: "Me", isCurrentUser: true)]
+            + friends.map { FilterPerson(id: $0.id, name: $0.displayName, isCurrentUser: false) }
+
+        let authorIDs = filterState.resolvedAuthorIDs(currentUserID: currentUser.id, friendIDs: friendIDs)
+        let reviews = try placeReviewRepository.reviews(
+            authoredBy: authorIDs,
+            visibleTo: currentUser.id,
+            friendIDs: friendIDs,
+            ratingRange: filterState.ratingRange
+        )
+        let places = try placeRepository.places(withIDs: Set(reviews.map(\.placeId)))
+        let categoryNamesByPlace = try places.reduce(into: [UUID: [String]]()) { result, place in
+            result[place.id] = try categoryRepository.categoryNames(forPlace: place.id)
+        }
+        let filteredPlaces = places.filter { place in
+            let categoryNames = categoryNamesByPlace[place.id] ?? []
+            return filterState.selectedCategoryOption.matches(categoryNames: categoryNames)
+        }
+        annotations = buildAnnotations(from: reviews, places: filteredPlaces)
+    }
+
+    private func scheduleBackgroundRefresh(for currentUser: User) {
+        refreshTask?.cancel()
+        let currentUserID = currentUser.id
+
+        refreshTask = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
+            let cachedFriends = (try? self.friendRepository.cachedAcceptedFriends(for: currentUserID)) ?? []
+            let friends = (try? await self.friendRepository.acceptedFriends(for: currentUserID)) ?? cachedFriends
+            guard !Task.isCancelled,
+                  let sessionUser = self.sessionStore.currentUser,
+                  sessionUser.id == currentUserID else {
+                return
+            }
+
+            await self.cloudKitSyncService.refreshFriendVisibleContentIfPossible(for: sessionUser, friends: friends)
+            guard !Task.isCancelled else {
+                return
+            }
+
+            do {
+                try self.reloadVisibleContent(
+                    for: sessionUser,
+                    friends: (try? self.friendRepository.cachedAcceptedFriends(for: currentUserID)) ?? friends
+                )
+                self.errorMessage = nil
+            } catch {
+                self.logger.error("Unable to refresh map content in background: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
     private func hasReachedPendingPromptTarget(region: MKCoordinateRegion, target: CLLocationCoordinate2D) -> Bool {
         let latitudeTolerance = max(region.span.latitudeDelta * 0.1, 0.0001)
         let longitudeTolerance = max(region.span.longitudeDelta * 0.1, 0.0001)
 
         return abs(region.center.latitude - target.latitude) <= latitudeTolerance
             && abs(region.center.longitude - target.longitude) <= longitudeTolerance
+    }
+
+    private func regionsApproximatelyEqual(_ lhs: MKCoordinateRegion, _ rhs: MKCoordinateRegion) -> Bool {
+        abs(lhs.center.latitude - rhs.center.latitude) < 0.0001
+            && abs(lhs.center.longitude - rhs.center.longitude) < 0.0001
+            && abs(lhs.span.latitudeDelta - rhs.span.latitudeDelta) < 0.0001
+            && abs(lhs.span.longitudeDelta - rhs.span.longitudeDelta) < 0.0001
     }
 }
 

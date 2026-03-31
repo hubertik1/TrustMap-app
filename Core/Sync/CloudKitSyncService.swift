@@ -77,12 +77,13 @@ final class CloudKitSyncService {
     }
 
     private let logger = Logger(subsystem: "TrustMap", category: "CloudKitSync")
-    private let refreshCooldown: TimeInterval = 20
+    private let refreshCooldown: TimeInterval = 60
     private let persistenceController: PersistenceController
     private let photoStorageService: LocalPhotoStorageService
     private let forceDisabled: Bool
     private let container: CKContainer
     private var refreshStatesByViewerID: [UUID: RefreshState] = [:]
+    private var backfilledViewerIDs = Set<UUID>()
 
     init(
         persistenceController: PersistenceController,
@@ -145,7 +146,10 @@ final class CloudKitSyncService {
 
         try await prepareSharingProfile(for: viewer)
         await syncUser(viewer)
-        await backfillLocalContent(for: viewer)
+        if !backfilledViewerIDs.contains(viewer.id) {
+            await backfillLocalContent(for: viewer)
+            backfilledViewerIDs.insert(viewer.id)
+        }
         try await reconcileShareParticipants(for: viewer, friends: friends)
         await acceptFriendSharesIfNeeded(friends)
         try await mergeSharedContent(from: friends)
@@ -458,6 +462,10 @@ final class CloudKitSyncService {
         }
 
         for (recordName, participant) in existingParticipantsByRecordName {
+            guard participant.role == .privateUser else {
+                continue
+            }
+
             guard recordName != ownerRecordName, !desiredFriendRecordNames.contains(recordName) else {
                 continue
             }

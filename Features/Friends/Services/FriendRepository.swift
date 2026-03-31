@@ -16,6 +16,8 @@ protocol FriendsRepository: AnyObject {
     func revokeInvite(inviteID: UUID, by inviterUserID: UUID) async throws
     func acceptedFriendIDs(for userID: UUID) async throws -> Set<UUID>
     func acceptedFriends(for userID: UUID) async throws -> [User]
+    func cachedAcceptedFriendIDs(for userID: UUID) throws -> Set<UUID>
+    func cachedAcceptedFriends(for userID: UUID) throws -> [User]
     func areFriends(_ firstUserID: UUID, _ secondUserID: UUID) async throws -> Bool
 }
 
@@ -78,6 +80,30 @@ final class FriendRepository: FriendsRepository {
 
         for localUser in try userRepository.allKnownUsers() {
             usersByID[localUser.id] = localUser
+        }
+
+        return friendIDs
+            .compactMap { usersByID[$0] }
+            .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+    }
+
+    func cachedAcceptedFriendIDs(for userID: UUID) throws -> Set<UUID> {
+        let friendships = try cachedFriendships(for: userID)
+        var ids = Set<UUID>()
+
+        for friendship in friendships {
+            if let otherUserID = friendship.otherUserID(for: userID) {
+                ids.insert(otherUserID)
+            }
+        }
+
+        return ids
+    }
+
+    func cachedAcceptedFriends(for userID: UUID) throws -> [User] {
+        let friendIDs = try cachedAcceptedFriendIDs(for: userID)
+        let usersByID = try userRepository.allKnownUsers().reduce(into: [UUID: User]()) { result, user in
+            result[user.id] = user
         }
 
         return friendIDs

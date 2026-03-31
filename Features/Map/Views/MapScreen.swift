@@ -1,4 +1,3 @@
-import Combine
 import MapKit
 import SwiftUI
 import UIKit
@@ -43,11 +42,8 @@ struct MapScreen: View {
                             }
                         }
 
-                        ForEach(viewModel.annotations, id: \.id) { annotation in
-                            Annotation(annotation.place.name, coordinate: annotation.coordinate) {
-                                RatingBadgeView(rating: annotation.averageRating)
-                            }
-                            .tag(MapSelection(annotation.place.id))
+                        ForEach(viewModel.annotations) { annotation in
+                            mapAnnotationView(for: annotation)
                         }
                     }
                     .mapStyle(mapStyle)
@@ -74,10 +70,15 @@ struct MapScreen: View {
                     .onMapCameraChange(frequency: .onEnd) { context in
                         viewModel.handleCameraChangeDidEnd(context.region)
                     }
-                    .onReceive(viewModel.$requestedCameraRegion.compactMap { $0 }) { region in
+                    .onChange(of: viewModel.requestedCameraRegionToken) { _, _ in
+                        guard let region = viewModel.requestedCameraRegion else {
+                            return
+                        }
+
                         withAnimation(.easeInOut(duration: 0.45)) {
                             cameraPosition = .region(region)
                         }
+                        viewModel.clearRequestedCameraRegion()
                     }
                     .simultaneousGesture(longPressGesture(proxy: proxy))
                     .ignoresSafeArea(edges: .bottom)
@@ -281,6 +282,13 @@ struct MapScreen: View {
         .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
+    }
+
+    private func mapAnnotationView(for annotation: MapPlaceAnnotation) -> some MapContent {
+        Annotation(annotation.place.name, coordinate: annotation.coordinate) {
+            RatingBadgeView(rating: annotation.averageRating)
+        }
+        .tag(MapSelection(annotation.place.id))
     }
 
     private func longPressGesture(proxy: MapProxy) -> some Gesture {
