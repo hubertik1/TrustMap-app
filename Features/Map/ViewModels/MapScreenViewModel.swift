@@ -5,6 +5,15 @@ import OSLog
 
 @MainActor
 final class MapScreenViewModel: ObservableObject {
+    struct PromptContext: Identifiable {
+        let place: Place
+        let coordinate: CLLocationCoordinate2D
+
+        var id: UUID {
+            place.id
+        }
+    }
+
     @Published var region: MKCoordinateRegion?
     @Published var requestedCameraRegion: MKCoordinateRegion?
     @Published var searchText = ""
@@ -14,7 +23,7 @@ final class MapScreenViewModel: ObservableObject {
     @Published var isSatelliteEnabled = false
     @Published var selectedPlace: Place?
     @Published var selectedAnnotationID: UUID?
-    @Published var promptPlace: Place?
+    @Published var promptContext: PromptContext?
     @Published var droppedPinPlace: Place?
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -28,8 +37,7 @@ final class MapScreenViewModel: ObservableObject {
     private let placeRepository: PlaceRepository
     private let mapSearchService: MapSearchService
     private let userLocationService: UserLocationServicing
-    private var pendingPromptPlace: Place?
-    private var pendingPromptCoordinate: CLLocationCoordinate2D?
+    private var promptPresentationTask: Task<Void, Never>?
     private var latestMapReloadRequestID = UUID()
     private var hasCenteredOnUserLocation = false
     private var hasStartedLocationFlow = false
@@ -60,6 +68,7 @@ final class MapScreenViewModel: ObservableObject {
 
     deinit {
         searchTask?.cancel()
+        promptPresentationTask?.cancel()
     }
 
     func load() async {
@@ -109,8 +118,11 @@ final class MapScreenViewModel: ObservableObject {
     func selectPlace(withID placeID: UUID) {
         if let annotation = annotations.first(where: { $0.place.id == placeID }) {
             droppedPinPlace = nil
-            selectedAnnotationID = annotation.id
-            deferPromptPresentation(for: annotation.place, focusingOn: annotation.place.coordinate)
+            startPromptFlow(
+                for: annotation.place,
+                coordinate: annotation.place.coordinate,
+                selectedAnnotationID: annotation.id
+            )
         }
     }
 
@@ -128,7 +140,11 @@ final class MapScreenViewModel: ObservableObject {
             requestedCameraRegion = searchRegion
             requestedCameraRegionToken = UUID()
             droppedPinPlace = nil
-            deferPromptPresentation(for: place, focusingOn: searchRegion.center)
+            startPromptFlow(
+                for: place,
+                coordinate: searchRegion.center,
+                selectedAnnotationID: nil
+            )
             await reloadMapPlaces()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
@@ -140,7 +156,7 @@ final class MapScreenViewModel: ObservableObject {
             let resolvedResult = try await mapSearchService.resolveDroppedPin(at: coordinate)
             let place = try await placeRepository.createOrGetPlace(from: resolvedResult)
             droppedPinPlace = place
-            deferPromptPresentation(for: place, focusingOn: coordinate)
+            startPromptFlow(for: place, coordinate: coordinate, selectedAnnotationID: nil)
             await reloadMapPlaces()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
@@ -156,7 +172,7 @@ final class MapScreenViewModel: ObservableObject {
             )
             let place = try await placeRepository.createOrGetPlace(from: resolvedResult)
             droppedPinPlace = nil
-            deferPromptPresentation(for: place, focusingOn: coordinate)
+            startPromptFlow(for: place, coordinate: coordinate, selectedAnnotationID: nil)
             await reloadMapPlaces()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
@@ -164,34 +180,17 @@ final class MapScreenViewModel: ObservableObject {
     }
 
     func openPromptedPlaceDetails() {
-        guard let promptPlace else { return }
-        selectedPlace = promptPlace
-        self.promptPlace = nil
-        selectedAnnotationID = nil
-        pendingPromptPlace = nil
-        pendingPromptCoordinate = nil
-        droppedPinPlace = nil
+        guard let promptContext else { return }
+        selectedPlace = promptContext.place
+        clearPromptState(keepSelectedPlace: true)
     }
 
     func dismissPrompt() {
-        promptPlace = nil
-        selectedAnnotationID = nil
-        pendingPromptPlace = nil
-        pendingPromptCoordinate = nil
-        droppedPinPlace = nil
+        clearPromptState()
     }
 
     func handleCameraChangeDidEnd(_ region: MKCoordinateRegion) {
         self.region = region
-
-        if let pendingPromptPlace,
-           let pendingPromptCoordinate,
-           region.center.isClose(to: pendingPromptCoordinate) {
-            promptPlace = pendingPromptPlace
-            self.pendingPromptPlace = nil
-            self.pendingPromptCoordinate = nil
-        }
-
         Task { await reloadMapPlaces() }
     }
 
@@ -256,14 +255,51 @@ final class MapScreenViewModel: ObservableObject {
         }
     }
 
-    private func deferPromptPresentation(for place: Place, focusingOn coordinate: CLLocationCoordinate2D) {
+    private func startPromptFlow(for place: Place, coordinate: CLLocationCoordinate2D, selectedAnnotationID: UUID?) {
+        promptPresentationTask?.cancel()
+        promptPresentationTask = nil
+
+        let context = PromptContext(place: place, coordinate: coordinate)
+
+        self.selectedAnnotationID = selectedAnnotationID
+        promptContext = nil
+
         let targetRegion = MKCoordinateRegion(center: coordinate, span: Self.defaultSpan)
-        promptPlace = nil
-        pendingPromptPlace = place
-        pendingPromptCoordinate = coordinate
+        if let region, isRegion(region, focusedOn: coordinate) {
+            requestedCameraRegion = nil
+            schedulePromptPresentation(for: context, delayMilliseconds: 180)
+            return
+        }
+
         region = targetRegion
         requestedCameraRegion = targetRegion
         requestedCameraRegionToken = UUID()
+        schedulePromptPresentation(for: context, delayMilliseconds: 520)
+    }
+
+    private func schedulePromptPresentation(for context: PromptContext, delayMilliseconds: Int) {
+        promptPresentationTask?.cancel()
+        promptPresentationTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(delayMilliseconds))
+            guard let self else {
+                return
+            }
+
+            self.promptContext = context
+            self.promptPresentationTask = nil
+        }
+    }
+
+    private func clearPromptState(keepSelectedPlace: Bool = false) {
+        promptPresentationTask?.cancel()
+        promptPresentationTask = nil
+        promptContext = nil
+        selectedAnnotationID = nil
+        droppedPinPlace = nil
+
+        if !keepSelectedPlace {
+            selectedPlace = nil
+        }
     }
 
     private func mapBounds(from region: MKCoordinateRegion?) -> (north: Double, south: Double, east: Double, west: Double)? {
@@ -316,6 +352,12 @@ final class MapScreenViewModel: ObservableObject {
     }
 
     private static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)
+
+    private func isRegion(_ region: MKCoordinateRegion, focusedOn coordinate: CLLocationCoordinate2D) -> Bool {
+        region.center.isClose(to: coordinate)
+            && abs(region.span.latitudeDelta - Self.defaultSpan.latitudeDelta) <= 0.002
+            && abs(region.span.longitudeDelta - Self.defaultSpan.longitudeDelta) <= 0.002
+    }
 }
 
 private extension CLLocationCoordinate2D {

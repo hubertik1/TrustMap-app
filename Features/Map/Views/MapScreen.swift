@@ -25,87 +25,85 @@ struct MapScreen: View {
 
     var body: some View {
         MapReader { proxy in
-            GeometryReader { geometry in
-                ZStack {
-                    Map(position: $cameraPosition, selection: $mapSelection) {
-                        UserAnnotation()
+            ZStack {
+                Map(position: $cameraPosition, selection: $mapSelection) {
+                    UserAnnotation()
 
-                        if let droppedPinPlace = viewModel.droppedPinPlace {
-                            Annotation("Dropped Pin", coordinate: droppedPinPlace.coordinate, anchor: .bottom) {
-                                Image(systemName: "mappin.circle.fill")
-                                    .font(.title)
-                                    .foregroundStyle(.red)
-                                    .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
-                            }
-                        }
-
-                        ForEach(viewModel.annotations) { annotation in
-                            mapAnnotationView(for: annotation)
+                    if let droppedPinPlace = viewModel.droppedPinPlace {
+                        Annotation("Dropped Pin", coordinate: droppedPinPlace.coordinate, anchor: .bottom) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.title)
+                                .foregroundStyle(.red)
+                                .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
                         }
                     }
-                    .mapStyle(mapStyle)
-                    .mapFeatureSelectionDisabled { feature in
-                        feature.kind != .pointOfInterest
-                    }
-                    .onChange(of: mapSelection) { _, selection in
-                        guard let selection else {
-                            viewModel.dismissPrompt()
-                            return
-                        }
 
-                        Task {
-                            if let placeID = selection.value {
-                                viewModel.selectPlace(withID: placeID)
-                            } else if let feature = selection.feature {
-                                await viewModel.selectMapFeature(
-                                    title: feature.title,
-                                    coordinate: feature.coordinate
-                                )
-                            }
-                        }
+                    ForEach(viewModel.annotations) { annotation in
+                        mapAnnotationView(for: annotation)
                     }
-                    .onMapCameraChange(frequency: .onEnd) { context in
-                        viewModel.handleCameraChangeDidEnd(context.region)
+                }
+                .mapStyle(mapStyle)
+                .mapFeatureSelectionDisabled { feature in
+                    feature.kind != .pointOfInterest
+                }
+                .onChange(of: mapSelection) { _, selection in
+                    guard let selection else {
+                        viewModel.dismissPrompt()
+                        return
                     }
-                    .onChange(of: viewModel.requestedCameraRegionToken) { _, _ in
-                        guard let region = viewModel.requestedCameraRegion else { return }
 
-                        withAnimation(.easeInOut(duration: 0.45)) {
-                            cameraPosition = .region(region)
+                    Task {
+                        if let placeID = selection.value {
+                            viewModel.selectPlace(withID: placeID)
+                        } else if let feature = selection.feature {
+                            await viewModel.selectMapFeature(
+                                title: feature.title,
+                                coordinate: feature.coordinate
+                            )
                         }
-                        viewModel.clearRequestedCameraRegion()
                     }
-                    .simultaneousGesture(longPressGesture(proxy: proxy))
-                    .ignoresSafeArea(edges: .bottom)
+                }
+                .onMapCameraChange(frequency: .onEnd) { context in
+                    viewModel.handleCameraChangeDidEnd(context.region)
+                }
+                .onChange(of: viewModel.requestedCameraRegionToken) { _, _ in
+                    guard let region = viewModel.requestedCameraRegion else { return }
 
-                    if viewModel.isLoading && viewModel.annotations.isEmpty {
-                        LoadingStateView(title: "Loading your map")
-                            .background(.thinMaterial)
-                    } else if let errorMessage = viewModel.errorMessage, viewModel.annotations.isEmpty {
-                        ErrorStateView(message: errorMessage) {
-                            Task { await viewModel.load() }
-                        }
+                    withAnimation(.easeInOut(duration: 0.45)) {
+                        cameraPosition = .region(region)
+                    }
+                    viewModel.clearRequestedCameraRegion()
+                }
+                .simultaneousGesture(longPressGesture(proxy: proxy))
+                .ignoresSafeArea(edges: .bottom)
+
+                if viewModel.isLoading && viewModel.annotations.isEmpty {
+                    LoadingStateView(title: "Loading your map")
                         .background(.thinMaterial)
+                } else if let errorMessage = viewModel.errorMessage, viewModel.annotations.isEmpty {
+                    ErrorStateView(message: errorMessage) {
+                        Task { await viewModel.load() }
                     }
+                    .background(.thinMaterial)
+                }
 
-                    if let promptPlace = viewModel.promptPlace {
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .ignoresSafeArea()
-                            .onTapGesture {
-                                clearMapSelection()
-                            }
-
-                        if let point = proxy.convert(promptPlace.coordinate, to: .local) {
-                            selectionPromptView(for: promptPlace)
-                                .frame(width: 240)
-                                .position(
-                                    x: min(max(point.x, 132), geometry.size.width - 132),
-                                    y: min(max(point.y + 92, 120), geometry.size.height - 120)
-                                )
-                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                if let promptContext = viewModel.promptContext {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            clearMapSelection()
                         }
+
+                    VStack {
+                        Spacer()
+                        selectionPromptView(for: promptContext.place)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, promptBottomInset)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .animation(.easeInOut(duration: 0.2), value: promptContext.id)
                 }
             }
         }
@@ -250,6 +248,10 @@ struct MapScreen: View {
         viewModel.dismissPrompt()
     }
 
+    private var promptBottomInset: CGFloat {
+        viewModel.locationAccessState.message == nil ? 120 : 176
+    }
+
     private func longPressGesture(proxy: MapProxy) -> some Gesture {
         LongPressGesture(minimumDuration: 0.45)
             .sequenced(before: DragGesture(minimumDistance: 0))
@@ -271,6 +273,7 @@ struct MapScreen: View {
             let isSelected = viewModel.selectedAnnotationID == annotation.id
 
             Button {
+                mapSelection = nil
                 viewModel.selectPlace(withID: annotation.id)
             } label: {
                 VStack(spacing: 6) {
