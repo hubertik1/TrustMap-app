@@ -268,6 +268,8 @@ struct MapScreen: View {
     @MapContentBuilder
     private func mapAnnotationView(for annotation: MapPlaceAnnotation) -> some MapContent {
         Annotation(annotation.place.name, coordinate: annotation.coordinate, anchor: .bottom) {
+            let isSelected = viewModel.selectedAnnotationID == annotation.id
+
             Button {
                 viewModel.selectPlace(withID: annotation.id)
             } label: {
@@ -287,6 +289,10 @@ struct MapScreen: View {
                         .frame(width: 10, height: 10)
                         .overlay(Circle().stroke(.white, lineWidth: 2))
                 }
+                .scaleEffect(isSelected ? 1.12 : 1)
+                .offset(y: isSelected ? -12 : 0)
+                .shadow(color: .black.opacity(isSelected ? 0.22 : 0.12), radius: isSelected ? 14 : 8, y: isSelected ? 8 : 4)
+                .animation(.spring(response: 0.28, dampingFraction: 0.78), value: isSelected)
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
