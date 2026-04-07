@@ -9,6 +9,7 @@ final class ProfileViewModel: ObservableObject {
     @Published private(set) var dishReviews: [DishReview] = []
     @Published private(set) var placeNames: [UUID: String] = [:]
     @Published var editedHandle = ""
+    @Published private(set) var editedHandleSuffix = ""
     @Published var editedDisplayName = ""
     @Published var editedBio = ""
     @Published var isLoading = false
@@ -89,7 +90,9 @@ final class ProfileViewModel: ObservableObject {
             return
         }
 
-        editedHandle = user.handle
+        let components = Self.splitHandle(user.handle)
+        editedHandle = components.base
+        editedHandleSuffix = components.suffix
         editedDisplayName = user.displayName
         editedBio = user.bio ?? ""
     }
@@ -111,6 +114,9 @@ final class ProfileViewModel: ObservableObject {
                 avatarURL: currentUser.avatarURLString
             )
             user = updatedUser
+            let components = Self.splitHandle(updatedUser.handle)
+            editedHandle = components.base
+            editedHandleSuffix = components.suffix
             sessionStore.updateCurrentUser(updatedUser)
             refreshCenter.invalidateAll()
             errorMessage = nil
@@ -119,5 +125,14 @@ final class ProfileViewModel: ObservableObject {
             errorMessage = AppError.wrap(error).errorDescription
             return false
         }
+    }
+
+    private static func splitHandle(_ handle: String) -> (base: String, suffix: String) {
+        let parts = handle.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
+        guard parts.count == 2 else {
+            return (handle, "")
+        }
+
+        return (String(parts[0]), "#\(parts[1])")
     }
 }

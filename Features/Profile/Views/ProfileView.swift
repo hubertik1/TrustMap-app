@@ -119,12 +119,41 @@ private struct ProfileEditorSheet: View {
     var body: some View {
         Form {
             Section("Profile") {
-                TextField("Display name", text: $viewModel.editedDisplayName)
+                VStack(alignment: .leading, spacing: 10) {
+                    TextField(
+                        text: $viewModel.editedDisplayName,
+                        prompt: Text("Display name").foregroundStyle(.secondary)
+                    ) {
+                        EmptyView()
+                    }
+                    .textFieldStyle(.plain)
+                    .font(.body)
                     .textInputAutocapitalization(.words)
 
-                TextField("Handle", text: $viewModel.editedHandle)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+                    Divider()
+
+                    HStack(spacing: 12) {
+                        TextField(
+                            text: $viewModel.editedHandle,
+                            prompt: Text("Handle").foregroundStyle(.secondary)
+                        ) {
+                            EmptyView()
+                        }
+                        .textFieldStyle(.plain)
+                        .font(.body)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+
+                        if !viewModel.editedHandleSuffix.isEmpty {
+                            Text(viewModel.editedHandleSuffix)
+                                .font(.body.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Divider()
+                }
+                .listRowSeparator(.hidden)
 
                 TextField("Bio", text: $viewModel.editedBio, axis: .vertical)
                     .lineLimit(3...5)
