@@ -282,12 +282,15 @@ struct MapScreen: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(.regularMaterial, in: Capsule())
-
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 10, height: 10)
-                        .overlay(Circle().stroke(.white, lineWidth: 2))
+                    .foregroundStyle(.white)
+                    .background(
+                        annotation.badgeColor,
+                        in: Capsule()
+                    )
+                    .overlay {
+                        Capsule()
+                            .strokeBorder(annotation.badgeBorderColor, lineWidth: 1)
+                    }
                 }
                 .scaleEffect(isSelected ? 1.12 : 1)
                 .offset(y: isSelected ? -12 : 0)
@@ -325,6 +328,38 @@ struct MapScreen: View {
         .padding()
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: .black.opacity(0.12), radius: 12, y: 8)
+    }
+}
+
+private extension MapPlaceAnnotation {
+    var badgeColor: Color {
+        switch averageRating {
+        case ..<2.0:
+            return Color(red: 0.62, green: 0.23, blue: 0.18)
+        case ..<3.0:
+            return Color(red: 0.79, green: 0.42, blue: 0.17)
+        case ..<3.7:
+            return Color(red: 0.82, green: 0.65, blue: 0.23)
+        case ..<4.4:
+            return Color(red: 0.43, green: 0.55, blue: 0.24)
+        default:
+            return Color(red: 0.18, green: 0.42, blue: 0.24)
+        }
+    }
+
+    var badgeBorderColor: Color {
+        switch averageRating {
+        case ..<2.0:
+            return Color(red: 0.47, green: 0.16, blue: 0.12)
+        case ..<3.0:
+            return Color(red: 0.61, green: 0.30, blue: 0.11)
+        case ..<3.7:
+            return Color(red: 0.65, green: 0.50, blue: 0.15)
+        case ..<4.4:
+            return Color(red: 0.31, green: 0.42, blue: 0.16)
+        default:
+            return Color(red: 0.12, green: 0.29, blue: 0.16)
+        }
     }
 }
 
