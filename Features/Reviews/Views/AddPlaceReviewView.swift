@@ -100,7 +100,21 @@ struct AddPlaceReviewView: View {
 
     private var reviewSection: some View {
         Section("Review") {
-            Stepper("Rating: \(viewModel.ratingOverall)/5", value: $viewModel.ratingOverall, in: 1...5)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Rating")
+                        .font(.subheadline.weight(.medium))
+
+                    Spacer()
+
+                    Text("\(viewModel.ratingOverall)/5")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                StarRatingInputView(rating: $viewModel.ratingOverall)
+            }
+
             TextField("Description (optional)", text: $viewModel.descriptionText, axis: .vertical)
                 .lineLimit(3...6)
 

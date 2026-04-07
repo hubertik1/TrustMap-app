@@ -29,7 +29,22 @@ struct AddDishReviewView: View {
 
             Section("Dish Review") {
                 TextField("Dish name", text: $viewModel.dishName)
-                Stepper("Rating: \(viewModel.dishRating)/5", value: $viewModel.dishRating, in: 1...5)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Rating")
+                            .font(.subheadline.weight(.medium))
+
+                        Spacer()
+
+                        Text("\(viewModel.dishRating)/5")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    StarRatingInputView(rating: $viewModel.dishRating)
+                }
+
                 TextField("Short review (optional)", text: $viewModel.dishReviewText, axis: .vertical)
                     .lineLimit(3...5)
                 TextField("Price", text: $viewModel.priceText)

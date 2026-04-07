@@ -18,6 +18,33 @@ struct RatingBadgeView: View {
     }
 }
 
+struct StarRatingInputView: View {
+    @Binding var rating: Int
+    var maximumRating = 5
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(1...maximumRating, id: \.self) { star in
+                Button {
+                    rating = star
+                } label: {
+                    Image(systemName: star <= rating ? "star.fill" : "star")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(star <= rating ? Color.yellow : Color.secondary.opacity(0.55))
+                        .frame(width: 32, height: 32)
+                        .contentTransition(.symbolEffect(.replace))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(star) star\(star == 1 ? "" : "s")")
+                .accessibilityAddTraits(star == rating ? .isSelected : [])
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Rating")
+        .accessibilityValue("\(rating) out of \(maximumRating)")
+    }
+}
+
 extension Double {
     var badgeFillColor: Color {
         switch self {
@@ -51,5 +78,8 @@ extension Double {
 }
 
 #Preview {
-    RatingBadgeView(rating: 4.6)
+    VStack(spacing: 20) {
+        RatingBadgeView(rating: 4.6)
+        StarRatingInputView(rating: .constant(4))
+    }
 }
