@@ -17,13 +17,13 @@ final class AddPlaceReviewViewModel: ObservableObject {
         }
     }
 
-    @Published var ratingOverall = 8
+    @Published var ratingOverall = 4
     @Published var descriptionText = ""
     @Published var visibility: VisibilityStatus = .friendsOnly
-    @Published var availableCategories: [CustomCategory] = []
-    @Published var selectedCategoryID: UUID?
     @Published var selectedPhotoData: [Data] = []
     @Published var selectedPreviewImages: [UIImage] = []
+    @Published private(set) var existingPhotos: [PhotoAsset] = []
+    @Published private(set) var photoIDsMarkedForDeletion: Set<UUID> = []
     @Published var isSaving = false
     @Published var isDeleting = false
     @Published var errorMessage: String?
@@ -34,22 +34,19 @@ final class AddPlaceReviewViewModel: ObservableObject {
 
     let place: Place
 
-    private let sessionStore: SessionStore
-    private let categoryRepository: CategoryRepository
     private let placeReviewRepository: PlaceReviewRepository
+    private let refreshCenter: AppRefreshCenter
     private var existingReview: PlaceReview?
 
     init(
         place: Place,
-        sessionStore: SessionStore,
-        categoryRepository: CategoryRepository,
         placeReviewRepository: PlaceReviewRepository,
+        refreshCenter: AppRefreshCenter,
         existingReview: PlaceReview? = nil
     ) {
         self.place = place
-        self.sessionStore = sessionStore
-        self.categoryRepository = categoryRepository
         self.placeReviewRepository = placeReviewRepository
+        self.refreshCenter = refreshCenter
         self.existingReview = existingReview
         self.isEditing = existingReview != nil
 
@@ -63,34 +60,8 @@ final class AddPlaceReviewViewModel: ObservableObject {
     }
 
     func load() async {
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
-            return
-        }
-
-        do {
-            let defaultCategory = try categoryRepository.defaultRestaurantCategory(for: currentUser.id)
-            availableCategories = try categoryRepository.categories(for: currentUser.id)
-
-            if existingReview == nil {
-                existingReview = try placeReviewRepository.review(for: place.id, authoredBy: currentUser.id)
-            }
-
-            if let existingReview {
-                isEditing = true
-                populateForm(with: existingReview)
-
-                let placeCategoryIDs = Set(try categoryRepository.categories(forPlace: place.id).map(\.id))
-                if let matchingCategory = availableCategories.first(where: { placeCategoryIDs.contains($0.id) }) {
-                    selectedCategoryID = matchingCategory.id
-                } else if selectedCategoryID == nil {
-                    selectedCategoryID = defaultCategory.id
-                }
-            } else if selectedCategoryID == nil {
-                selectedCategoryID = defaultCategory.id
-            }
-        } catch {
-            errorMessage = AppError.wrap(error).errorDescription
+        if let existingReview {
+            populateForm(with: existingReview)
         }
     }
 
@@ -109,41 +80,56 @@ final class AddPlaceReviewViewModel: ObservableObject {
         selectedPreviewImages = newImages
     }
 
-    func save() async {
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
+    func removeSelectedPhoto(at index: Int) {
+        guard selectedPreviewImages.indices.contains(index),
+              selectedPhotoData.indices.contains(index) else {
             return
         }
 
+        selectedPreviewImages.remove(at: index)
+        selectedPhotoData.remove(at: index)
+    }
+
+    func toggleExistingPhotoRemoval(_ photo: PhotoAsset) {
+        if photoIDsMarkedForDeletion.contains(photo.id) {
+            photoIDsMarkedForDeletion.remove(photo.id)
+        } else {
+            photoIDsMarkedForDeletion.insert(photo.id)
+        }
+    }
+
+    func isExistingPhotoMarkedForRemoval(_ photo: PhotoAsset) -> Bool {
+        photoIDsMarkedForDeletion.contains(photo.id)
+    }
+
+    func save() async {
         lastAction = .save
         isSaving = true
         errorMessage = nil
 
         do {
-            let persistedReview = try placeReviewRepository.review(for: place.id, authoredBy: currentUser.id)
-            let existingReview = persistedReview ?? self.existingReview
-            let defaultCategoryID = try categoryRepository.defaultRestaurantCategory(for: currentUser.id).id
-            let resolvedCategoryID = selectedCategoryID ?? defaultCategoryID
-
             let draft = PlaceReviewDraft(
                 placeId: place.id,
-                authorUserId: currentUser.id,
                 ratingOverall: ratingOverall,
                 reviewText: "",
                 descriptionText: descriptionText,
                 visibility: visibility,
                 photoDataItems: selectedPhotoData,
-                selectedCategoryId: resolvedCategoryID
+                photoIDsToDelete: Array(photoIDsMarkedForDeletion),
+                selectedCategoryId: nil
             )
 
             if let existingReview {
-                self.existingReview = try placeReviewRepository.updateReview(existingReview, with: draft)
-                isEditing = true
+                self.existingReview = try await placeReviewRepository.updateReview(existingReview, with: draft)
             } else {
-                self.existingReview = try placeReviewRepository.addReview(draft)
-                isEditing = true
+                self.existingReview = try await placeReviewRepository.createReview(draft)
             }
 
+            isEditing = true
+            if let updatedReview = self.existingReview {
+                populateForm(with: updatedReview)
+            }
+            refreshCenter.invalidateAll()
             didSave = true
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
@@ -155,21 +141,17 @@ final class AddPlaceReviewViewModel: ObservableObject {
     func deleteReview() async {
         lastAction = .delete
 
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
-            return
-        }
-
         isDeleting = true
         errorMessage = nil
 
         do {
-            guard let review = try placeReviewRepository.review(for: place.id, authoredBy: currentUser.id) ?? existingReview else {
+            guard let review = existingReview else {
                 throw AppError.validationFailure("No review exists for this place yet.")
             }
 
-            try placeReviewRepository.deleteReview(review)
+            try await placeReviewRepository.deleteReview(review)
             existingReview = nil
+            refreshCenter.invalidateAll()
             didDelete = true
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
@@ -182,5 +164,9 @@ final class AddPlaceReviewViewModel: ObservableObject {
         ratingOverall = review.ratingOverall
         descriptionText = review.descriptionText
         visibility = review.visibility
+        existingPhotos = review.photos
+        photoIDsMarkedForDeletion = []
+        selectedPhotoData = []
+        selectedPreviewImages = []
     }
 }

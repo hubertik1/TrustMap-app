@@ -1,161 +1,85 @@
 import Foundation
-import SwiftData
+import UniformTypeIdentifiers
+import UIKit
 
 @MainActor
-final class PhotoAssetRepository {
-    private let persistenceController: PersistenceController
-    private let storageService: LocalPhotoStorageService
-    private let cloudKitSyncService: CloudKitSyncService
-
-    init(
-        persistenceController: PersistenceController,
-        storageService: LocalPhotoStorageService,
-        cloudKitSyncService: CloudKitSyncService
-    ) {
-        self.persistenceController = persistenceController
-        self.storageService = storageService
-        self.cloudKitSyncService = cloudKitSyncService
+final class PhotoRepository {
+    private struct PreparedUpload {
+        let data: Data
+        let fileExtension: String
+        let mimeType: String
     }
 
-    private var context: ModelContext {
-        persistenceController.mainContext
+    private let apiClient: APIClient
+
+    init(apiClient: APIClient) {
+        self.apiClient = apiClient
     }
 
-    func storePlaceReviewPhotos(
-        _ dataItems: [Data],
-        ownerUserID: UUID,
-        placeID: UUID,
-        placeReviewID: UUID
-    ) throws -> [PhotoAsset] {
-        var assets: [PhotoAsset] = []
-
-        for data in dataItems {
-            let reference = try storageService.storeImageData(data)
-            let asset = PhotoAsset(
-                ownerUserId: ownerUserID,
-                placeId: placeID,
-                placeReviewId: placeReviewID,
-                assetReference: reference
+    func uploadPlaceReviewPhoto(reviewID: UUID, imageData: Data) async throws -> PhotoAsset {
+        let preparedUpload = try prepareUpload(from: imageData)
+        let multipart = MultipartFormData(
+            fields: ["placeReviewId": reviewID.uuidString],
+            file: .init(
+                fieldName: "file",
+                fileName: "place-review-\(reviewID.uuidString).\(preparedUpload.fileExtension)",
+                mimeType: preparedUpload.mimeType,
+                data: preparedUpload.data
             )
-            context.insert(asset)
-            assets.append(asset)
-        }
-
-        try saveChanges()
-
-        for asset in assets {
-            let url = storageService.fileURL(for: asset.assetReference)
-            Task { await cloudKitSyncService.syncPhotoAsset(asset, fileURL: url) }
-        }
-
-        return assets
-    }
-
-    func storeDishPhoto(
-        _ data: Data?,
-        ownerUserID: UUID,
-        placeID: UUID,
-        dishReviewID: UUID
-    ) throws -> PhotoAsset? {
-        guard let data else {
-            return nil
-        }
-
-        let reference = try storageService.storeImageData(data)
-        let asset = PhotoAsset(
-            ownerUserId: ownerUserID,
-            placeId: placeID,
-            dishReviewId: dishReviewID,
-            assetReference: reference
         )
-        context.insert(asset)
-        try saveChanges()
-        let url = storageService.fileURL(for: asset.assetReference)
-        Task { await cloudKitSyncService.syncPhotoAsset(asset, fileURL: url) }
-        return asset
+
+        return try await apiClient.send(
+            APIRequest<PhotoAsset>(
+                method: .post,
+                path: "photos/upload",
+                body: .multipart(multipart),
+                acceptedStatusCodes: [201]
+            )
+        )
     }
 
-    func photos(for placeID: UUID) throws -> [PhotoAsset] {
-        let descriptor = FetchDescriptor<PhotoAsset>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        var seenAssetIDs = Set<UUID>()
-        return try context.fetch(descriptor).filter {
-            guard seenAssetIDs.insert($0.id).inserted else {
-                return false
-            }
-            return $0.placeId == placeID
+    func uploadDishReviewPhoto(reviewID: UUID, imageData: Data) async throws -> PhotoAsset {
+        let preparedUpload = try prepareUpload(from: imageData)
+        let multipart = MultipartFormData(
+            fields: ["dishReviewId": reviewID.uuidString],
+            file: .init(
+                fieldName: "file",
+                fileName: "dish-review-\(reviewID.uuidString).\(preparedUpload.fileExtension)",
+                mimeType: preparedUpload.mimeType,
+                data: preparedUpload.data
+            )
+        )
+
+        return try await apiClient.send(
+            APIRequest<PhotoAsset>(
+                method: .post,
+                path: "photos/upload",
+                body: .multipart(multipart),
+                acceptedStatusCodes: [201]
+            )
+        )
+    }
+
+    func deletePhoto(id: UUID) async throws {
+        _ = try await apiClient.send(
+            APIRequest<EmptyResponse>(
+                method: .delete,
+                path: "photos/\(id.uuidString)",
+                acceptedStatusCodes: [204]
+            )
+        )
+    }
+
+    private func prepareUpload(from imageData: Data) throws -> PreparedUpload {
+        guard let image = UIImage(data: imageData),
+              let jpegData = image.jpegData(compressionQuality: 0.9) else {
+            throw AppError.validationFailure("Select a supported image before uploading.")
         }
-    }
 
-    func photos(
-        for placeID: UUID,
-        visiblePlaceReviewIDs: Set<UUID>,
-        visibleDishReviewIDs: Set<UUID>
-    ) throws -> [PhotoAsset] {
-        let descriptor = FetchDescriptor<PhotoAsset>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        var seenAssetIDs = Set<UUID>()
-        return try context.fetch(descriptor).filter { asset in
-            guard seenAssetIDs.insert(asset.id).inserted else {
-                return false
-            }
-            guard asset.placeId == placeID else {
-                return false
-            }
-
-            if let placeReviewId = asset.placeReviewId, visiblePlaceReviewIDs.contains(placeReviewId) {
-                return true
-            }
-
-            if let dishReviewId = asset.dishReviewId, visibleDishReviewIDs.contains(dishReviewId) {
-                return true
-            }
-
-            return false
-        }
-    }
-
-    func assets(forPlaceReviewID reviewID: UUID) throws -> [PhotoAsset] {
-        let descriptor = FetchDescriptor<PhotoAsset>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        var seenAssetIDs = Set<UUID>()
-        return try context.fetch(descriptor).filter {
-            guard seenAssetIDs.insert($0.id).inserted else {
-                return false
-            }
-            return $0.placeReviewId == reviewID
-        }
-    }
-
-    func assets(forDishReviewID reviewID: UUID) throws -> [PhotoAsset] {
-        let descriptor = FetchDescriptor<PhotoAsset>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        var seenAssetIDs = Set<UUID>()
-        return try context.fetch(descriptor).filter {
-            guard seenAssetIDs.insert($0.id).inserted else {
-                return false
-            }
-            return $0.dishReviewId == reviewID
-        }
-    }
-
-    func imageData(for asset: PhotoAsset) -> Data? {
-        storageService.imageData(for: asset.assetReference)
-    }
-
-    func storageFileURL(for asset: PhotoAsset) -> URL {
-        storageService.fileURL(for: asset.assetReference)
-    }
-
-    func removeStoredFiles(for assets: [PhotoAsset]) {
-        for asset in assets {
-            storageService.deleteImageIfPresent(for: asset.assetReference)
-        }
-    }
-
-    private func saveChanges() throws {
-        do {
-            if context.hasChanges {
-                try context.save()
-            }
-        } catch {
-            throw AppError.persistenceFailure("Unable to save the selected photos.")
-        }
+        return PreparedUpload(
+            data: jpegData,
+            fileExtension: "jpg",
+            mimeType: UTType.jpeg.preferredMIMEType ?? "image/jpeg"
+        )
     }
 }

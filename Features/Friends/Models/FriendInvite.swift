@@ -1,42 +1,39 @@
 import Foundation
-import SwiftData
 
-@Model
-final class FriendInvite {
-    var id: UUID
-    var token: String
-    var inviterUserId: UUID
-    var inviteeUserId: UUID?
-    var status: FriendInviteStatus
-    var createdAt: Date
-    var expiresAt: Date?
-    var respondedAt: Date?
+struct FriendInvite: Identifiable, Codable, Hashable, Sendable {
+    let id: UUID
+    let sender: UserSummary
+    let receiver: UserSummary
+    let status: FriendInviteStatus
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case createdAt
+        case id
+        case receiver = "receiver"
+        case sender = "sender"
+        case status
+    }
 
     init(
         id: UUID = UUID(),
-        token: String,
-        inviterUserId: UUID,
-        inviteeUserId: UUID? = nil,
+        sender: UserSummary,
+        receiver: UserSummary,
         status: FriendInviteStatus = .pending,
-        createdAt: Date = .now,
-        expiresAt: Date? = nil,
-        respondedAt: Date? = nil
+        createdAt: Date = .now
     ) {
         self.id = id
-        self.token = token
-        self.inviterUserId = inviterUserId
-        self.inviteeUserId = inviteeUserId
+        self.sender = sender
+        self.receiver = receiver
         self.status = status
         self.createdAt = createdAt
-        self.expiresAt = expiresAt
-        self.respondedAt = respondedAt
     }
 
-    var isExpired: Bool {
-        guard let expiresAt else {
-            return status == .expired
-        }
+    var inviterUserId: UUID {
+        sender.id
+    }
 
-        return status == .expired || expiresAt < .now
+    var inviteeUserId: UUID {
+        receiver.id
     }
 }

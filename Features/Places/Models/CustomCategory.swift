@@ -1,13 +1,11 @@
 import Foundation
-import SwiftData
 
-@Model
-final class CustomCategory {
-    var id: UUID
-    var ownerUserId: UUID
-    var name: String
-    var iconName: String?
-    var createdAt: Date
+struct CustomCategory: Identifiable, Codable, Hashable, Sendable {
+    let id: UUID
+    let ownerUserId: UUID
+    let name: String
+    let iconName: String?
+    let createdAt: Date
 
     init(
         id: UUID = UUID(),

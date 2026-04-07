@@ -94,10 +94,20 @@ struct MyPlaceReviewsView: View {
             reviews: [
                 PlaceReview(
                     placeId: UUID(uuidString: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD")!,
-                    authorUserId: UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!,
                     ratingOverall: 9,
                     reviewText: "",
                     descriptionText: "Great coffee, quick service, and plenty of seating."
+                    ,
+                    author: PreviewAppFactory.sampleUser.summary,
+                    place: Place(
+                        id: UUID(uuidString: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD")!,
+                        name: "Caffe Aurora",
+                        latitude: 37.7764,
+                        longitude: -122.4231,
+                        address: "123 Valencia St, San Francisco, CA",
+                        city: "San Francisco",
+                        countryCode: "US"
+                    )
                 )
             ],
             placeNames: [

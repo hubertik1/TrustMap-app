@@ -1,485 +1,100 @@
 import Foundation
-import OSLog
-import Security
-import SwiftData
 
 @MainActor
-protocol FriendsRepository: AnyObject {
-    func fetchFriends(for userID: UUID) async throws -> [Friendship]
-    func fetchIncomingInvites(for userID: UUID) async throws -> [FriendInvite]
-    func fetchOutgoingInvites(for userID: UUID) async throws -> [FriendInvite]
-    func createInvite(from inviterUserID: UUID) async throws -> FriendInvite
-    func findInvite(by token: String) async throws -> FriendInvite?
-    func prepareInvite(token: String, for inviteeUserID: UUID) async throws -> FriendInvite?
-    func acceptInvite(token: String, by inviteeUserID: UUID) async throws
-    func declineInvite(token: String, by inviteeUserID: UUID) async throws
-    func revokeInvite(inviteID: UUID, by inviterUserID: UUID) async throws
-    func acceptedFriendIDs(for userID: UUID) async throws -> Set<UUID>
-    func acceptedFriends(for userID: UUID) async throws -> [User]
-    func cachedAcceptedFriendIDs(for userID: UUID) throws -> Set<UUID>
-    func cachedAcceptedFriends(for userID: UUID) throws -> [User]
-    func cachedFriends(for userID: UUID) throws -> [Friendship]
-    func cachedIncomingInvites(for userID: UUID) throws -> [FriendInvite]
-    func cachedOutgoingInvites(for userID: UUID) throws -> [FriendInvite]
-    func areFriends(_ firstUserID: UUID, _ secondUserID: UUID) async throws -> Bool
-}
-
-@MainActor
-final class FriendRepository: FriendsRepository {
-    private let logger = Logger(subsystem: "TrustMap", category: "FriendRepository")
-    private let persistenceController: PersistenceController
-    private let cloudKitSyncService: CloudKitSyncService
-    private let socialGraphService: any SocialGraphCloudKitServicing
-    private let userRepository: UserProfileRepository
-
-    init(
-        persistenceController: PersistenceController,
-        cloudKitSyncService: CloudKitSyncService,
-        socialGraphService: any SocialGraphCloudKitServicing,
-        userRepository: UserProfileRepository
-    ) {
-        self.persistenceController = persistenceController
-        self.cloudKitSyncService = cloudKitSyncService
-        self.socialGraphService = socialGraphService
-        self.userRepository = userRepository
+final class FriendRepository {
+    private struct SendFriendRequestPayload: Encodable {
+        let receiverUserId: UUID
     }
 
-    private var context: ModelContext {
-        persistenceController.mainContext
+    private struct FriendDTO: Decodable {
+        let user: UserSummary
+        let friendsSinceUtc: Date
     }
 
-    func fetchFriends(for userID: UUID) async throws -> [Friendship] {
-        do {
-            let friendships = try await socialGraphService.fetchFriendships(for: userID)
-            let cachedFriendships = try cacheFriendships(friendships)
-            let participantIDs = Set(cachedFriendships.flatMap { [$0.userAId, $0.userBId] })
-            _ = try? await userRepository.refreshUsers(withIDs: participantIDs)
-            return cachedFriendships.sorted { $0.createdAt > $1.createdAt }
-        } catch {
-            logger.error("Unable to refresh friendships from CloudKit: \(error.localizedDescription, privacy: .public)")
-            return try cachedFriendships(for: userID)
-        }
+    private let apiClient: APIClient
+
+    init(apiClient: APIClient) {
+        self.apiClient = apiClient
     }
 
-    func acceptedFriendIDs(for userID: UUID) async throws -> Set<UUID> {
-        let friendships = try await fetchFriends(for: userID)
-        var ids = Set<UUID>()
-
-        for friendship in friendships {
-            if let otherUserID = friendship.otherUserID(for: userID) {
-                ids.insert(otherUserID)
-            }
-        }
-
-        return ids
-    }
-
-    func acceptedFriends(for userID: UUID) async throws -> [User] {
-        let friendIDs = try await acceptedFriendIDs(for: userID)
-        let cachedRemoteUsers = (try? await userRepository.refreshUsers(withIDs: friendIDs)) ?? []
-        var usersByID: [UUID: User] = cachedRemoteUsers.reduce(into: [:]) { result, user in
-            result[user.id] = user
-        }
-
-        for localUser in try userRepository.allKnownUsers() {
-            usersByID[localUser.id] = localUser
-        }
-
-        return friendIDs
-            .compactMap { usersByID[$0] }
-            .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
-    }
-
-    func cachedAcceptedFriendIDs(for userID: UUID) throws -> Set<UUID> {
-        let friendships = try cachedFriendships(for: userID)
-        var ids = Set<UUID>()
-
-        for friendship in friendships {
-            if let otherUserID = friendship.otherUserID(for: userID) {
-                ids.insert(otherUserID)
-            }
-        }
-
-        return ids
-    }
-
-    func cachedAcceptedFriends(for userID: UUID) throws -> [User] {
-        let friendIDs = try cachedAcceptedFriendIDs(for: userID)
-        let usersByID = try userRepository.allKnownUsers().reduce(into: [UUID: User]()) { result, user in
-            result[user.id] = user
-        }
-
-        return friendIDs
-            .compactMap { usersByID[$0] }
-            .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
-    }
-
-    func cachedFriends(for userID: UUID) throws -> [Friendship] {
-        try cachedFriendships(for: userID)
-    }
-
-    func cachedIncomingInvites(for userID: UUID) throws -> [FriendInvite] {
-        try allInvites()
-            .filter { $0.status == .pending && $0.inviteeUserId == userID }
-            .sorted { $0.createdAt > $1.createdAt }
-    }
-
-    func cachedOutgoingInvites(for userID: UUID) throws -> [FriendInvite] {
-        try allInvites()
-            .filter { $0.status == .pending && $0.inviterUserId == userID }
-            .sorted { $0.createdAt > $1.createdAt }
-    }
-
-    func fetchIncomingInvites(for userID: UUID) async throws -> [FriendInvite] {
-        do {
-            let remoteInvites = try await socialGraphService.fetchPendingIncomingInvites(for: userID)
-            let invites = try await normalizeInvites(remoteInvites)
-            let participantIDs = Set(invites.compactMap(\.inviterUserId) + invites.compactMap(\.inviteeUserId))
-            _ = try? await userRepository.refreshUsers(withIDs: participantIDs)
-            return invites
-                .filter { $0.status == .pending && $0.inviteeUserId == userID }
-                .sorted { $0.createdAt > $1.createdAt }
-        } catch {
-            logger.error("Unable to refresh incoming invites from CloudKit: \(error.localizedDescription, privacy: .public)")
-            return try allInvites()
-                .filter { $0.status == .pending && $0.inviteeUserId == userID }
-                .sorted { $0.createdAt > $1.createdAt }
-        }
-    }
-
-    func fetchOutgoingInvites(for userID: UUID) async throws -> [FriendInvite] {
-        do {
-            let remoteInvites = try await socialGraphService.fetchPendingOutgoingInvites(for: userID)
-            let invites = try await normalizeInvites(remoteInvites)
-            let participantIDs = Set(invites.compactMap(\.inviterUserId) + invites.compactMap(\.inviteeUserId))
-            _ = try? await userRepository.refreshUsers(withIDs: participantIDs)
-            return invites
-                .filter { $0.status == .pending && $0.inviterUserId == userID }
-                .sorted { $0.createdAt > $1.createdAt }
-        } catch {
-            logger.error("Unable to refresh outgoing invites from CloudKit: \(error.localizedDescription, privacy: .public)")
-            return try allInvites()
-                .filter { $0.status == .pending && $0.inviterUserId == userID }
-                .sorted { $0.createdAt > $1.createdAt }
-        }
-    }
-
-    func createInvite(from inviterUserID: UUID) async throws -> FriendInvite {
-        guard try userRepository.user(withID: inviterUserID) != nil else {
-            throw AppError.missingCurrentUser
-        }
-
-        let existingInvites = try await socialGraphService.fetchPendingOutgoingInvites(for: inviterUserID)
-        let pendingExistingInvites = try await normalizeInvites(existingInvites)
-        if let existingInvite = pendingExistingInvites.first(where: {
-            $0.inviterUserId == inviterUserID
-                && $0.status == .pending
-                && $0.inviteeUserId == nil
-                && !$0.isExpired
-        }) {
-            return existingInvite
-        }
-
-        let invite = FriendInvite(
-            token: Self.generateToken(),
-            inviterUserId: inviterUserID,
-            expiresAt: .now.addingTimeInterval(AppConfiguration.friendInviteLifetime)
-        )
-        let cachedInvite = try cacheInvite(invite)
-        try await socialGraphService.upsertInvite(cachedInvite)
-        return cachedInvite
-    }
-
-    func findInvite(by token: String) async throws -> FriendInvite? {
-        if let remoteInvite = try await socialGraphService.fetchInvite(token: token) {
-            let cachedInvite = try await normalizeInvite(remoteInvite)
-            let participantIDs = Set([cachedInvite.inviterUserId] + [cachedInvite.inviteeUserId].compactMap { $0 })
-            _ = try await userRepository.refreshUsers(withIDs: participantIDs)
-            return cachedInvite
-        }
-
-        return try allInvites().first(where: { $0.token == token })
-    }
-
-    func prepareInvite(token: String, for inviteeUserID: UUID) async throws -> FriendInvite? {
-        guard let invite = try await findInvite(by: token) else {
-            return nil
-        }
-
-        guard invite.status == .pending, !invite.isExpired else {
-            return invite
-        }
-
-        guard invite.inviterUserId != inviteeUserID else {
-            return invite
-        }
-
-        if try await areFriends(invite.inviterUserId, inviteeUserID) {
-            return invite
-        }
-
-        if let claimedInviteeID = invite.inviteeUserId, claimedInviteeID != inviteeUserID {
-            return invite
-        }
-
-        if invite.inviteeUserId == nil {
-            invite.inviteeUserId = inviteeUserID
-            try saveChanges()
-            try await socialGraphService.upsertInvite(invite)
-        }
-
-        return invite
-    }
-
-    func acceptInvite(token: String, by inviteeUserID: UUID) async throws {
-        guard let invite = try await findInvite(by: token) else {
-            throw AppError.validationFailure("This invite could not be found.")
-        }
-
-        guard invite.status == .pending else {
-            return
-        }
-
-        guard !invite.isExpired else {
-            invite.status = .expired
-            try saveChanges()
-            try await socialGraphService.upsertInvite(invite)
-            throw AppError.validationFailure("This invite has expired.")
-        }
-
-        guard invite.inviterUserId != inviteeUserID else {
-            throw AppError.validationFailure("You can’t accept your own invite.")
-        }
-
-        if let claimedInviteeID = invite.inviteeUserId, claimedInviteeID != inviteeUserID {
-            throw AppError.validationFailure("This invite is reserved for another person.")
-        }
-
-        let existingFriendship = try await socialGraphService.fetchFriendship(
-            firstUserID: invite.inviterUserId,
-            secondUserID: inviteeUserID
-        )
-
-        invite.inviteeUserId = inviteeUserID
-        invite.status = .accepted
-        invite.respondedAt = .now
-
-        let friendship = existingFriendship
-            ?? Friendship(
-                id: StableIdentifier.friendshipID(firstUserID: invite.inviterUserId, secondUserID: inviteeUserID),
-                userAId: invite.inviterUserId,
-                userBId: inviteeUserID
+    func fetchFriends() async throws -> [Friendship] {
+        let response = try await apiClient.send(
+            APIRequest<[FriendDTO]>(
+                method: .get,
+                path: "friends"
             )
-
-        _ = try cacheFriendship(friendship)
-        try saveChanges()
-        try await socialGraphService.upsertInvite(invite)
-        try await socialGraphService.upsertFriendship(friendship)
-
-        Task {
-            if let currentUser = try? userRepository.user(withID: inviteeUserID) {
-                let friends =
-                    (try? await acceptedFriends(for: inviteeUserID))
-                    ?? (try? cachedAcceptedFriends(for: inviteeUserID))
-                    ?? []
-
-                await cloudKitSyncService.refreshFriendVisibleContentIfPossible(
-                    for: currentUser,
-                    friends: friends
-                )
-            }
-        }
-    }
-
-    func declineInvite(token: String, by inviteeUserID: UUID) async throws {
-        guard let invite = try await findInvite(by: token) else {
-            throw AppError.validationFailure("This invite could not be found.")
-        }
-
-        guard invite.status == .pending else {
-            return
-        }
-
-        guard invite.inviterUserId != inviteeUserID else {
-            throw AppError.validationFailure("You can’t decline your own invite.")
-        }
-
-        if let claimedInviteeID = invite.inviteeUserId, claimedInviteeID != inviteeUserID {
-            throw AppError.validationFailure("This invite is reserved for another person.")
-        }
-
-        invite.inviteeUserId = inviteeUserID
-        invite.status = .declined
-        invite.respondedAt = .now
-        try saveChanges()
-        try await socialGraphService.upsertInvite(invite)
-    }
-
-    func revokeInvite(inviteID: UUID, by inviterUserID: UUID) async throws {
-        guard let invite = try invite(withID: inviteID) else {
-            return
-        }
-
-        guard invite.inviterUserId == inviterUserID else {
-            throw AppError.validationFailure("Only the sender can cancel this invite.")
-        }
-
-        guard invite.status == .pending else {
-            return
-        }
-
-        invite.status = .revoked
-        invite.respondedAt = .now
-        try saveChanges()
-        try await socialGraphService.upsertInvite(invite)
-    }
-
-    func areFriends(_ firstUserID: UUID, _ secondUserID: UUID) async throws -> Bool {
-        if let remoteFriendship = try await socialGraphService.fetchFriendship(firstUserID: firstUserID, secondUserID: secondUserID) {
-            _ = try cacheFriendship(remoteFriendship)
-            return true
-        }
-
-        return try friendshipBetween(firstUserID, secondUserID) != nil
-    }
-
-    private func invite(withID inviteID: UUID) throws -> FriendInvite? {
-        try allInvites().first(where: { $0.id == inviteID })
-    }
-
-    private func friendshipBetween(_ firstUserID: UUID, _ secondUserID: UUID) throws -> Friendship? {
-        let orderedPair = Self.orderedPair(firstUserID, secondUserID)
-
-        return try allFriendships().first {
-            $0.userAId == orderedPair.0 && $0.userBId == orderedPair.1
-        }
-    }
-
-    private func allInvites() throws -> [FriendInvite] {
-        let descriptor = FetchDescriptor<FriendInvite>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        var seenInviteIDs = Set<UUID>()
-        return try context.fetch(descriptor).filter { seenInviteIDs.insert($0.id).inserted }
-    }
-
-    private func allFriendships() throws -> [Friendship] {
-        let descriptor = FetchDescriptor<Friendship>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-        var seenFriendshipIDs = Set<UUID>()
-        return try context.fetch(descriptor).filter { seenFriendshipIDs.insert($0.id).inserted }
-    }
-
-    private func cachedFriendships(for userID: UUID) throws -> [Friendship] {
-        try allFriendships()
-            .filter { $0.userAId == userID || $0.userBId == userID }
-            .sorted { $0.createdAt > $1.createdAt }
-    }
-
-    private func normalizeInvites(_ invites: [FriendInvite]) async throws -> [FriendInvite] {
-        var normalizedInvites: [FriendInvite] = []
-        normalizedInvites.reserveCapacity(invites.count)
-
-        for invite in invites {
-            normalizedInvites.append(try await normalizeInvite(invite))
-        }
-
-        return normalizedInvites
-    }
-
-    private func normalizeInvite(_ invite: FriendInvite) async throws -> FriendInvite {
-        let cachedInvite = try cacheInvite(invite)
-
-        if cachedInvite.status == .pending, cachedInvite.isExpired {
-            cachedInvite.status = .expired
-            try saveChanges()
-            try await socialGraphService.upsertInvite(cachedInvite)
-        }
-
-        return cachedInvite
-    }
-
-    @discardableResult
-    private func cacheInvite(_ remoteInvite: FriendInvite) throws -> FriendInvite {
-        if let existingInvite = try invite(withID: remoteInvite.id) {
-            existingInvite.token = remoteInvite.token
-            existingInvite.inviterUserId = remoteInvite.inviterUserId
-            existingInvite.inviteeUserId = remoteInvite.inviteeUserId
-            existingInvite.status = remoteInvite.status
-            existingInvite.createdAt = remoteInvite.createdAt
-            existingInvite.expiresAt = remoteInvite.expiresAt
-            existingInvite.respondedAt = remoteInvite.respondedAt
-            try saveChanges()
-            return existingInvite
-        }
-
-        let invite = FriendInvite(
-            id: remoteInvite.id,
-            token: remoteInvite.token,
-            inviterUserId: remoteInvite.inviterUserId,
-            inviteeUserId: remoteInvite.inviteeUserId,
-            status: remoteInvite.status,
-            createdAt: remoteInvite.createdAt,
-            expiresAt: remoteInvite.expiresAt,
-            respondedAt: remoteInvite.respondedAt
         )
-        context.insert(invite)
-        try saveChanges()
-        return invite
-    }
 
-    private func cacheFriendships(_ remoteFriendships: [Friendship]) throws -> [Friendship] {
-        try remoteFriendships.map(cacheFriendship)
-    }
-
-    @discardableResult
-    private func cacheFriendship(_ remoteFriendship: Friendship) throws -> Friendship {
-        if let existingFriendship = try inviteCompatibleFriendship(withID: remoteFriendship.id) {
-            existingFriendship.userAId = remoteFriendship.userAId
-            existingFriendship.userBId = remoteFriendship.userBId
-            existingFriendship.createdAt = remoteFriendship.createdAt
-            try saveChanges()
-            return existingFriendship
+        return response.map {
+            Friendship(id: $0.user.id, user: $0.user, createdAt: $0.friendsSinceUtc)
         }
+    }
 
-        let friendship = Friendship(
-            id: remoteFriendship.id,
-            userAId: remoteFriendship.userAId,
-            userBId: remoteFriendship.userBId,
-            createdAt: remoteFriendship.createdAt
+    func fetchIncomingRequests() async throws -> [FriendInvite] {
+        try await apiClient.send(
+            APIRequest<[FriendInvite]>(
+                method: .get,
+                path: "friend-requests/incoming"
+            )
         )
-        context.insert(friendship)
-        try saveChanges()
-        return friendship
     }
 
-    private func inviteCompatibleFriendship(withID friendshipID: UUID) throws -> Friendship? {
-        try allFriendships().first(where: { $0.id == friendshipID })
+    func fetchOutgoingRequests() async throws -> [FriendInvite] {
+        try await apiClient.send(
+            APIRequest<[FriendInvite]>(
+                method: .get,
+                path: "friend-requests/outgoing"
+            )
+        )
     }
 
-    private func saveChanges() throws {
-        do {
-            if context.hasChanges {
-                try context.save()
-            }
-        } catch {
-            throw AppError.persistenceFailure("Unable to save the friend relationship.")
-        }
+    func sendRequest(to userID: UUID) async throws -> FriendInvite {
+        try await apiClient.send(
+            APIRequest<FriendInvite>(
+                method: .post,
+                path: "friend-requests",
+                body: .json(AnyEncodable(SendFriendRequestPayload(receiverUserId: userID))),
+                acceptedStatusCodes: [201]
+            )
+        )
     }
 
-    private static func orderedPair(_ firstID: UUID, _ secondID: UUID) -> (UUID, UUID) {
-        firstID.uuidString < secondID.uuidString ? (firstID, secondID) : (secondID, firstID)
+    func acceptRequest(id: UUID) async throws -> Friendship {
+        let response = try await apiClient.send(
+            APIRequest<FriendDTO>(
+                method: .post,
+                path: "friend-requests/\(id.uuidString)/accept"
+            )
+        )
+
+        return Friendship(id: response.user.id, user: response.user, createdAt: response.friendsSinceUtc)
     }
 
-    private static func generateToken(byteCount: Int = 24) -> String {
-        var bytes = [UInt8](repeating: 0, count: byteCount)
-        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+    func rejectRequest(id: UUID) async throws -> FriendInvite {
+        try await apiClient.send(
+            APIRequest<FriendInvite>(
+                method: .post,
+                path: "friend-requests/\(id.uuidString)/reject"
+            )
+        )
+    }
 
-        guard status == errSecSuccess else {
-            return UUID().uuidString.replacingOccurrences(of: "-", with: "")
-        }
+    func cancelRequest(id: UUID) async throws -> FriendInvite {
+        try await apiClient.send(
+            APIRequest<FriendInvite>(
+                method: .post,
+                path: "friend-requests/\(id.uuidString)/cancel"
+            )
+        )
+    }
 
-        return Data(bytes)
-            .base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
+    func removeFriend(userID: UUID) async throws {
+        _ = try await apiClient.send(
+            APIRequest<EmptyResponse>(
+                method: .delete,
+                path: "friends/\(userID.uuidString)",
+                acceptedStatusCodes: [204]
+            )
+        )
     }
 }

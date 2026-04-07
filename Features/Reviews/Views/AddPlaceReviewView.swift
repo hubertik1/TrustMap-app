@@ -11,9 +11,8 @@ struct AddPlaceReviewView: View {
         _viewModel = StateObject(
             wrappedValue: AddPlaceReviewViewModel(
                 place: place,
-                sessionStore: container.sessionStore,
-                categoryRepository: container.categoryRepository,
                 placeReviewRepository: container.placeReviewRepository,
+                refreshCenter: container.refreshCenter,
                 existingReview: existingReview
             )
         )
@@ -23,7 +22,6 @@ struct AddPlaceReviewView: View {
         Form {
             placeSection
             reviewSection
-            categorySection
             photosSection
             deleteSection
         }
@@ -102,23 +100,13 @@ struct AddPlaceReviewView: View {
 
     private var reviewSection: some View {
         Section("Review") {
-            Stepper("Rating: \(viewModel.ratingOverall)/10", value: $viewModel.ratingOverall, in: 1...10)
-            TextField("Description", text: $viewModel.descriptionText, axis: .vertical)
+            Stepper("Rating: \(viewModel.ratingOverall)/5", value: $viewModel.ratingOverall, in: 1...5)
+            TextField("Description (optional)", text: $viewModel.descriptionText, axis: .vertical)
                 .lineLimit(3...6)
 
             Picker("Visibility", selection: $viewModel.visibility) {
                 ForEach(VisibilityStatus.allCases) { status in
                     Text(status.displayName).tag(status)
-                }
-            }
-        }
-    }
-
-    private var categorySection: some View {
-        Section("Category") {
-            Picker("Category", selection: $viewModel.selectedCategoryID) {
-                ForEach(viewModel.availableCategories, id: \.id) { category in
-                    Text(category.name).tag(category.id as UUID?)
                 }
             }
         }
@@ -134,15 +122,31 @@ struct AddPlaceReviewView: View {
                 Label("Add Photos", systemImage: "photo.on.rectangle.angled")
             }
 
+            if !viewModel.existingPhotos.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Current Photos")
+                        .font(.subheadline.weight(.medium))
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(viewModel.existingPhotos) { photo in
+                                existingPhotoThumbnail(photo)
+                            }
+                        }
+                    }
+                }
+            }
+
             if !viewModel.selectedPreviewImages.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(Array(viewModel.selectedPreviewImages.enumerated()), id: \.offset) { _, image in
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 96, height: 96)
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("New Photos")
+                        .font(.subheadline.weight(.medium))
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(Array(viewModel.selectedPreviewImages.enumerated()), id: \.offset) { index, image in
+                                selectedPhotoThumbnail(image, index: index)
+                            }
                         }
                     }
                 }
@@ -176,6 +180,57 @@ struct AddPlaceReviewView: View {
             } header: {
                 Text("Danger Zone")
             }
+        }
+    }
+
+    private func existingPhotoThumbnail(_ photo: PhotoAsset) -> some View {
+        ZStack(alignment: .topTrailing) {
+            RemotePhotoView(asset: photo)
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    if viewModel.isExistingPhotoMarkedForRemoval(photo) {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(.black.opacity(0.45))
+                            .overlay(
+                                Label("Will Delete", systemImage: "trash")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                            )
+                    }
+                }
+
+            Button {
+                viewModel.toggleExistingPhotoRemoval(photo)
+            } label: {
+                Image(systemName: viewModel.isExistingPhotoMarkedForRemoval(photo) ? "arrow.uturn.backward.circle.fill" : "trash.circle.fill")
+                    .font(.title3)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .red)
+            }
+            .buttonStyle(.plain)
+            .padding(6)
+        }
+    }
+
+    private func selectedPhotoThumbnail(_ image: UIImage, index: Int) -> some View {
+        ZStack(alignment: .topTrailing) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            Button {
+                viewModel.removeSelectedPhoto(at: index)
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title3)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .black.opacity(0.65))
+            }
+            .buttonStyle(.plain)
+            .padding(6)
         }
     }
 }

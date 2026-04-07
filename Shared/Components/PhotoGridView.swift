@@ -1,84 +1,61 @@
 import SwiftUI
 
-private struct PhotoGridDisplayPhoto: Identifiable {
-    let id: UUID
-    let image: UIImage
-}
-
 private struct PhotoGridSelectedPhoto: Identifiable {
-    let id: UUID
+    let asset: PhotoAsset
+    var id: UUID { asset.id }
 }
 
 struct PhotoGridView: View {
     let assets: [PhotoAsset]
-    let imageDataProvider: (PhotoAsset) -> Data?
     var allowsFullscreenPresentation = false
 
     @State private var selectedPhoto: PhotoGridSelectedPhoto?
 
     var body: some View {
-        let photos = displayPhotos
-
-        if !photos.isEmpty {
+        if !assets.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(photos) { photo in
-                        photoThumbnail(for: photo)
+                    ForEach(assets) { asset in
+                        photoThumbnail(for: asset)
                     }
                 }
                 .padding(.vertical, 4)
             }
             .fullScreenCover(item: $selectedPhoto) { selectedPhoto in
                 PhotoLightboxView(
-                    photos: photos,
+                    photos: assets,
                     initialPhotoID: selectedPhoto.id
                 )
             }
         }
     }
 
-    private var displayPhotos: [PhotoGridDisplayPhoto] {
-        assets.compactMap { asset in
-            guard let data = imageDataProvider(asset),
-                  let image = UIImage(data: data) else {
-                return nil
-            }
-
-            return PhotoGridDisplayPhoto(id: asset.id, image: image)
-        }
-    }
-
     @ViewBuilder
-    private func photoThumbnail(for photo: PhotoGridDisplayPhoto) -> some View {
+    private func photoThumbnail(for asset: PhotoAsset) -> some View {
         if allowsFullscreenPresentation {
             Button {
-                selectedPhoto = PhotoGridSelectedPhoto(id: photo.id)
+                selectedPhoto = PhotoGridSelectedPhoto(asset: asset)
             } label: {
-                photoImage(for: photo)
+                RemotePhotoView(asset: asset)
+                    .frame(width: 96, height: 96)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
         } else {
-            photoImage(for: photo)
+            RemotePhotoView(asset: asset)
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
-    }
-
-    private func photoImage(for photo: PhotoGridDisplayPhoto) -> some View {
-        Image(uiImage: photo.image)
-            .resizable()
-            .scaledToFill()
-            .frame(width: 96, height: 96)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
 private struct PhotoLightboxView: View {
     @Environment(\.dismiss) private var dismiss
 
-    let photos: [PhotoGridDisplayPhoto]
-
+    let photos: [PhotoAsset]
     @State private var selectedPhotoID: UUID
 
-    init(photos: [PhotoGridDisplayPhoto], initialPhotoID: UUID) {
+    init(photos: [PhotoAsset], initialPhotoID: UUID) {
         self.photos = photos
         _selectedPhotoID = State(initialValue: initialPhotoID)
     }
@@ -89,16 +66,15 @@ private struct PhotoLightboxView: View {
 
             TabView(selection: $selectedPhotoID) {
                 ForEach(photos) { photo in
-                    Image(uiImage: photo.image)
-                        .resizable()
+                    RemotePhotoView(asset: photo)
                         .scaledToFit()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding()
+                        .background(Color.black)
                         .tag(photo.id)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .automatic : .never))
-            .background(Color.black)
 
             Button("Done") {
                 dismiss()
@@ -107,5 +83,39 @@ private struct PhotoLightboxView: View {
             .padding(.trailing, 16)
             .foregroundStyle(.white)
         }
+    }
+}
+
+struct RemotePhotoView: View {
+    let asset: PhotoAsset
+    var placeholderSystemImage = "photo"
+
+    var body: some View {
+        if let resolvedURL = asset.resolvedURL {
+            AsyncImage(url: resolvedURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                case .empty:
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color(.secondarySystemBackground))
+                case .failure:
+                    photoPlaceholder
+                @unknown default:
+                    photoPlaceholder
+                }
+            }
+        } else {
+            photoPlaceholder
+        }
+    }
+
+    private var photoPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(Color(.secondarySystemBackground))
+            .overlay(Image(systemName: placeholderSystemImage).foregroundStyle(.secondary))
     }
 }

@@ -98,11 +98,20 @@ struct MyDishReviewsView: View {
             reviews: [
                 DishReview(
                     placeId: UUID(uuidString: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD")!,
-                    authorUserId: UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!,
                     dishName: "Tiramisu Pancakes",
                     dishRating: 10,
                     dishReviewText: "Ridiculously good mascarpone cream.",
-                    price: 14
+                    priceAmount: 14,
+                    author: PreviewAppFactory.sampleUser.summary,
+                    place: Place(
+                        id: UUID(uuidString: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD")!,
+                        name: "Caffe Aurora",
+                        latitude: 37.7764,
+                        longitude: -122.4231,
+                        address: "123 Valencia St, San Francisco, CA",
+                        city: "San Francisco",
+                        countryCode: "US"
+                    )
                 )
             ],
             placeNames: [

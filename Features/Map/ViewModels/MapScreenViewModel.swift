@@ -10,8 +10,6 @@ final class MapScreenViewModel: ObservableObject {
     @Published var searchText = ""
     @Published var searchResults: [PlaceSearchResult] = []
     @Published var annotations: [MapPlaceAnnotation] = []
-    @Published var availableCategoryOptions: [PlaceCategoryOption] = [.all, .restaurants]
-    @Published var availablePeople: [FilterPerson] = []
     @Published var filterState = MapFilterState()
     @Published var isSatelliteEnabled = false
     @Published var selectedPlace: Place?
@@ -22,45 +20,26 @@ final class MapScreenViewModel: ObservableObject {
     @Published var isFilterPresented = false
     @Published private(set) var locationAccessState: UserLocationAccessState = .idle
 
-    private let sessionStore: SessionStore
+    var requestedCameraRegionToken = UUID()
+
     private let logger = Logger(subsystem: "TrustMap", category: "MapScreenViewModel")
-    private let cloudKitSyncService: CloudKitSyncService
-    private let friendRepository: FriendRepository
-    private let userRepository: UserProfileRepository
-    private let categoryRepository: CategoryRepository
+    private let mapRepository: MapRepository
     private let placeRepository: PlaceRepository
-    private let placeReviewRepository: PlaceReviewRepository
-    private let dishReviewRepository: DishReviewRepository
     private let mapSearchService: MapSearchService
     private let userLocationService: UserLocationServicing
     private var hasCenteredOnUserLocation = false
     private var hasStartedLocationFlow = false
     private var shouldCenterOnNextLocationUpdate = true
     private var searchTask: Task<Void, Never>?
-    private var refreshTask: Task<Void, Never>?
-    private var pendingPromptPlace: Place?
-    private var pendingPromptCoordinate: CLLocationCoordinate2D?
 
     init(
-        sessionStore: SessionStore,
-        cloudKitSyncService: CloudKitSyncService,
-        friendRepository: FriendRepository,
-        userRepository: UserProfileRepository,
-        categoryRepository: CategoryRepository,
+        mapRepository: MapRepository,
         placeRepository: PlaceRepository,
-        placeReviewRepository: PlaceReviewRepository,
-        dishReviewRepository: DishReviewRepository,
         mapSearchService: MapSearchService,
         userLocationService: UserLocationServicing
     ) {
-        self.sessionStore = sessionStore
-        self.cloudKitSyncService = cloudKitSyncService
-        self.friendRepository = friendRepository
-        self.userRepository = userRepository
-        self.categoryRepository = categoryRepository
+        self.mapRepository = mapRepository
         self.placeRepository = placeRepository
-        self.placeReviewRepository = placeReviewRepository
-        self.dishReviewRepository = dishReviewRepository
         self.mapSearchService = mapSearchService
         self.userLocationService = userLocationService
 
@@ -77,29 +56,13 @@ final class MapScreenViewModel: ObservableObject {
 
     deinit {
         searchTask?.cancel()
-        refreshTask?.cancel()
     }
 
     func load() async {
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
-            return
-        }
-
         errorMessage = nil
-        if annotations.isEmpty {
-            isLoading = true
-        }
-
-        do {
-            try reloadVisibleContent(for: currentUser, friends: try friendRepository.cachedAcceptedFriends(for: currentUser.id))
-        } catch {
-            logger.error("Unable to load map content: \(error.localizedDescription, privacy: .public)")
-            errorMessage = AppError.wrap(error).errorDescription
-        }
-
+        isLoading = true
+        await reloadMapPlaces()
         isLoading = false
-        scheduleBackgroundRefresh(for: currentUser)
     }
 
     func performSearch() async {
@@ -107,17 +70,7 @@ final class MapScreenViewModel: ObservableObject {
     }
 
     func applyFilters() async {
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
-            return
-        }
-
-        do {
-            try reloadVisibleContent(for: currentUser, friends: friendRepository.cachedAcceptedFriends(for: currentUser.id))
-        } catch {
-            logger.error("Unable to apply map filters: \(error.localizedDescription, privacy: .public)")
-            errorMessage = AppError.wrap(error).errorDescription
-        }
+        await reloadMapPlaces()
     }
 
     func handleSearchTextChange() {
@@ -131,19 +84,13 @@ final class MapScreenViewModel: ObservableObject {
 
         searchTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(250))
-            guard !Task.isCancelled else {
-                return
-            }
-
+            guard !Task.isCancelled else { return }
             await self?.searchForSuggestions(reportErrors: false)
         }
     }
 
     func startLocationFlowIfNeeded() {
-        guard !hasStartedLocationFlow else {
-            return
-        }
-
+        guard !hasStartedLocationFlow else { return }
         hasStartedLocationFlow = true
         locationAccessState = userLocationService.authorizationStatus == .notDetermined ? .requestingPermission : .locating
         userLocationService.start()
@@ -155,28 +102,17 @@ final class MapScreenViewModel: ObservableObject {
         userLocationService.requestCurrentLocation()
     }
 
-    func selectAnnotation(_ annotation: MapPlaceAnnotation) {
-        promptPlace = annotation.place
-    }
-
     func selectPlace(withID placeID: UUID) {
-        guard let annotation = annotations.first(where: { $0.place.id == placeID }) else {
-            return
+        if let annotation = annotations.first(where: { $0.place.id == placeID }) {
+            droppedPinPlace = nil
+            deferPromptPresentation(for: annotation.place, focusingOn: annotation.place.coordinate)
         }
-
-        droppedPinPlace = nil
-        deferPromptPresentation(for: annotation.place, focusingOn: annotation.place.coordinate)
     }
 
     func selectSearchResult(_ result: PlaceSearchResult) async {
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
-            return
-        }
-
         do {
             let resolvedResult = try await mapSearchService.resolve(result, region: region)
-            let place = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
+            let place = try await placeRepository.createOrGetPlace(from: resolvedResult)
             searchResults = []
             searchText = ""
             let searchRegion = MKCoordinateRegion(
@@ -185,168 +121,135 @@ final class MapScreenViewModel: ObservableObject {
             )
             region = searchRegion
             requestedCameraRegion = searchRegion
+            requestedCameraRegionToken = UUID()
             droppedPinPlace = nil
             deferPromptPresentation(for: place, focusingOn: searchRegion.center)
-        } catch {
-            errorMessage = AppError.wrap(error).errorDescription
-        }
-    }
-
-    func selectMapLocation(at coordinate: CLLocationCoordinate2D) async {
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
-            return
-        }
-
-        do {
-            let resolvedResult = try await mapSearchService.resolveMapTap(at: coordinate)
-            let place = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
-            promptPlace = place
+            await reloadMapPlaces()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
     }
 
     func selectLongPressLocation(at coordinate: CLLocationCoordinate2D) async {
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
-            return
-        }
-
         do {
             let resolvedResult = try await mapSearchService.resolveDroppedPin(at: coordinate)
-            let place = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
+            let place = try await placeRepository.createOrGetPlace(from: resolvedResult)
             droppedPinPlace = place
             deferPromptPresentation(for: place, focusingOn: coordinate)
+            await reloadMapPlaces()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
     }
 
     func selectMapFeature(title: String?, coordinate: CLLocationCoordinate2D) async {
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
-            return
-        }
-
         do {
             let resolvedResult = try await mapSearchService.resolveFeature(
                 title: title,
                 coordinate: coordinate,
                 region: region
             )
-            let place = try placeRepository.upsertPlace(from: resolvedResult, createdByUserID: currentUser.id)
+            let place = try await placeRepository.createOrGetPlace(from: resolvedResult)
             droppedPinPlace = nil
             deferPromptPresentation(for: place, focusingOn: coordinate)
+            await reloadMapPlaces()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
     }
 
     func openPromptedPlaceDetails() {
-        guard let promptPlace else {
-            return
-        }
-
-        droppedPinPlace = nil
+        guard let promptPlace else { return }
         selectedPlace = promptPlace
         self.promptPlace = nil
+        droppedPinPlace = nil
     }
 
     func dismissPrompt() {
-        droppedPinPlace = nil
         promptPlace = nil
-        pendingPromptPlace = nil
-        pendingPromptCoordinate = nil
+        droppedPinPlace = nil
     }
 
     func handleCameraChangeDidEnd(_ region: MKCoordinateRegion) {
-        if let currentRegion = self.region, regionsApproximatelyEqual(currentRegion, region) {
-            return
-        }
-
         self.region = region
-
-        guard let pendingPromptPlace,
-              let pendingPromptCoordinate,
-              hasReachedPendingPromptTarget(region: region, target: pendingPromptCoordinate) else {
-            return
-        }
-
-        promptPlace = pendingPromptPlace
-        self.pendingPromptPlace = nil
-        self.pendingPromptCoordinate = nil
-    }
-
-    private func focus(on coordinate: CLLocationCoordinate2D) {
-        let span = region?.span ?? Self.defaultSpan
-        let nextRegion = MKCoordinateRegion(center: coordinate, span: span)
-        if let requestedCameraRegion, regionsApproximatelyEqual(requestedCameraRegion, nextRegion) {
-            return
-        }
-
-        requestedCameraRegion = nextRegion
+        Task { await reloadMapPlaces() }
     }
 
     func clearRequestedCameraRegion() {
         requestedCameraRegion = nil
     }
 
-    var requestedCameraRegionToken: String {
-        guard let requestedCameraRegion else {
-            return ""
-        }
-
-        return [
-            requestedCameraRegion.center.latitude,
-            requestedCameraRegion.center.longitude,
-            requestedCameraRegion.span.latitudeDelta,
-            requestedCameraRegion.span.longitudeDelta
-        ]
-        .map { String($0) }
-        .joined(separator: "|")
-    }
-
-    func userName(for userID: UUID) -> String {
-        if let person = availablePeople.first(where: { $0.id == userID }) {
-            return person.name
-        }
-
-        return "Friend"
-    }
-
-    private func buildAnnotations(
-        from placeReviews: [PlaceReview],
-        dishReviews: [DishReview],
-        places: [Place]
-    ) -> [MapPlaceAnnotation] {
-        let groupedPlaceReviews = Dictionary(grouping: placeReviews, by: \.placeId)
-        let groupedDishReviews = Dictionary(grouping: dishReviews, by: \.placeId)
-
-        return places.compactMap { place in
-            let groupedPlace = groupedPlaceReviews[place.id] ?? []
-            let groupedDish = groupedDishReviews[place.id] ?? []
-
-            guard !groupedPlace.isEmpty || !groupedDish.isEmpty else {
-                return nil
-            }
-
-            let ratings: [Int]
-            if !groupedPlace.isEmpty {
-                ratings = groupedPlace.map(\.ratingOverall)
-            } else {
-                ratings = groupedDish.map(\.dishRating)
-            }
-
-            let total = ratings.reduce(0, +)
-            return MapPlaceAnnotation(
-                id: place.id,
-                place: place,
-                averageRating: Double(total) / Double(ratings.count),
-                reviewCount: ratings.count
+    private func reloadMapPlaces() async {
+        do {
+            let bounds = mapBounds(from: region)
+            let places = try await mapRepository.fetchMapPlaces(
+                north: bounds?.north,
+                south: bounds?.south,
+                east: bounds?.east,
+                west: bounds?.west,
+                take: 250
             )
+
+            annotations = places
+                .filter { mapPlace in
+                    guard let average = mapPlace.averagePlaceRating else {
+                        return filterState.minimumRating <= 1
+                    }
+
+                    return filterState.ratingRange.contains(Int(round(average)))
+                }
+                .map {
+                    MapPlaceAnnotation(
+                        id: $0.placeId,
+                        place: $0.place,
+                        averageRating: $0.averagePlaceRating ?? 0,
+                        reviewCount: $0.visiblePlaceReviewCount + $0.visibleDishReviewCount
+                    )
+                }
+            errorMessage = nil
+        } catch {
+            logger.error("Unable to load map places: \(error.localizedDescription, privacy: .public)")
+            errorMessage = AppError.wrap(error).errorDescription
         }
-        .sorted { $0.averageRating > $1.averageRating }
+    }
+
+    private func searchForSuggestions(reportErrors: Bool) async {
+        do {
+            searchResults = try await mapSearchService.search(query: searchText, region: region)
+            if reportErrors {
+                errorMessage = nil
+            }
+        } catch {
+            if reportErrors {
+                errorMessage = AppError.wrap(error).errorDescription
+            }
+        }
+    }
+
+    private func deferPromptPresentation(for place: Place, focusingOn coordinate: CLLocationCoordinate2D) {
+        let targetRegion = MKCoordinateRegion(center: coordinate, span: Self.defaultSpan)
+        region = targetRegion
+        requestedCameraRegion = targetRegion
+        requestedCameraRegionToken = UUID()
+
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard let self else { return }
+            self.promptPlace = place
+        }
+    }
+
+    private func mapBounds(from region: MKCoordinateRegion?) -> (north: Double, south: Double, east: Double, west: Double)? {
+        guard let region else { return nil }
+        let halfLat = region.span.latitudeDelta / 2
+        let halfLon = region.span.longitudeDelta / 2
+
+        return (
+            north: region.center.latitude + halfLat,
+            south: region.center.latitude - halfLat,
+            east: region.center.longitude + halfLon,
+            west: region.center.longitude - halfLon
+        )
     }
 
     private func handleAuthorizationChange(_ status: CLAuthorizationStatus) {
@@ -360,151 +263,27 @@ final class MapScreenViewModel: ObservableObject {
         case .restricted:
             locationAccessState = .restricted
         @unknown default:
-            locationAccessState = .failed("TrustMap could not read the current location permission status.")
+            locationAccessState = .failed("TrustMap could not determine location access.")
         }
     }
 
     private func handleLocationUpdate(_ location: CLLocation) {
         locationAccessState = .ready
-
-        let userRegion = MKCoordinateRegion(
-            center: location.coordinate,
-            span: Self.defaultSpan
-        )
-        region = userRegion
-
-        guard shouldCenterOnNextLocationUpdate || !hasCenteredOnUserLocation else {
+        guard !hasCenteredOnUserLocation || shouldCenterOnNextLocationUpdate else {
             return
         }
 
+        let userRegion = MKCoordinateRegion(center: location.coordinate, span: Self.defaultSpan)
+        region = userRegion
+        requestedCameraRegion = userRegion
+        requestedCameraRegionToken = UUID()
         hasCenteredOnUserLocation = true
         shouldCenterOnNextLocationUpdate = false
-        requestedCameraRegion = userRegion
     }
 
     private func handleLocationError(_ error: AppError) {
         locationAccessState = .failed(error.errorDescription ?? "TrustMap could not determine your current location.")
     }
 
-    private func searchForSuggestions(reportErrors: Bool) async {
-        let normalizedQuery = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !normalizedQuery.isEmpty else {
-            searchResults = []
-            return
-        }
-
-        do {
-            searchResults = try await mapSearchService.search(query: normalizedQuery, region: region)
-            if reportErrors {
-                errorMessage = nil
-            }
-        } catch {
-            searchResults = []
-            if reportErrors {
-                errorMessage = AppError.wrap(error).errorDescription
-            }
-        }
-    }
-
-    private func deferPromptPresentation(for place: Place, focusingOn coordinate: CLLocationCoordinate2D) {
-        promptPlace = nil
-        pendingPromptPlace = place
-        pendingPromptCoordinate = coordinate
-        focus(on: coordinate)
-    }
-
-    private func reloadVisibleContent(for currentUser: User, friends: [User]) throws {
-        let friendIDs = Set(friends.map(\.id))
-        let defaultRestaurantCategory = try categoryRepository.defaultRestaurantCategory(for: currentUser.id)
-        let ownedCategories = try categoryRepository.categories(for: currentUser.id)
-        availableCategoryOptions = [.all, .restaurants] + ownedCategories
-            .filter {
-                $0.id != defaultRestaurantCategory.id
-                    && $0.name.caseInsensitiveCompare(PlaceCategoryOption.restaurants.title) != .orderedSame
-            }
-            .map(PlaceCategoryOption.init(category:))
-
-        if !availableCategoryOptions.contains(filterState.selectedCategoryOption) {
-            filterState.selectedCategoryOption = .restaurants
-        }
-
-        availablePeople = [FilterPerson(id: currentUser.id, name: "Me", isCurrentUser: true)]
-            + friends.map { FilterPerson(id: $0.id, name: $0.displayName, isCurrentUser: false) }
-
-        let authorIDs = filterState.resolvedAuthorIDs(currentUserID: currentUser.id, friendIDs: friendIDs)
-        let reviews = try placeReviewRepository.reviews(
-            authoredBy: authorIDs,
-            visibleTo: currentUser.id,
-            friendIDs: friendIDs,
-            ratingRange: filterState.ratingRange
-        )
-        let dishReviews = try dishReviewRepository.reviews(
-            authoredBy: authorIDs,
-            visibleTo: currentUser.id,
-            friendIDs: friendIDs,
-            ratingRange: filterState.ratingRange
-        )
-        let places = try placeRepository.places(withIDs: Set(reviews.map(\.placeId)).union(dishReviews.map(\.placeId)))
-        let categoryNamesByPlace = try places.reduce(into: [UUID: [String]]()) { result, place in
-            result[place.id] = try categoryRepository.categoryNames(forPlace: place.id)
-        }
-        let filteredPlaces = places.filter { place in
-            let categoryNames = categoryNamesByPlace[place.id] ?? []
-            return filterState.selectedCategoryOption.matches(categoryNames: categoryNames)
-        }
-        annotations = buildAnnotations(from: reviews, dishReviews: dishReviews, places: filteredPlaces)
-    }
-
-    private func scheduleBackgroundRefresh(for currentUser: User) {
-        refreshTask?.cancel()
-        let currentUserID = currentUser.id
-
-        refreshTask = Task { [weak self] in
-            guard let self else {
-                return
-            }
-
-            let cachedFriends = (try? self.friendRepository.cachedAcceptedFriends(for: currentUserID)) ?? []
-            let friends = (try? await self.friendRepository.acceptedFriends(for: currentUserID)) ?? cachedFriends
-            guard !Task.isCancelled,
-                  let sessionUser = self.sessionStore.currentUser,
-                  sessionUser.id == currentUserID else {
-                return
-            }
-
-            await self.cloudKitSyncService.refreshFriendVisibleContentIfPossible(for: sessionUser, friends: friends)
-            guard !Task.isCancelled else {
-                return
-            }
-
-            do {
-                try self.reloadVisibleContent(
-                    for: sessionUser,
-                    friends: (try? self.friendRepository.cachedAcceptedFriends(for: currentUserID)) ?? friends
-                )
-                self.errorMessage = nil
-            } catch {
-                self.logger.error("Unable to refresh map content in background: \(error.localizedDescription, privacy: .public)")
-            }
-        }
-    }
-
-    private func hasReachedPendingPromptTarget(region: MKCoordinateRegion, target: CLLocationCoordinate2D) -> Bool {
-        let latitudeTolerance = max(region.span.latitudeDelta * 0.1, 0.0001)
-        let longitudeTolerance = max(region.span.longitudeDelta * 0.1, 0.0001)
-
-        return abs(region.center.latitude - target.latitude) <= latitudeTolerance
-            && abs(region.center.longitude - target.longitude) <= longitudeTolerance
-    }
-
-    private func regionsApproximatelyEqual(_ lhs: MKCoordinateRegion, _ rhs: MKCoordinateRegion) -> Bool {
-        abs(lhs.center.latitude - rhs.center.latitude) < 0.0001
-            && abs(lhs.center.longitude - rhs.center.longitude) < 0.0001
-            && abs(lhs.span.latitudeDelta - rhs.span.latitudeDelta) < 0.0001
-            && abs(lhs.span.longitudeDelta - rhs.span.longitudeDelta) < 0.0001
-    }
-}
-
-private extension MapScreenViewModel {
-    static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
+    private static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)
 }

@@ -11,7 +11,6 @@ struct PlaceSearchSheet: View {
         self.onPlaceSelected = onPlaceSelected
         _viewModel = StateObject(
             wrappedValue: PlaceSearchViewModel(
-                sessionStore: container.sessionStore,
                 mapSearchService: container.mapSearchService,
                 placeRepository: container.placeRepository
             )
@@ -36,12 +35,14 @@ struct PlaceSearchSheet: View {
                 } else {
                     List(viewModel.results) { result in
                         Button {
-                            do {
-                                let place = try viewModel.select(result)
-                                onPlaceSelected(place)
-                                dismiss()
-                            } catch {
-                                viewModel.errorMessage = AppError.wrap(error).errorDescription
+                            Task {
+                                do {
+                                    let place = try await viewModel.select(result)
+                                    onPlaceSelected(place)
+                                    dismiss()
+                                } catch {
+                                    viewModel.errorMessage = AppError.wrap(error).errorDescription
+                                }
                             }
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {

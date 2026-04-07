@@ -1,13 +1,11 @@
 import Foundation
-import SwiftData
 
-@Model
-final class ActivityItem {
-    var id: UUID
-    var actorUserId: UUID
-    var type: ActivityItemType
-    var referenceId: String
-    var createdAt: Date
+struct ActivityItem: Identifiable, Codable, Hashable, Sendable {
+    let id: UUID
+    let actorUserId: UUID
+    let type: ActivityItemType
+    let referenceId: String
+    let createdAt: Date
 
     init(
         id: UUID = UUID(),

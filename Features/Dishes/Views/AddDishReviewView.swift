@@ -7,15 +7,13 @@ struct AddDishReviewView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var isDeleteConfirmationPresented = false
 
-    init(container: AppContainer, place: Place, existingReview: DishReview? = nil, existingPhotoData: Data? = nil) {
+    init(container: AppContainer, place: Place, existingReview: DishReview? = nil) {
         _viewModel = StateObject(
             wrappedValue: AddDishReviewViewModel(
                 place: place,
-                sessionStore: container.sessionStore,
-                placeReviewRepository: container.placeReviewRepository,
                 dishReviewRepository: container.dishReviewRepository,
-                existingReview: existingReview,
-                existingPhotoData: existingPhotoData
+                refreshCenter: container.refreshCenter,
+                existingReview: existingReview
             )
         )
     }
@@ -31,11 +29,17 @@ struct AddDishReviewView: View {
 
             Section("Dish Review") {
                 TextField("Dish name", text: $viewModel.dishName)
-                Stepper("Rating: \(viewModel.dishRating)/10", value: $viewModel.dishRating, in: 1...10)
-                TextField("Short review", text: $viewModel.dishReviewText, axis: .vertical)
+                Stepper("Rating: \(viewModel.dishRating)/5", value: $viewModel.dishRating, in: 1...5)
+                TextField("Short review (optional)", text: $viewModel.dishReviewText, axis: .vertical)
                     .lineLimit(3...5)
                 TextField("Price", text: $viewModel.priceText)
                     .keyboardType(.decimalPad)
+
+                Picker("Visibility", selection: $viewModel.visibility) {
+                    ForEach(VisibilityStatus.allCases) { status in
+                        Text(status.displayName).tag(status)
+                    }
+                }
             }
 
             Section("Photo") {
@@ -43,12 +47,40 @@ struct AddDishReviewView: View {
                     Label("Add Dish Photo", systemImage: "camera")
                 }
 
+                if !viewModel.existingPhotos.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Current Photos")
+                            .font(.subheadline.weight(.medium))
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(viewModel.existingPhotos) { photo in
+                                    existingPhotoThumbnail(photo)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if let image = viewModel.selectedPreviewImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(height: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    ZStack(alignment: .topTrailing) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(height: 220)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                        Button {
+                            viewModel.removeSelectedPhoto()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title3)
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(.white, .black.opacity(0.65))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(10)
+                    }
                 }
             }
 
@@ -121,6 +153,36 @@ struct AddDishReviewView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.errorMessage ?? "")
+        }
+    }
+
+    private func existingPhotoThumbnail(_ photo: PhotoAsset) -> some View {
+        ZStack(alignment: .topTrailing) {
+            RemotePhotoView(asset: photo)
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    if viewModel.isExistingPhotoMarkedForRemoval(photo) {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(.black.opacity(0.45))
+                            .overlay(
+                                Label("Will Delete", systemImage: "trash")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                            )
+                    }
+                }
+
+            Button {
+                viewModel.toggleExistingPhotoRemoval(photo)
+            } label: {
+                Image(systemName: viewModel.isExistingPhotoMarkedForRemoval(photo) ? "arrow.uturn.backward.circle.fill" : "trash.circle.fill")
+                    .font(.title3)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .red)
+            }
+            .buttonStyle(.plain)
+            .padding(6)
         }
     }
 }

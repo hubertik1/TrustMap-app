@@ -3,19 +3,17 @@ import SwiftUI
 struct PlaceDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var container: AppContainer
+    @ObservedObject private var refreshCenter: AppRefreshCenter
     @StateObject private var viewModel: PlaceDetailViewModel
 
     init(container: AppContainer, place: Place) {
         self.container = container
+        self.refreshCenter = container.refreshCenter
         _viewModel = StateObject(
             wrappedValue: PlaceDetailViewModel(
                 place: place,
                 sessionStore: container.sessionStore,
-                cloudKitSyncService: container.cloudKitSyncService,
-                friendRepository: container.friendRepository,
-                userRepository: container.userRepository,
-                categoryRepository: container.categoryRepository,
-                photoAssetRepository: container.photoAssetRepository,
+                placeRepository: container.placeRepository,
                 placeReviewRepository: container.placeReviewRepository,
                 dishReviewRepository: container.dishReviewRepository
             )
@@ -36,7 +34,7 @@ struct PlaceDetailView: View {
                         PlaceSummaryHeaderView(
                             place: viewModel.place,
                             averageRating: viewModel.averageRating,
-                            categoryNames: viewModel.categoryNames
+                            categoryNames: []
                         )
                     }
 
@@ -49,8 +47,7 @@ struct PlaceDetailView: View {
                                 ReviewCardView(
                                     review: review,
                                     authorName: viewModel.authorName(for: review.authorUserId),
-                                    photos: viewModel.reviewPhotos[review.id] ?? [],
-                                    imageDataProvider: viewModel.imageData
+                                    photos: review.photos
                                 )
                                 .listRowInsets(EdgeInsets())
                                 .listRowBackground(Color.clear)
@@ -65,7 +62,6 @@ struct PlaceDetailView: View {
                         } else {
                             PhotoGridView(
                                 assets: viewModel.placePhotos,
-                                imageDataProvider: viewModel.imageData,
                                 allowsFullscreenPresentation: true
                             )
                         }
@@ -127,12 +123,11 @@ struct PlaceDetailView: View {
                 AddDishReviewView(
                     container: container,
                     place: viewModel.place,
-                    existingReview: review,
-                    existingPhotoData: viewModel.dishPhotoData(for: review)
+                    existingReview: review
                 )
             }
         }
-        .task {
+        .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
         }
         .toolbar {
@@ -147,8 +142,7 @@ struct PlaceDetailView: View {
         let row = DishReviewRowView(
             review: review,
             authorName: viewModel.authorName(for: review.authorUserId),
-            photo: viewModel.dishPhotos[review.id],
-            imageDataProvider: viewModel.imageData
+            photo: review.photos.first
         )
 
         if viewModel.canEdit(review) {

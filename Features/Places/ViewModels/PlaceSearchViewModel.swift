@@ -7,16 +7,13 @@ final class PlaceSearchViewModel: ObservableObject {
     @Published var isSearching = false
     @Published var errorMessage: String?
 
-    private let sessionStore: SessionStore
     private let mapSearchService: MapSearchService
     private let placeRepository: PlaceRepository
 
     init(
-        sessionStore: SessionStore,
         mapSearchService: MapSearchService,
         placeRepository: PlaceRepository
     ) {
-        self.sessionStore = sessionStore
         self.mapSearchService = mapSearchService
         self.placeRepository = placeRepository
     }
@@ -34,11 +31,8 @@ final class PlaceSearchViewModel: ObservableObject {
         isSearching = false
     }
 
-    func select(_ result: PlaceSearchResult) throws -> Place {
-        guard let currentUser = sessionStore.currentUser else {
-            throw AppError.missingCurrentUser
-        }
-
-        return try placeRepository.upsertPlace(from: result, createdByUserID: currentUser.id)
+    func select(_ result: PlaceSearchResult) async throws -> Place {
+        let resolved = try await mapSearchService.resolve(result, region: nil)
+        return try await placeRepository.createOrGetPlace(from: resolved)
     }
 }

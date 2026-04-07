@@ -35,10 +35,19 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.food-and-drink</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>TrustMap uses your location to center the map around you and help you discover nearby places.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>TrustMap needs access to your local network to connect to the development backend running on your Mac.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>TrustMapAPIBaseURL</key>
+	<string>http://192.168.0.59:8080</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

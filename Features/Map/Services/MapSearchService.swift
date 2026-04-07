@@ -194,3 +194,39 @@ private final class SearchCompleter: NSObject, MKLocalSearchCompleterDelegate {
         continuation = nil
     }
 }
+
+@MainActor
+final class MapRepository {
+    private let apiClient: APIClient
+
+    init(apiClient: APIClient) {
+        self.apiClient = apiClient
+    }
+
+    func fetchMapPlaces(
+        north: Double? = nil,
+        south: Double? = nil,
+        east: Double? = nil,
+        west: Double? = nil,
+        take: Int = 250
+    ) async throws -> [MapPlace] {
+        var queryItems = [URLQueryItem(name: "take", value: String(take))]
+
+        if let north, let south, let east, let west {
+            queryItems.append(contentsOf: [
+                URLQueryItem(name: "north", value: String(north)),
+                URLQueryItem(name: "south", value: String(south)),
+                URLQueryItem(name: "east", value: String(east)),
+                URLQueryItem(name: "west", value: String(west))
+            ])
+        }
+
+        return try await apiClient.send(
+            APIRequest<[MapPlace]>(
+                method: .get,
+                path: "map/places",
+                queryItems: queryItems
+            )
+        )
+    }
+}

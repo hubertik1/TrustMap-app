@@ -14,7 +14,7 @@ struct SettingsView: View {
             Section("Account") {
                 Text("TrustMap uses Sign in with Apple only for v1.")
                 Button("Sign Out", role: .destructive) {
-                    viewModel.signOut()
+                    Task { await viewModel.signOut() }
                 }
             }
 

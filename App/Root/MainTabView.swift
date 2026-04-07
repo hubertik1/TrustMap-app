@@ -2,12 +2,10 @@ import SwiftUI
 
 struct MainTabView: View {
     @ObservedObject private var container: AppContainer
-    @ObservedObject private var deepLinkRouter: DeepLinkRouter
     @State private var selectedTab: AppTab = .map
 
     init(container: AppContainer) {
         self.container = container
-        self.deepLinkRouter = container.deepLinkRouter
     }
 
     var body: some View {
@@ -51,27 +49,6 @@ struct MainTabView: View {
                 Label("Profile", systemImage: "person.crop.circle")
             }
             .tag(AppTab.profile)
-        }
-        .onChange(of: deepLinkRouter.presentedInvite?.id) { _, presentedInviteID in
-            guard presentedInviteID != nil else {
-                return
-            }
-
-            selectedTab = .friends
-        }
-        .sheet(
-            item: Binding(
-                get: { deepLinkRouter.presentedInvite },
-                set: { newValue in
-                    if newValue == nil {
-                        deepLinkRouter.dismissPresentedInvite()
-                    }
-                }
-            )
-        ) { presentedInvite in
-            NavigationStack {
-                AcceptInviteView(container: container, token: presentedInvite.token)
-            }
         }
     }
 }

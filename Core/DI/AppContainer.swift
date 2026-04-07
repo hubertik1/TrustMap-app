@@ -2,111 +2,68 @@ import Foundation
 
 @MainActor
 final class AppContainer: ObservableObject {
-    let persistenceController: PersistenceController
-    let photoStorageService: LocalPhotoStorageService
-    let cloudKitSyncService: CloudKitSyncService
-    let socialGraphCloudKitService: SocialGraphCloudKitService
+    let apiClient: APIClient
     let authService: AppleAuthenticationService
-    let pendingDeepLinkStore: PendingDeepLinkStore
-    let inviteLinkBuilder: InviteLinkBuilder
-    let deepLinkRouter: DeepLinkRouter
+    let authRepository: AuthRepository
+    let refreshCenter: AppRefreshCenter
+    let tokenStore: KeychainTokenStore
+    let sessionStore: SessionStore
     let userRepository: UserProfileRepository
     let friendRepository: FriendRepository
-    let categoryRepository: CategoryRepository
     let placeRepository: PlaceRepository
-    let photoAssetRepository: PhotoAssetRepository
+    let mapRepository: MapRepository
+    let photoRepository: PhotoRepository
     let placeReviewRepository: PlaceReviewRepository
     let dishReviewRepository: DishReviewRepository
     let feedRepository: FeedRepository
     let mapSearchService: MapSearchService
     let userLocationService: UserLocationService
-    let sessionStore: SessionStore
 
-    init(inMemory: Bool = false) {
-        let persistenceController = PersistenceController(inMemory: inMemory)
-        let photoStorageService = LocalPhotoStorageService()
-        let cloudKitSyncService = CloudKitSyncService(
-            persistenceController: persistenceController,
-            photoStorageService: photoStorageService,
-            forceDisabled: !AppConfiguration.cloudKitSyncEnabled || AppConfiguration.isRunningPreviews
-        )
-        let socialGraphCloudKitService = SocialGraphCloudKitService(
-            forceDisabled: !AppConfiguration.socialGraphCloudKitEnabled || AppConfiguration.isRunningPreviews || inMemory
-        )
+    init(preview: Bool = false) {
+        let apiClient = APIClient(baseURL: AppConfiguration.apiBaseURL)
         let authService = AppleAuthenticationService()
-        let pendingDeepLinkStore = PendingDeepLinkStore()
-        let inviteLinkBuilder = InviteLinkBuilder()
-        let deepLinkRouter = DeepLinkRouter(
-            inviteLinkBuilder: inviteLinkBuilder,
-            pendingDeepLinkStore: pendingDeepLinkStore
-        )
-        let userRepository = UserProfileRepository(
-            persistenceController: persistenceController,
-            cloudKitSyncService: cloudKitSyncService,
-            socialGraphService: socialGraphCloudKitService
-        )
-        let friendRepository = FriendRepository(
-            persistenceController: persistenceController,
-            cloudKitSyncService: cloudKitSyncService,
-            socialGraphService: socialGraphCloudKitService,
-            userRepository: userRepository
-        )
-        let categoryRepository = CategoryRepository(
-            persistenceController: persistenceController,
-            cloudKitSyncService: cloudKitSyncService
-        )
-        let placeRepository = PlaceRepository(
-            persistenceController: persistenceController,
-            cloudKitSyncService: cloudKitSyncService
-        )
-        let photoAssetRepository = PhotoAssetRepository(
-            persistenceController: persistenceController,
-            storageService: photoStorageService,
-            cloudKitSyncService: cloudKitSyncService
-        )
-        let placeReviewRepository = PlaceReviewRepository(
-            persistenceController: persistenceController,
-            cloudKitSyncService: cloudKitSyncService,
-            photoAssetRepository: photoAssetRepository,
-            categoryRepository: categoryRepository
-        )
-        let dishReviewRepository = DishReviewRepository(
-            persistenceController: persistenceController,
-            cloudKitSyncService: cloudKitSyncService,
-            photoAssetRepository: photoAssetRepository
-        )
-        let feedRepository = FeedRepository(persistenceController: persistenceController)
+        let authRepository = AuthRepository(apiClient: apiClient)
+        let refreshCenter = AppRefreshCenter()
+        let tokenStore = KeychainTokenStore()
+        let userRepository = UserProfileRepository(apiClient: apiClient)
+        let friendRepository = FriendRepository(apiClient: apiClient)
+        let placeRepository = PlaceRepository(apiClient: apiClient)
+        let photoRepository = PhotoRepository(apiClient: apiClient)
+        let placeReviewRepository = PlaceReviewRepository(apiClient: apiClient, photoRepository: photoRepository)
+        let dishReviewRepository = DishReviewRepository(apiClient: apiClient, photoRepository: photoRepository)
+        let feedRepository = FeedRepository(apiClient: apiClient)
+        let mapRepository = MapRepository(apiClient: apiClient)
         let mapSearchService = MapSearchService()
         let userLocationService = UserLocationService()
         let sessionStore = SessionStore(
             authService: authService,
+            authRepository: authRepository,
+            refreshCenter: refreshCenter,
             userRepository: userRepository,
-            signOutCleanup: {
-                pendingDeepLinkStore.clearInviteToken()
-                cloudKitSyncService.resetEphemeralState()
-                persistenceController.resetAllData()
-                photoStorageService.deleteAllImages()
-            }
+            tokenStore: tokenStore
         )
 
-        self.persistenceController = persistenceController
-        self.photoStorageService = photoStorageService
-        self.cloudKitSyncService = cloudKitSyncService
-        self.socialGraphCloudKitService = socialGraphCloudKitService
+        apiClient.sessionProvider = sessionStore
+
+        self.apiClient = apiClient
         self.authService = authService
-        self.pendingDeepLinkStore = pendingDeepLinkStore
-        self.inviteLinkBuilder = inviteLinkBuilder
-        self.deepLinkRouter = deepLinkRouter
+        self.authRepository = authRepository
+        self.refreshCenter = refreshCenter
+        self.tokenStore = tokenStore
+        self.sessionStore = sessionStore
         self.userRepository = userRepository
         self.friendRepository = friendRepository
-        self.categoryRepository = categoryRepository
         self.placeRepository = placeRepository
-        self.photoAssetRepository = photoAssetRepository
+        self.mapRepository = mapRepository
+        self.photoRepository = photoRepository
         self.placeReviewRepository = placeReviewRepository
         self.dishReviewRepository = dishReviewRepository
         self.feedRepository = feedRepository
         self.mapSearchService = mapSearchService
         self.userLocationService = userLocationService
-        self.sessionStore = sessionStore
+
+        if preview {
+            sessionStore.setPreviewState(.signedOut)
+        }
     }
 }

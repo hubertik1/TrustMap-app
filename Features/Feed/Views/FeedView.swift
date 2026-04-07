@@ -2,20 +2,15 @@ import SwiftUI
 
 struct FeedView: View {
     private let container: AppContainer
+    @ObservedObject private var refreshCenter: AppRefreshCenter
     @StateObject private var viewModel: FeedViewModel
 
     init(container: AppContainer) {
         self.container = container
+        self.refreshCenter = container.refreshCenter
         _viewModel = StateObject(
             wrappedValue: FeedViewModel(
-                sessionStore: container.sessionStore,
-                cloudKitSyncService: container.cloudKitSyncService,
-                feedRepository: container.feedRepository,
-                friendRepository: container.friendRepository,
-                userRepository: container.userRepository,
-                placeRepository: container.placeRepository,
-                placeReviewRepository: container.placeReviewRepository,
-                dishReviewRepository: container.dishReviewRepository
+                feedRepository: container.feedRepository
             )
         )
     }
@@ -58,7 +53,7 @@ struct FeedView: View {
             }
         }
         .navigationTitle("Feed")
-        .task {
+        .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
         }
     }

@@ -2,7 +2,7 @@ import AuthenticationServices
 import Foundation
 
 @MainActor
-final class SessionStore: ObservableObject {
+final class SessionStore: ObservableObject, APISessionProviding {
     enum State {
         case launching
         case signedOut
@@ -13,17 +13,26 @@ final class SessionStore: ObservableObject {
     @Published var alertMessage: String?
 
     private let authService: AuthServicing
+    private let authRepository: AuthRepository
+    private let refreshCenter: AppRefreshCenter
     private let userRepository: UserProfileRepository
-    private let signOutCleanup: @MainActor () -> Void
+    private let tokenStore: KeychainTokenStore
+
+    private var storedTokens: SessionTokens?
+    private var refreshTask: Task<AuthSession, Error>?
 
     init(
         authService: AuthServicing,
+        authRepository: AuthRepository,
+        refreshCenter: AppRefreshCenter,
         userRepository: UserProfileRepository,
-        signOutCleanup: @escaping @MainActor () -> Void = {}
+        tokenStore: KeychainTokenStore
     ) {
         self.authService = authService
+        self.authRepository = authRepository
+        self.refreshCenter = refreshCenter
         self.userRepository = userRepository
-        self.signOutCleanup = signOutCleanup
+        self.tokenStore = tokenStore
     }
 
     var currentUser: User? {
@@ -34,52 +43,143 @@ final class SessionStore: ObservableObject {
         return user
     }
 
+    var currentAccessToken: String? {
+        storedTokens?.accessToken
+    }
+
     func bootstrap() async {
-        guard let appleUserID = authService.persistedAppleUserID() else {
-            signOutCleanup()
+        guard let tokens = tokenStore.load() else {
             state = .signedOut
             return
         }
 
-        do {
-            let credentialState = try await authService.credentialState(for: appleUserID)
-            guard credentialState == .authorized,
-                  let user = try await userRepository.restoreAuthorizedUser(forAppleUserID: appleUserID) else {
-                authService.persistActiveAppleUserID(nil)
-                signOutCleanup()
-                state = .signedOut
-                return
-            }
+        storedTokens = tokens
 
-            state = .signedIn(user)
+        do {
+            let me = try await userRepository.fetchCurrentUser()
+            state = .signedIn(me)
         } catch {
-            authService.persistActiveAppleUserID(nil)
-            signOutCleanup()
-            state = .signedOut
-            alertMessage = AppError.wrap(error).errorDescription
+            do {
+                _ = try await refreshSession()
+                let me = try await userRepository.fetchCurrentUser()
+                state = .signedIn(me)
+            } catch {
+                clearSessionState()
+                state = .signedOut
+            }
         }
     }
 
     func signIn(with result: Result<ASAuthorization, any Error>) async {
         do {
             let credential = try authService.credential(from: result)
-            let user = try await userRepository.createOrUpdateSignedInUser(credential: credential)
-            authService.persistActiveAppleUserID(credential.userID)
-            state = .signedIn(user)
+            let session = try await authRepository.signIn(with: credential)
+            try applySession(session, appleUserID: credential.userID)
         } catch {
-            signOutCleanup()
+            clearSessionState()
             alertMessage = AppError.wrap(error).errorDescription
             state = .signedOut
         }
     }
 
-    func signOut() {
-        authService.persistActiveAppleUserID(nil)
-        signOutCleanup()
+    func refreshSession() async throws -> String {
+        if let refreshTask {
+            let session = try await refreshTask.value
+            return session.tokens.accessToken
+        }
+
+        guard let refreshToken = storedTokens?.refreshToken, !refreshToken.isEmpty else {
+            throw AppError.invalidSession
+        }
+
+        let task = Task { @MainActor [authRepository] in
+            try await authRepository.refresh(refreshToken: refreshToken)
+        }
+
+        refreshTask = task
+        defer { refreshTask = nil }
+
+        do {
+            let session = try await task.value
+            try applySession(session, appleUserID: authService.lastAppleUserID())
+            return session.tokens.accessToken
+        } catch {
+            clearSessionState()
+            state = .signedOut
+            throw AppError.invalidSession
+        }
+    }
+
+    func handleUnauthorizedSession() async {
+        clearSessionState()
+        alertMessage = AppError.invalidSession.errorDescription
         state = .signedOut
+    }
+
+    func signOut(allDevices: Bool = false) async {
+        let refreshToken = storedTokens?.refreshToken
+        await authRepository.logout(refreshToken: refreshToken, allDevices: allDevices)
+        clearSessionState()
+        state = .signedOut
+    }
+
+    func handleSceneDidBecomeActive() async {
+        guard storedTokens != nil,
+              let appleUserID = authService.lastAppleUserID() else {
+            return
+        }
+
+        do {
+            let credentialState = try await authService.credentialState(for: appleUserID)
+            guard credentialState == .authorized else {
+                clearSessionState()
+                state = .signedOut
+                alertMessage = "Your Apple sign-in is no longer valid. Sign in again to continue."
+                return
+            }
+        } catch {
+            // Ignore transient Apple credential state failures. Backend session remains authoritative.
+        }
     }
 
     func setPreviewState(_ state: State) {
         self.state = state
+    }
+
+    func updateCurrentUser(_ user: User) {
+        guard case .signedIn = state else {
+            return
+        }
+
+        state = .signedIn(user)
+    }
+
+    private func applySession(_ session: AuthSession, appleUserID: String?) throws {
+        storedTokens = session.tokens
+        try tokenStore.save(session.tokens)
+        authService.persistLastAppleUserID(appleUserID)
+        state = .signedIn(session.user)
+        alertMessage = nil
+        refreshCenter.reset()
+    }
+
+    private func clearSessionState() {
+        storedTokens = nil
+        tokenStore.clear()
+        authService.persistLastAppleUserID(nil)
+        refreshCenter.reset()
+    }
+}
+
+@MainActor
+final class AppRefreshCenter: ObservableObject {
+    @Published private(set) var globalRevision = 0
+
+    func invalidateAll() {
+        globalRevision &+= 1
+    }
+
+    func reset() {
+        globalRevision = 0
     }
 }

@@ -4,6 +4,7 @@ import UIKit
 
 struct MapScreen: View {
     @ObservedObject private var container: AppContainer
+    @ObservedObject private var refreshCenter: AppRefreshCenter
     @StateObject private var viewModel: MapScreenViewModel
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var mapSelection: MapSelection<UUID>?
@@ -11,16 +12,11 @@ struct MapScreen: View {
 
     init(container: AppContainer) {
         self.container = container
+        self.refreshCenter = container.refreshCenter
         _viewModel = StateObject(
             wrappedValue: MapScreenViewModel(
-                sessionStore: container.sessionStore,
-                cloudKitSyncService: container.cloudKitSyncService,
-                friendRepository: container.friendRepository,
-                userRepository: container.userRepository,
-                categoryRepository: container.categoryRepository,
+                mapRepository: container.mapRepository,
                 placeRepository: container.placeRepository,
-                placeReviewRepository: container.placeReviewRepository,
-                dishReviewRepository: container.dishReviewRepository,
                 mapSearchService: container.mapSearchService,
                 userLocationService: container.userLocationService
             )
@@ -72,9 +68,7 @@ struct MapScreen: View {
                         viewModel.handleCameraChangeDidEnd(context.region)
                     }
                     .onChange(of: viewModel.requestedCameraRegionToken) { _, _ in
-                        guard let region = viewModel.requestedCameraRegion else {
-                            return
-                        }
+                        guard let region = viewModel.requestedCameraRegion else { return }
 
                         withAnimation(.easeInOut(duration: 0.45)) {
                             cameraPosition = .region(region)
@@ -180,11 +174,7 @@ struct MapScreen: View {
             }
         }
         .sheet(isPresented: $viewModel.isFilterPresented) {
-            MapFilterSheet(
-                filterState: $viewModel.filterState,
-                availablePeople: viewModel.availablePeople,
-                availableCategories: viewModel.availableCategoryOptions
-            ) {
+            MapFilterSheet(filterState: $viewModel.filterState) {
                 Task { await viewModel.applyFilters() }
             }
         }
@@ -208,7 +198,7 @@ struct MapScreen: View {
                 }
             }
         }
-        .task {
+        .task(id: refreshCenter.globalRevision) {
             viewModel.startLocationFlowIfNeeded()
             await viewModel.load()
         }
@@ -219,9 +209,7 @@ struct MapScreen: View {
             LazyVStack(spacing: 8) {
                 ForEach(viewModel.searchResults) { result in
                     Button {
-                        Task {
-                            await viewModel.selectSearchResult(result)
-                        }
+                        Task { await viewModel.selectSearchResult(result) }
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(result.name)
@@ -262,51 +250,68 @@ struct MapScreen: View {
         viewModel.dismissPrompt()
     }
 
-    private func selectionPromptView(for place: Place) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(place.name)
-                .font(.headline)
-                .lineLimit(2)
-
-            if !place.address.isEmpty && place.address != place.name {
-                Text(place.address)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-
-            Button("Details") {
-                viewModel.openPromptedPlaceDetails()
-            }
-            .buttonStyle(.bordered)
-        }
-        .padding(12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
-    }
-
-    private func mapAnnotationView(for annotation: MapPlaceAnnotation) -> some MapContent {
-        Annotation(annotation.place.name, coordinate: annotation.coordinate) {
-            RatingBadgeView(rating: annotation.averageRating)
-        }
-        .tag(MapSelection(annotation.place.id))
-    }
-
     private func longPressGesture(proxy: MapProxy) -> some Gesture {
-        LongPressGesture(minimumDuration: 0.55, maximumDistance: 12)
-            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .local))
+        LongPressGesture(minimumDuration: 0.45)
+            .sequenced(before: DragGesture(minimumDistance: 0))
             .onEnded { value in
                 guard case .second(true, let drag?) = value,
                       let coordinate = proxy.convert(drag.location, from: .local) else {
                     return
                 }
 
-                clearMapSelection()
-
                 Task {
                     await viewModel.selectLongPressLocation(at: coordinate)
                 }
             }
+    }
+
+    @MapContentBuilder
+    private func mapAnnotationView(for annotation: MapPlaceAnnotation) -> some MapContent {
+        Annotation(annotation.place.name, coordinate: annotation.coordinate, anchor: .bottom) {
+            VStack(spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "fork.knife")
+                        .font(.caption.weight(.semibold))
+                    Text(annotation.averageRating, format: .number.precision(.fractionLength(1)))
+                        .font(.caption.weight(.semibold))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.regularMaterial, in: Capsule())
+
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().stroke(.white, lineWidth: 2))
+            }
+        }
+        .tag(annotation.id)
+    }
+
+    private func selectionPromptView(for place: Place) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(place.name)
+                .font(.headline)
+
+            Text(place.address)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            HStack {
+                Button("Close") {
+                    clearMapSelection()
+                }
+                .buttonStyle(.bordered)
+
+                Button("Open") {
+                    viewModel.openPromptedPlaceDetails()
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding()
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.12), radius: 12, y: 8)
     }
 }
 

@@ -2,20 +2,15 @@ import SwiftUI
 
 struct PlacesView: View {
     @ObservedObject private var container: AppContainer
+    @ObservedObject private var refreshCenter: AppRefreshCenter
     @StateObject private var viewModel: PlacesViewModel
 
     init(container: AppContainer) {
         self.container = container
+        self.refreshCenter = container.refreshCenter
         _viewModel = StateObject(
             wrappedValue: PlacesViewModel(
-                sessionStore: container.sessionStore,
-                cloudKitSyncService: container.cloudKitSyncService,
-                friendRepository: container.friendRepository,
-                userRepository: container.userRepository,
-                categoryRepository: container.categoryRepository,
-                placeRepository: container.placeRepository,
-                placeReviewRepository: container.placeReviewRepository,
-                dishReviewRepository: container.dishReviewRepository
+                mapRepository: container.mapRepository
             )
         )
     }
@@ -47,55 +42,7 @@ struct PlacesView: View {
         }
         .navigationTitle("Places")
         .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom) {
-            Text(viewModel.filterSummary)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial, in: Capsule())
-                .padding()
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Section("Change Category") {
-                        ForEach(viewModel.availableCategoryOptions) { option in
-                            Button {
-                                Task { await viewModel.apply(category: option) }
-                            } label: {
-                                HStack {
-                                    Text(option.title)
-                                    if viewModel.selectedCategoryOption == option {
-                                        Spacer()
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Section("Filter Reviews") {
-                        ForEach(ReviewSourceFilterMode.allCases) { mode in
-                            Button {
-                                Task { await viewModel.apply(sourceFilter: mode) }
-                            } label: {
-                                HStack {
-                                    Text(mode.displayName)
-                                    if viewModel.sourceFilterMode == mode {
-                                        Spacer()
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                }
-            }
-        }
-        .task {
+        .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
         }
     }

@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 @main
@@ -13,6 +12,5 @@ struct TrustMapApp: App {
         WindowGroup {
             AppRootView(container: container)
         }
-        .modelContainer(container.persistenceController.modelContainer)
     }
 }

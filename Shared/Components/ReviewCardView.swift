@@ -4,7 +4,6 @@ struct ReviewCardView: View {
     let review: PlaceReview
     let authorName: String
     let photos: [PhotoAsset]
-    let imageDataProvider: (PhotoAsset) -> Data?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -25,7 +24,7 @@ struct ReviewCardView: View {
                     .foregroundStyle(.secondary)
             }
 
-            PhotoGridView(assets: photos, imageDataProvider: imageDataProvider)
+            PhotoGridView(assets: photos)
 
             Text(review.updatedAt, style: .relative)
                 .font(.caption)

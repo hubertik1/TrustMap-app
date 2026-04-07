@@ -1,12 +1,10 @@
 import Foundation
-import SwiftData
 
-@Model
-final class PlaceCategoryAssignment {
-    var id: UUID
-    var placeId: UUID
-    var categoryId: UUID
-    var assignedByUserId: UUID
+struct PlaceCategoryAssignment: Identifiable, Codable, Hashable, Sendable {
+    let id: UUID
+    let placeId: UUID
+    let categoryId: UUID
+    let assignedByUserId: UUID
 
     init(
         id: UUID = UUID(),

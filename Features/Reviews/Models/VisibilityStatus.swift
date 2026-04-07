@@ -1,8 +1,9 @@
 import Foundation
 
 enum VisibilityStatus: String, Codable, CaseIterable, Identifiable {
-    case friendsOnly
-    case onlyMe
+    case friendsOnly = "Friends"
+    case onlyMe = "Private"
+    case `public` = "Public"
 
     var id: String { rawValue }
 
@@ -12,6 +13,8 @@ enum VisibilityStatus: String, Codable, CaseIterable, Identifiable {
             return "Friends Only"
         case .onlyMe:
             return "Only Me"
+        case .public:
+            return "Public"
         }
     }
 }

@@ -2,7 +2,6 @@ import Foundation
 
 struct DishReviewDraft: Sendable {
     let placeId: UUID
-    let authorUserId: UUID
     let placeReviewId: UUID?
     let visibility: VisibilityStatus
     let dishName: String
@@ -10,4 +9,5 @@ struct DishReviewDraft: Sendable {
     let dishReviewText: String
     let price: Double?
     let photoData: Data?
+    let photoIDsToDelete: [UUID]
 }

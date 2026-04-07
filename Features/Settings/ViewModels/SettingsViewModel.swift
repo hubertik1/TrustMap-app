@@ -14,7 +14,7 @@ final class SettingsViewModel: ObservableObject {
         return "Version \(version) (\(build))"
     }
 
-    func signOut() {
-        sessionStore.signOut()
+    func signOut() async {
+        await sessionStore.signOut()
     }
 }

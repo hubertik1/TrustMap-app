@@ -2,271 +2,199 @@ import Foundation
 
 @MainActor
 final class FriendsViewModel: ObservableObject {
-    struct FriendListItem: Identifiable {
+    struct FriendListItem: Identifiable, Equatable {
         let id: UUID
+        let userID: UUID
         let displayName: String
+        let handle: String
         let bio: String?
         let addedAt: Date
     }
 
-    struct IncomingInviteListItem: Identifiable {
+    struct RequestListItem: Identifiable, Equatable {
         let id: UUID
-        let token: String
-        let inviterName: String
-        let inviterBio: String?
+        let userID: UUID
+        let displayName: String
+        let handle: String
+        let bio: String?
         let createdAt: Date
     }
 
-    struct OutgoingInviteListItem: Identifiable {
+    struct SearchResultItem: Identifiable, Equatable {
         let id: UUID
-        let recipientName: String?
-        let createdAt: Date
-        let statusLabel: String
-    }
-
-    struct InviteSharePayload: Identifiable {
-        let id = UUID()
-        let message: String
-        let url: URL
-
-        var activityItems: [Any] {
-            [url, message]
-        }
+        let userID: UUID
+        let displayName: String
+        let handle: String
+        let relationshipStatus: RelationshipStatus
     }
 
     @Published private(set) var friends: [FriendListItem] = []
-    @Published private(set) var incomingInvites: [IncomingInviteListItem] = []
-    @Published private(set) var outgoingInvites: [OutgoingInviteListItem] = []
+    @Published private(set) var incomingRequests: [RequestListItem] = []
+    @Published private(set) var outgoingRequests: [RequestListItem] = []
+    @Published private(set) var searchResults: [SearchResultItem] = []
+    @Published var searchText = ""
     @Published var isLoading = false
     @Published var errorMessage: String?
-    @Published private(set) var activeInviteID: UUID?
-    @Published private(set) var isPreparingInvite = false
-    @Published var sharePayload: InviteSharePayload?
+    @Published private(set) var activeUserID: UUID?
 
-    private let sessionStore: SessionStore
-    private let cloudKitSyncService: CloudKitSyncService
+    private let refreshCenter: AppRefreshCenter
     private let userRepository: UserProfileRepository
-    private let friendRepository: any FriendsRepository
-    private let inviteLinkBuilder: any InviteLinkBuilding
-    private var refreshTask: Task<Void, Never>?
+    private let friendRepository: FriendRepository
+    private var searchTask: Task<Void, Never>?
 
     init(
-        sessionStore: SessionStore,
-        cloudKitSyncService: CloudKitSyncService,
+        refreshCenter: AppRefreshCenter,
         userRepository: UserProfileRepository,
-        friendRepository: any FriendsRepository,
-        inviteLinkBuilder: any InviteLinkBuilding
+        friendRepository: FriendRepository
     ) {
-        self.sessionStore = sessionStore
-        self.cloudKitSyncService = cloudKitSyncService
+        self.refreshCenter = refreshCenter
         self.userRepository = userRepository
         self.friendRepository = friendRepository
-        self.inviteLinkBuilder = inviteLinkBuilder
-    }
-
-    deinit {
-        refreshTask?.cancel()
-    }
-
-    func load() async {
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
-            friends = []
-            incomingInvites = []
-            outgoingInvites = []
-            return
-        }
-
-        errorMessage = nil
-        if !hasAnyEntries {
-            isLoading = true
-        }
-
-        do {
-            try reloadCachedState(for: currentUser.id)
-        } catch {
-            errorMessage = AppError.wrap(error).errorDescription
-            friends = []
-            incomingInvites = []
-            outgoingInvites = []
-        }
-
-        isLoading = false
-        scheduleBackgroundRefresh(for: currentUser.id)
-    }
-
-    func addFriend() async {
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
-            return
-        }
-
-        guard !isPreparingInvite else {
-            return
-        }
-
-        isPreparingInvite = true
-        errorMessage = nil
-        defer { isPreparingInvite = false }
-
-        do {
-            let invite = try await friendRepository.createInvite(from: currentUser.id)
-            let inviteURL = try inviteLinkBuilder.inviteURL(for: invite.token)
-            await load()
-            sharePayload = InviteSharePayload(
-                message: "Join me in TrustMap and let’s add each other as friends.",
-                url: inviteURL
-            )
-        } catch {
-            errorMessage = AppError.wrap(error).errorDescription
-        }
-    }
-
-    func accept(_ invite: IncomingInviteListItem) async {
-        await performInviteAction(inviteID: invite.id) { currentUserID in
-            try await friendRepository.acceptInvite(token: invite.token, by: currentUserID)
-        }
-    }
-
-    func decline(_ invite: IncomingInviteListItem) async {
-        await performInviteAction(inviteID: invite.id) { currentUserID in
-            try await friendRepository.declineInvite(token: invite.token, by: currentUserID)
-        }
-    }
-
-    func revoke(_ invite: OutgoingInviteListItem) async {
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
-            return
-        }
-
-        guard activeInviteID == nil else {
-            return
-        }
-
-        activeInviteID = invite.id
-        errorMessage = nil
-        defer { activeInviteID = nil }
-
-        do {
-            try await friendRepository.revokeInvite(inviteID: invite.id, by: currentUser.id)
-            await load()
-        } catch {
-            errorMessage = AppError.wrap(error).errorDescription
-        }
     }
 
     var hasAnyEntries: Bool {
-        !friends.isEmpty || !incomingInvites.isEmpty
+        !friends.isEmpty || !incomingRequests.isEmpty || !outgoingRequests.isEmpty
     }
 
-    var isMutating: Bool {
-        isPreparingInvite || activeInviteID != nil
-    }
-
-    private func performInviteAction(
-        inviteID: UUID,
-        _ action: (_ currentUserID: UUID) async throws -> Void
-    ) async {
-        guard let currentUser = sessionStore.currentUser else {
-            errorMessage = AppError.missingCurrentUser.errorDescription
-            return
-        }
-
-        guard activeInviteID == nil else {
-            return
-        }
-
-        activeInviteID = inviteID
+    func load() async {
         errorMessage = nil
-        defer { activeInviteID = nil }
+        isLoading = true
 
         do {
-            try await action(currentUser.id)
+            async let friends = friendRepository.fetchFriends()
+            async let incoming = friendRepository.fetchIncomingRequests()
+            async let outgoing = friendRepository.fetchOutgoingRequests()
+
+            self.friends = try await friends.map {
+                FriendListItem(
+                    id: $0.id,
+                    userID: $0.user.id,
+                    displayName: $0.user.displayName,
+                    handle: $0.user.handle,
+                    bio: nil,
+                    addedAt: $0.createdAt
+                )
+            }
+
+            self.incomingRequests = try await incoming.map {
+                RequestListItem(
+                    id: $0.id,
+                    userID: $0.sender.id,
+                    displayName: $0.sender.displayName,
+                    handle: $0.sender.handle,
+                    bio: nil,
+                    createdAt: $0.createdAt
+                )
+            }
+
+            self.outgoingRequests = try await outgoing.map {
+                RequestListItem(
+                    id: $0.id,
+                    userID: $0.receiver.id,
+                    displayName: $0.receiver.displayName,
+                    handle: $0.receiver.handle,
+                    bio: nil,
+                    createdAt: $0.createdAt
+                )
+            }
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
+        }
+
+        isLoading = false
+    }
+
+    func handleSearchTextChange() {
+        searchTask?.cancel()
+
+        let normalized = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized.count >= 2 else {
+            searchResults = []
+            return
+        }
+
+        searchTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            await self?.searchUsers()
+        }
+    }
+
+    func sendRequest(to result: SearchResultItem) async {
+        await performMutation(for: result.userID) {
+            _ = try await friendRepository.sendRequest(to: result.userID)
             await load()
+            await searchUsers()
+        }
+    }
+
+    func accept(_ request: RequestListItem) async {
+        await performMutation(for: request.userID) {
+            _ = try await friendRepository.acceptRequest(id: request.id)
+            await load()
+            await searchUsers()
+        }
+    }
+
+    func reject(_ request: RequestListItem) async {
+        await performMutation(for: request.userID) {
+            _ = try await friendRepository.rejectRequest(id: request.id)
+            await load()
+            await searchUsers()
+        }
+    }
+
+    func cancel(_ request: RequestListItem) async {
+        await performMutation(for: request.userID) {
+            _ = try await friendRepository.cancelRequest(id: request.id)
+            await load()
+            await searchUsers()
+        }
+    }
+
+    func remove(friend: FriendListItem) async {
+        await performMutation(for: friend.userID) {
+            try await friendRepository.removeFriend(userID: friend.userID)
+            await load()
+            await searchUsers()
+        }
+    }
+
+    private func searchUsers() async {
+        let normalized = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized.count >= 2 else {
+            searchResults = []
+            return
+        }
+
+        do {
+            let results = try await userRepository.searchUsers(query: normalized)
+            searchResults = results.map {
+                SearchResultItem(
+                    id: $0.user.id,
+                    userID: $0.user.id,
+                    displayName: $0.user.displayName,
+                    handle: $0.user.handle,
+                    relationshipStatus: $0.relationshipStatus
+                )
+            }
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
     }
 
-    private func reloadCachedState(for currentUserID: UUID) throws {
-        let friendships = try friendRepository.cachedFriends(for: currentUserID)
-        let incomingInvites = try friendRepository.cachedIncomingInvites(for: currentUserID)
-        let outgoingInvites = try friendRepository.cachedOutgoingInvites(for: currentUserID)
-        let knownUsers = try userRepository.allKnownUsers()
-        let userLookup: [UUID: User] = knownUsers.reduce(into: [:]) { result, user in
-            result[user.id] = user
-        }
+    private func performMutation(for userID: UUID, action: () async throws -> Void) async {
+        guard activeUserID == nil else { return }
 
-        friends = friendships.compactMap { friendship in
-            guard let otherUserID = friendship.otherUserID(for: currentUserID) else {
-                return nil
-            }
+        activeUserID = userID
+        errorMessage = nil
+        defer { activeUserID = nil }
 
-            let user = userLookup[otherUserID]
-            return FriendListItem(
-                id: friendship.id,
-                displayName: user?.displayName ?? "TrustMap User",
-                bio: user?.bio,
-                addedAt: friendship.createdAt
-            )
-        }
-
-        self.incomingInvites = incomingInvites.map { invite in
-            let inviter = userLookup[invite.inviterUserId]
-            return IncomingInviteListItem(
-                id: invite.id,
-                token: invite.token,
-                inviterName: inviter?.displayName ?? "TrustMap User",
-                inviterBio: inviter?.bio,
-                createdAt: invite.createdAt
-            )
-        }
-
-        self.outgoingInvites = outgoingInvites.map { invite in
-            OutgoingInviteListItem(
-                id: invite.id,
-                recipientName: invite.inviteeUserId.flatMap { userLookup[$0]?.displayName },
-                createdAt: invite.createdAt,
-                statusLabel: invite.inviteeUserId == nil ? "Waiting for someone to open your link." : "Waiting for a response."
-            )
-        }
-    }
-
-    private func scheduleBackgroundRefresh(for currentUserID: UUID) {
-        refreshTask?.cancel()
-
-        refreshTask = Task { [weak self] in
-            guard let self else {
-                return
-            }
-
-            do {
-                _ = try await self.friendRepository.fetchFriends(for: currentUserID)
-                _ = try await self.friendRepository.fetchIncomingInvites(for: currentUserID)
-                _ = try await self.friendRepository.fetchOutgoingInvites(for: currentUserID)
-                guard !Task.isCancelled,
-                      let currentUser = self.sessionStore.currentUser,
-                      currentUser.id == currentUserID else {
-                    return
-                }
-
-                let friends: [User]
-                if let cachedFriends = try? self.friendRepository.cachedAcceptedFriends(for: currentUserID) {
-                    friends = cachedFriends
-                } else {
-                    friends = (try? await self.friendRepository.acceptedFriends(for: currentUserID)) ?? []
-                }
-                await self.cloudKitSyncService.refreshFriendVisibleContentIfPossible(for: currentUser, friends: friends)
-                guard !Task.isCancelled else {
-                    return
-                }
-
-                try self.reloadCachedState(for: currentUserID)
-                self.errorMessage = nil
-            } catch {
-                self.errorMessage = AppError.wrap(error).errorDescription
-            }
+        do {
+            try await action()
+            refreshCenter.invalidateAll()
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
         }
     }
 }

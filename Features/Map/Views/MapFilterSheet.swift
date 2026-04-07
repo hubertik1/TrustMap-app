@@ -2,8 +2,6 @@ import SwiftUI
 
 struct MapFilterSheet: View {
     @Binding var filterState: MapFilterState
-    let availablePeople: [FilterPerson]
-    let availableCategories: [PlaceCategoryOption]
     let onApply: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -11,53 +9,9 @@ struct MapFilterSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Category") {
-                    Picker("Category", selection: $filterState.selectedCategoryOption) {
-                        ForEach(availableCategories) { option in
-                            Text(option.title).tag(option)
-                        }
-                    }
-                }
-
-                Section("Visibility") {
-                    Picker("Source", selection: $filterState.sourceMode) {
-                        ForEach(ReviewSourceFilterMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    }
-
-                    Picker("People", selection: $filterState.peopleMode) {
-                        ForEach(PeopleFilterMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    }
-                }
-
                 Section("Rating Range") {
                     Stepper("Minimum Rating: \(filterState.minimumRating)", value: $filterState.minimumRating, in: 1...filterState.maximumRating)
-                    Stepper("Maximum Rating: \(filterState.maximumRating)", value: $filterState.maximumRating, in: filterState.minimumRating...10)
-                }
-
-                Section("Selected People") {
-                    if availablePeople.isEmpty {
-                        Text("People you can filter by will appear after you add friends.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(availablePeople, id: \.id) { person in
-                            Button {
-                                toggleSelection(for: person.id)
-                            } label: {
-                                HStack {
-                                    Text(person.name)
-                                    Spacer()
-                                    if filterState.selectedPersonIDs.contains(person.id) {
-                                        Image(systemName: "checkmark")
-                                            .foregroundStyle(Color.accentColor)
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    Stepper("Maximum Rating: \(filterState.maximumRating)", value: $filterState.maximumRating, in: filterState.minimumRating...5)
                 }
             }
             .navigationTitle("Map Filters")
@@ -76,35 +30,8 @@ struct MapFilterSheet: View {
             }
         }
     }
-
-    private func toggleSelection(for personID: UUID) {
-        if filterState.selectedPersonIDs.contains(personID) {
-            filterState.selectedPersonIDs.remove(personID)
-        } else {
-            filterState.selectedPersonIDs.insert(personID)
-        }
-    }
-}
-
-private struct MapFilterSheetPreviewHost: View {
-    @State private var filterState = MapFilterState(
-        sourceMode: .mineAndFriends,
-        minimumRating: 6,
-        maximumRating: 10,
-        peopleMode: .includeSelected,
-        selectedPersonIDs: [UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!]
-    )
-
-    var body: some View {
-        MapFilterSheet(
-            filterState: $filterState,
-            availablePeople: PreviewAppFactory.samplePeople(),
-            availableCategories: [.all, .restaurants, PlaceCategoryOption(id: "bbq", title: "BBQ Spots", categoryID: UUID())],
-            onApply: {}
-        )
-    }
 }
 
 #Preview {
-    MapFilterSheetPreviewHost()
+    MapFilterSheet(filterState: .constant(MapFilterState()), onApply: {})
 }

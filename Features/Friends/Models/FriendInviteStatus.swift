@@ -1,26 +1,23 @@
 import Foundation
 
 enum FriendInviteStatus: String, Codable, CaseIterable, Identifiable {
-    case pending
-    case accepted
-    case declined
-    case revoked
-    case expired
+    case accepted = "Accepted"
+    case cancelled = "Cancelled"
+    case pending = "Pending"
+    case rejected = "Rejected"
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .pending:
-            return "Pending"
         case .accepted:
             return "Accepted"
-        case .declined:
-            return "Declined"
-        case .revoked:
+        case .cancelled:
             return "Canceled"
-        case .expired:
-            return "Expired"
+        case .pending:
+            return "Pending"
+        case .rejected:
+            return "Rejected"
         }
     }
 }

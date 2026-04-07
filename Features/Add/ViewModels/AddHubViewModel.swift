@@ -36,7 +36,7 @@ final class AddHubViewModel: ObservableObject {
 
     func load() async {
         do {
-            recentPlaces = try placeRepository.recentPlaces()
+            recentPlaces = try await placeRepository.recentPlaces()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
