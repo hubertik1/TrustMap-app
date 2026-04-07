@@ -30,6 +30,7 @@ final class MapScreenViewModel: ObservableObject {
     private let userLocationService: UserLocationServicing
     private var pendingPromptPlace: Place?
     private var pendingPromptCoordinate: CLLocationCoordinate2D?
+    private var latestMapReloadRequestID = UUID()
     private var hasCenteredOnUserLocation = false
     private var hasStartedLocationFlow = false
     private var shouldCenterOnNextLocationUpdate = true
@@ -199,6 +200,9 @@ final class MapScreenViewModel: ObservableObject {
     }
 
     private func reloadMapPlaces() async {
+        let requestID = UUID()
+        latestMapReloadRequestID = requestID
+
         do {
             let bounds = mapBounds(from: region)
             let places = try await mapRepository.fetchMapPlaces(
@@ -208,6 +212,10 @@ final class MapScreenViewModel: ObservableObject {
                 west: bounds?.west,
                 take: 250
             )
+
+            guard latestMapReloadRequestID == requestID else {
+                return
+            }
 
             annotations = places
                 .filter { mapPlace in
@@ -227,6 +235,9 @@ final class MapScreenViewModel: ObservableObject {
                 }
             errorMessage = nil
         } catch {
+            guard latestMapReloadRequestID == requestID else {
+                return
+            }
             logger.error("Unable to load map places: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
         }
@@ -257,8 +268,11 @@ final class MapScreenViewModel: ObservableObject {
 
     private func mapBounds(from region: MKCoordinateRegion?) -> (north: Double, south: Double, east: Double, west: Double)? {
         guard let region else { return nil }
-        let halfLat = region.span.latitudeDelta / 2
-        let halfLon = region.span.longitudeDelta / 2
+        // Query a slightly larger area than the exact viewport so annotations
+        // near the visible edge do not flicker in and out while the map moves.
+        let paddingMultiplier = 0.7
+        let halfLat = region.span.latitudeDelta * paddingMultiplier
+        let halfLon = region.span.longitudeDelta * paddingMultiplier
 
         return (
             north: region.center.latitude + halfLat,
