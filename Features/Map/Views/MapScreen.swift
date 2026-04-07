@@ -268,22 +268,29 @@ struct MapScreen: View {
     @MapContentBuilder
     private func mapAnnotationView(for annotation: MapPlaceAnnotation) -> some MapContent {
         Annotation(annotation.place.name, coordinate: annotation.coordinate, anchor: .bottom) {
-            VStack(spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: "fork.knife")
-                        .font(.caption.weight(.semibold))
-                    Text(annotation.averageRating, format: .number.precision(.fractionLength(1)))
-                        .font(.caption.weight(.semibold))
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(.regularMaterial, in: Capsule())
+            Button {
+                viewModel.selectPlace(withID: annotation.id)
+            } label: {
+                VStack(spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "fork.knife")
+                            .font(.caption.weight(.semibold))
+                        Text(annotation.averageRating, format: .number.precision(.fractionLength(1)))
+                            .font(.caption.weight(.semibold))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(.regularMaterial, in: Capsule())
 
-                Circle()
-                    .fill(Color.accentColor)
-                    .frame(width: 10, height: 10)
-                    .overlay(Circle().stroke(.white, lineWidth: 2))
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 10, height: 10)
+                        .overlay(Circle().stroke(.white, lineWidth: 2))
+                }
             }
+            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+            .accessibilityLabel("Open \(annotation.place.name)")
         }
         .tag(annotation.id)
     }
