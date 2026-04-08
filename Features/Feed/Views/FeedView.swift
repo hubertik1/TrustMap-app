@@ -38,9 +38,13 @@ struct FeedView: View {
                             Text(item.title)
                                 .font(.headline)
 
-                            Text(item.subtitle)
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.secondary)
+                            if let subtitle = item.subtitle {
+                                Text(subtitle)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            FeedStarRatingView(rating: item.rating)
 
                             Text(item.createdAt.feedTimestampText)
                                 .font(.caption)
@@ -81,5 +85,22 @@ private extension Date {
 #Preview {
     NavigationStack {
         FeedView(container: PreviewAppFactory.makeContainer())
+    }
+}
+
+private struct FeedStarRatingView: View {
+    let rating: Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(1...5, id: \.self) { star in
+                Image(systemName: star <= rating ? "star.fill" : "star")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(star <= rating ? Color.yellow : Color.secondary.opacity(0.45))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Rating")
+        .accessibilityValue("\(rating) out of 5 stars")
     }
 }

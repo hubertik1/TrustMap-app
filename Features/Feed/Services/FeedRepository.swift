@@ -44,15 +44,15 @@ final class FeedRepository {
 
         return response.items.map { item in
             let title: String
-            let subtitle: String
+            let subtitle: String?
 
             if item.activityType == "DishReview" {
                 let dishName = item.dishName ?? "dish"
                 title = "\(item.author.displayName) added \(dishName) at \(item.place.name)"
-                subtitle = "Rated \(item.rating)/5"
+                subtitle = nil
             } else {
                 title = "\(item.author.displayName) added \(item.place.name)"
-                subtitle = item.title?.nilIfEmpty ?? "Rated \(item.rating)/5"
+                subtitle = item.title?.nilIfEmpty
             }
 
             return FeedPlaceActivityItem(
@@ -60,6 +60,7 @@ final class FeedRepository {
                 place: item.place,
                 title: title,
                 subtitle: subtitle,
+                rating: item.rating,
                 createdAt: item.updatedAtUtc
             )
         }

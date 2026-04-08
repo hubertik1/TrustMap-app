@@ -4,6 +4,7 @@ struct FeedPlaceActivityItem: Identifiable {
     let id: UUID
     let place: Place
     let title: String
-    let subtitle: String
+    let subtitle: String?
+    let rating: Int
     let createdAt: Date
 }
