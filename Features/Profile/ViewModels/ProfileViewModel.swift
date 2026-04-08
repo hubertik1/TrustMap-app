@@ -5,6 +5,7 @@ import OSLog
 final class ProfileViewModel: ObservableObject {
     @Published private(set) var user: User?
     @Published private(set) var stats = UserStats(ratedPlacesCount: 0, reviewedDishesCount: 0)
+    @Published private(set) var categoryCount = 0
     @Published private(set) var placeReviews: [PlaceReview] = []
     @Published private(set) var dishReviews: [DishReview] = []
     @Published private(set) var placeNames: [UUID: String] = [:]
@@ -20,6 +21,7 @@ final class ProfileViewModel: ObservableObject {
     private let refreshCenter: AppRefreshCenter
     private let sessionStore: SessionStore
     private let userRepository: UserProfileRepository
+    private let categoryRepository: CategoryRepository
     private let placeReviewRepository: PlaceReviewRepository
     private let dishReviewRepository: DishReviewRepository
 
@@ -27,12 +29,14 @@ final class ProfileViewModel: ObservableObject {
         refreshCenter: AppRefreshCenter,
         sessionStore: SessionStore,
         userRepository: UserProfileRepository,
+        categoryRepository: CategoryRepository,
         placeReviewRepository: PlaceReviewRepository,
         dishReviewRepository: DishReviewRepository
     ) {
         self.refreshCenter = refreshCenter
         self.sessionStore = sessionStore
         self.userRepository = userRepository
+        self.categoryRepository = categoryRepository
         self.placeReviewRepository = placeReviewRepository
         self.dishReviewRepository = dishReviewRepository
         self.user = sessionStore.currentUser
@@ -50,20 +54,26 @@ final class ProfileViewModel: ObservableObject {
 
         do {
             let currentProfile = try await userRepository.fetchCurrentUser()
-            let placeReviews = try await placeReviewRepository.fetchReviews(authorUserID: currentUser.id)
-            let dishReviews = try await dishReviewRepository.fetchReviews(authorUserID: currentUser.id)
+            async let categories = categoryRepository.fetchMyCategories()
+            async let placeReviews = placeReviewRepository.fetchReviews(authorUserID: currentUser.id)
+            async let dishReviews = dishReviewRepository.fetchReviews(authorUserID: currentUser.id)
+
+            let resolvedCategories = try await categories
+            let resolvedPlaceReviews = try await placeReviews
+            let resolvedDishReviews = try await dishReviews
 
             self.user = currentProfile
-            self.placeReviews = placeReviews
-            self.dishReviews = dishReviews
-            self.placeNames = (placeReviews.map { ($0.placeId, $0.place.name) }
-                + dishReviews.map { ($0.placeId, $0.place.name) })
+            self.categoryCount = resolvedCategories.count
+            self.placeReviews = resolvedPlaceReviews
+            self.dishReviews = resolvedDishReviews
+            self.placeNames = (resolvedPlaceReviews.map { ($0.placeId, $0.place.name) }
+                + resolvedDishReviews.map { ($0.placeId, $0.place.name) })
                 .reduce(into: [:]) { partialResult, item in
                     partialResult[item.0] = item.1
                 }
             self.stats = UserStats(
-                ratedPlacesCount: Set(placeReviews.map(\.placeId)).count,
-                reviewedDishesCount: dishReviews.count
+                ratedPlacesCount: Set(resolvedPlaceReviews.map(\.placeId)).count,
+                reviewedDishesCount: resolvedDishReviews.count
             )
         } catch {
             logger.error("Unable to load profile: \(error.localizedDescription, privacy: .public)")

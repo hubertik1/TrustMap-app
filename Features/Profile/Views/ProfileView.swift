@@ -14,6 +14,7 @@ struct ProfileView: View {
                 refreshCenter: container.refreshCenter,
                 sessionStore: container.sessionStore,
                 userRepository: container.userRepository,
+                categoryRepository: container.categoryRepository,
                 placeReviewRepository: container.placeReviewRepository,
                 dishReviewRepository: container.dishReviewRepository
             )
@@ -90,7 +91,7 @@ struct ProfileView: View {
                                 refreshCenter: container.refreshCenter
                             )
                         } label: {
-                            LabeledContent("Categories", value: "Manage")
+                            LabeledContent("Categories", value: "\(viewModel.categoryCount)")
                         }
                     }
 
@@ -266,11 +267,18 @@ private struct CategoriesView: View {
                                     .foregroundStyle(.secondary)
                             } else {
                                 ForEach(viewModel.customCategories) { category in
-                                    CategoryListRow(
-                                        category: category,
-                                        subtitle: viewModel.subtitle(forMyCategory: category),
-                                        trailingText: category.isOwnedByCurrentUser ? "You" : "Saved"
-                                    )
+                                    NavigationLink {
+                                        CategoryDetailView(
+                                            category: category,
+                                            viewModel: viewModel
+                                        )
+                                    } label: {
+                                        CategoryListRow(
+                                            category: category,
+                                            subtitle: viewModel.subtitle(forMyCategory: category),
+                                            trailingText: category.isOwnedByCurrentUser ? "You" : "Saved"
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -361,6 +369,7 @@ private final class CategoriesViewModel: ObservableObject {
     @Published private(set) var adoptingCategoryIDs: Set<UUID> = []
     @Published var isLoading = false
     @Published var isSaving = false
+    @Published var isDeleting = false
     @Published var errorMessage: String?
 
     private let categoryRepository: CategoryRepository
@@ -409,6 +418,38 @@ private final class CategoriesViewModel: ObservableObject {
                 myCategories.append(created)
             }
             friendCategories.removeAll { $0.name.caseInsensitiveCompare(created.name) == .orderedSame }
+            refreshCenter.invalidateAll()
+            return true
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
+            return false
+        }
+    }
+
+    func updateCategory(_ category: CustomCategory, name: String) async -> Bool {
+        isSaving = true
+        defer { isSaving = false }
+
+        do {
+            let updated = try await categoryRepository.updateCategory(id: category.id, name: name)
+            if let index = myCategories.firstIndex(where: { $0.id == updated.id }) {
+                myCategories[index] = updated
+            }
+            refreshCenter.invalidateAll()
+            return true
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
+            return false
+        }
+    }
+
+    func deleteCategory(_ category: CustomCategory) async -> Bool {
+        isDeleting = true
+        defer { isDeleting = false }
+
+        do {
+            try await categoryRepository.deleteCategory(id: category.id)
+            myCategories.removeAll { $0.id == category.id }
             refreshCenter.invalidateAll()
             return true
         } catch {
@@ -526,6 +567,86 @@ private struct AddCategorySheet: View {
                         }
                     }
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+private struct CategoryDetailView: View {
+    @Environment(\.dismiss) private var dismiss
+    let category: CustomCategory
+    @ObservedObject var viewModel: CategoriesViewModel
+
+    @State private var name: String
+    @State private var isDeleteConfirmationPresented = false
+
+    init(category: CustomCategory, viewModel: CategoriesViewModel) {
+        self.category = category
+        self.viewModel = viewModel
+        _name = State(initialValue: category.name)
+    }
+
+    private var isEditable: Bool {
+        category.isOwnedByCurrentUser
+    }
+
+    var body: some View {
+        Form {
+            Section("Category") {
+                TextField("Title", text: $name)
+                    .disabled(!isEditable)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+            }
+
+            Section {
+                Button(role: .destructive) {
+                    isDeleteConfirmationPresented = true
+                } label: {
+                    Text("Delete Category")
+                }
+                .disabled(viewModel.isDeleting)
+                .confirmationDialog(
+                    "Delete this category?",
+                    isPresented: $isDeleteConfirmationPresented,
+                    titleVisibility: .visible
+                ) {
+                    Button("Delete Category", role: .destructive) {
+                        Task {
+                            let didDelete = await viewModel.deleteCategory(category)
+                            if didDelete {
+                                dismiss()
+                            }
+                        }
+                    }
+
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Are you sure you want to delete this category?")
+                }
+            } header: {
+                Text("Danger Zone")
+            }
+        }
+        .navigationTitle("Category")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                if isEditable {
+                    if viewModel.isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Save") {
+                            Task {
+                                let didSave = await viewModel.updateCategory(category, name: name)
+                                if didSave {
+                                    dismiss()
+                                }
+                            }
+                        }
+                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name == category.name)
+                    }
                 }
             }
         }

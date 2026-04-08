@@ -95,6 +95,11 @@ final class CategoryRepository {
         let iconName: String?
     }
 
+    private struct UpdateCategoryPayload: Encodable {
+        let name: String
+        let iconName: String?
+    }
+
     private let apiClient: APIClient
 
     init(apiClient: APIClient) {
@@ -141,6 +146,32 @@ final class CategoryRepository {
                 method: .post,
                 path: "categories/\(id.uuidString)/adopt",
                 acceptedStatusCodes: [200]
+            )
+        )
+    }
+
+    func updateCategory(id: UUID, name: String, iconName: String? = nil) async throws -> CustomCategory {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            throw AppError.validationFailure("Enter a category name.")
+        }
+
+        return try await apiClient.send(
+            APIRequest<CustomCategory>(
+                method: .patch,
+                path: "categories/\(id.uuidString)",
+                body: .json(AnyEncodable(UpdateCategoryPayload(name: trimmedName, iconName: iconName))),
+                acceptedStatusCodes: [200]
+            )
+        )
+    }
+
+    func deleteCategory(id: UUID) async throws {
+        _ = try await apiClient.send(
+            APIRequest<EmptyResponse>(
+                method: .delete,
+                path: "categories/\(id.uuidString)",
+                acceptedStatusCodes: [204]
             )
         )
     }
