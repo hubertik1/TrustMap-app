@@ -4,6 +4,7 @@ struct DishReviewRowView: View {
     let review: DishReview
     let authorName: String
     let photo: PhotoAsset?
+    var isEditable = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -40,7 +41,18 @@ struct DishReviewRowView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            if isEditable {
+                VStack {
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                    Spacer(minLength: 0)
+                }
+            }
         }
+        .contentShape(Rectangle())
     }
 
     private var placeholder: some View {

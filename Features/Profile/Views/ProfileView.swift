@@ -63,6 +63,7 @@ struct ProfileView: View {
                     Section {
                         NavigationLink {
                             MyPlaceReviewsView(
+                                container: container,
                                 reviews: viewModel.placeReviews,
                                 placeNames: viewModel.placeNames,
                                 onDelete: { review in
@@ -75,6 +76,7 @@ struct ProfileView: View {
 
                         NavigationLink {
                             MyDishReviewsView(
+                                container: container,
                                 reviews: viewModel.dishReviews,
                                 placeNames: viewModel.placeNames,
                                 onDelete: { review in

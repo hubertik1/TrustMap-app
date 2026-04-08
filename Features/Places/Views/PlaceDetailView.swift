@@ -142,7 +142,8 @@ struct PlaceDetailView: View {
         let row = DishReviewRowView(
             review: review,
             authorName: viewModel.authorName(for: review.authorUserId),
-            photo: review.photos.first
+            photo: review.photos.first,
+            isEditable: viewModel.canEdit(review)
         )
 
         if viewModel.canEdit(review) {
@@ -152,6 +153,7 @@ struct PlaceDetailView: View {
                 row
             }
             .buttonStyle(.plain)
+            .contentShape(Rectangle())
         } else {
             row
         }
