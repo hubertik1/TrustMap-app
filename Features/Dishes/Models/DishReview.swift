@@ -4,6 +4,8 @@ struct DishReview: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     let placeId: UUID
     let placeReviewId: UUID?
+    let categoryId: UUID?
+    let categoryName: String?
     let visibility: VisibilityStatus
     let dishName: String
     let dishRating: Int
@@ -18,6 +20,8 @@ struct DishReview: Identifiable, Codable, Hashable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case author
+        case categoryId
+        case categoryName
         case createdAt = "createdAtUtc"
         case currencyCode
         case dishName
@@ -37,6 +41,8 @@ struct DishReview: Identifiable, Codable, Hashable, Sendable {
         id: UUID = UUID(),
         placeId: UUID,
         placeReviewId: UUID? = nil,
+        categoryId: UUID? = nil,
+        categoryName: String? = nil,
         visibility: VisibilityStatus = .friendsOnly,
         dishName: String,
         dishRating: Int,
@@ -52,6 +58,8 @@ struct DishReview: Identifiable, Codable, Hashable, Sendable {
         self.id = id
         self.placeId = placeId
         self.placeReviewId = placeReviewId
+        self.categoryId = categoryId
+        self.categoryName = categoryName
         self.visibility = visibility
         self.dishName = dishName
         self.dishRating = dishRating
@@ -84,6 +92,8 @@ extension DishReview {
         id = try container.decode(UUID.self, forKey: .id)
         placeId = try container.decode(UUID.self, forKey: .placeId)
         placeReviewId = try container.decodeIfPresent(UUID.self, forKey: .placeReviewId)
+        categoryId = try container.decodeIfPresent(UUID.self, forKey: .categoryId)
+        categoryName = try container.decodeIfPresent(String.self, forKey: .categoryName)
         visibility = try container.decode(VisibilityStatus.self, forKey: .visibility)
         dishName = try container.decode(String.self, forKey: .dishName)
         dishRating = try container.decode(Int.self, forKey: .dishRating)

@@ -4,6 +4,7 @@ import Foundation
 final class DishReviewRepository {
     private struct CreateDishReviewPayload: Encodable {
         let placeId: UUID
+        let categoryId: UUID
         let placeReviewId: UUID?
         let visibility: VisibilityStatus
         let dishName: String
@@ -14,6 +15,7 @@ final class DishReviewRepository {
     }
 
     private struct UpdateDishReviewPayload: Encodable {
+        let categoryId: UUID
         let visibility: VisibilityStatus
         let dishName: String
         let rating: Int
@@ -69,8 +71,13 @@ final class DishReviewRepository {
     }
 
     func createReview(_ draft: DishReviewDraft) async throws -> DishReview {
+        guard let categoryId = draft.selectedCategoryId else {
+            throw AppError.validationFailure("Choose a category for this place.")
+        }
+
         let payload = CreateDishReviewPayload(
             placeId: draft.placeId,
+            categoryId: categoryId,
             placeReviewId: draft.placeReviewId,
             visibility: draft.visibility,
             dishName: draft.dishName.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -110,7 +117,12 @@ final class DishReviewRepository {
     }
 
     func updateReview(_ review: DishReview, with draft: DishReviewDraft) async throws -> DishReview {
+        guard let categoryId = draft.selectedCategoryId else {
+            throw AppError.validationFailure("Choose a category for this place.")
+        }
+
         let payload = UpdateDishReviewPayload(
+            categoryId: categoryId,
             visibility: draft.visibility,
             dishName: draft.dishName.trimmingCharacters(in: .whitespacesAndNewlines),
             rating: draft.dishRating,

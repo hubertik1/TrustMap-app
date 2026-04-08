@@ -11,6 +11,7 @@ final class AppContainer: ObservableObject {
     let userRepository: UserProfileRepository
     let friendRepository: FriendRepository
     let placeRepository: PlaceRepository
+    let categoryRepository: CategoryRepository
     let mapRepository: MapRepository
     let photoRepository: PhotoRepository
     let placeReviewRepository: PlaceReviewRepository
@@ -28,6 +29,7 @@ final class AppContainer: ObservableObject {
         let userRepository = UserProfileRepository(apiClient: apiClient)
         let friendRepository = FriendRepository(apiClient: apiClient)
         let placeRepository = PlaceRepository(apiClient: apiClient)
+        let categoryRepository = CategoryRepository(apiClient: apiClient)
         let photoRepository = PhotoRepository(apiClient: apiClient)
         let placeReviewRepository = PlaceReviewRepository(apiClient: apiClient, photoRepository: photoRepository)
         let dishReviewRepository = DishReviewRepository(apiClient: apiClient, photoRepository: photoRepository)
@@ -54,6 +56,7 @@ final class AppContainer: ObservableObject {
         self.userRepository = userRepository
         self.friendRepository = friendRepository
         self.placeRepository = placeRepository
+        self.categoryRepository = categoryRepository
         self.mapRepository = mapRepository
         self.photoRepository = photoRepository
         self.placeReviewRepository = placeReviewRepository

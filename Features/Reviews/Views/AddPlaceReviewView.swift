@@ -12,6 +12,7 @@ struct AddPlaceReviewView: View {
             wrappedValue: AddPlaceReviewViewModel(
                 place: place,
                 placeReviewRepository: container.placeReviewRepository,
+                categoryRepository: container.categoryRepository,
                 refreshCenter: container.refreshCenter,
                 existingReview: existingReview
             )
@@ -117,6 +118,16 @@ struct AddPlaceReviewView: View {
 
             TextField("Description (optional)", text: $viewModel.descriptionText, axis: .vertical)
                 .lineLimit(3...6)
+
+            Picker("Category", selection: $viewModel.selectedCategoryId) {
+                if viewModel.availableCategories.isEmpty {
+                    Text("Loading categories...").tag(UUID?.none)
+                } else {
+                    ForEach(viewModel.availableCategories) { category in
+                        Text(category.name).tag(Optional(category.id))
+                    }
+                }
+            }
 
             Picker("Visibility", selection: $viewModel.visibility) {
                 ForEach(VisibilityStatus.allCases) { status in

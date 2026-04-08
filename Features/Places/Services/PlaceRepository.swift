@@ -87,3 +87,61 @@ final class PlaceRepository {
         )
     }
 }
+
+@MainActor
+final class CategoryRepository {
+    private struct CreateCategoryPayload: Encodable {
+        let name: String
+        let iconName: String?
+    }
+
+    private let apiClient: APIClient
+
+    init(apiClient: APIClient) {
+        self.apiClient = apiClient
+    }
+
+    func fetchMyCategories() async throws -> [CustomCategory] {
+        try await apiClient.send(
+            APIRequest<[CustomCategory]>(
+                method: .get,
+                path: "categories/my"
+            )
+        )
+    }
+
+    func fetchFriendCategories() async throws -> [CustomCategory] {
+        try await apiClient.send(
+            APIRequest<[CustomCategory]>(
+                method: .get,
+                path: "categories/friends"
+            )
+        )
+    }
+
+    func createCategory(name: String, iconName: String? = nil) async throws -> CustomCategory {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            throw AppError.validationFailure("Enter a category name.")
+        }
+
+        return try await apiClient.send(
+            APIRequest<CustomCategory>(
+                method: .post,
+                path: "categories",
+                body: .json(AnyEncodable(CreateCategoryPayload(name: trimmedName, iconName: iconName))),
+                acceptedStatusCodes: [200, 201]
+            )
+        )
+    }
+
+    func adoptCategory(id: UUID) async throws -> CustomCategory {
+        try await apiClient.send(
+            APIRequest<CustomCategory>(
+                method: .post,
+                path: "categories/\(id.uuidString)/adopt",
+                acceptedStatusCodes: [200]
+            )
+        )
+    }
+}

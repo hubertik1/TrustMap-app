@@ -10,7 +10,10 @@ struct AddHubView: View {
     init(container: AppContainer) {
         self.container = container
         _viewModel = StateObject(
-            wrappedValue: AddHubViewModel(placeRepository: container.placeRepository)
+            wrappedValue: AddHubViewModel(
+                mapRepository: container.mapRepository,
+                categoryRepository: container.categoryRepository
+            )
         )
     }
 
@@ -60,6 +63,27 @@ struct AddHubView: View {
             }
         }
         .navigationTitle("Add")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    ForEach(viewModel.availableCategoryOptions) { option in
+                        Button {
+                            Task { await viewModel.applyCategoryFilter(option) }
+                        } label: {
+                            HStack {
+                                Text(option.title)
+                                if option == viewModel.selectedCategory {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                }
+                .accessibilityLabel("Filter places by category")
+            }
+        }
         .sheet(isPresented: $isSearchPresented) {
             PlaceSearchSheet(container: container, title: activeFlow?.title ?? "Choose Place") { place in
                 selectedPlace = place

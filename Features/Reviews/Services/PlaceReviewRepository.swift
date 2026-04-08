@@ -4,6 +4,7 @@ import Foundation
 final class PlaceReviewRepository {
     private struct CreatePlaceReviewPayload: Encodable {
         let placeId: UUID
+        let categoryId: UUID
         let visibility: VisibilityStatus
         let rating: Int
         let title: String?
@@ -11,6 +12,7 @@ final class PlaceReviewRepository {
     }
 
     private struct UpdatePlaceReviewPayload: Encodable {
+        let categoryId: UUID
         let visibility: VisibilityStatus
         let rating: Int
         let title: String?
@@ -59,8 +61,13 @@ final class PlaceReviewRepository {
     }
 
     func createReview(_ draft: PlaceReviewDraft) async throws -> PlaceReview {
+        guard let categoryId = draft.selectedCategoryId else {
+            throw AppError.validationFailure("Choose a category for this place.")
+        }
+
         let payload = CreatePlaceReviewPayload(
             placeId: draft.placeId,
+            categoryId: categoryId,
             visibility: draft.visibility,
             rating: draft.ratingOverall,
             title: draft.reviewText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
@@ -93,7 +100,12 @@ final class PlaceReviewRepository {
     }
 
     func updateReview(_ review: PlaceReview, with draft: PlaceReviewDraft) async throws -> PlaceReview {
+        guard let categoryId = draft.selectedCategoryId else {
+            throw AppError.validationFailure("Choose a category for this place.")
+        }
+
         let payload = UpdatePlaceReviewPayload(
+            categoryId: categoryId,
             visibility: draft.visibility,
             rating: draft.ratingOverall,
             title: draft.reviewText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,

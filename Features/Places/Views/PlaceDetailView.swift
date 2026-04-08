@@ -34,7 +34,7 @@ struct PlaceDetailView: View {
                         PlaceSummaryHeaderView(
                             place: viewModel.place,
                             averageRating: viewModel.averageRating,
-                            categoryNames: []
+                            categoryNames: viewModel.categoryNames
                         )
                     }
 

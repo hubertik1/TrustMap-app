@@ -3,6 +3,8 @@ import Foundation
 struct PlaceReview: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     let placeId: UUID
+    let categoryId: UUID?
+    let categoryName: String?
     let visibility: VisibilityStatus
     let ratingOverall: Int
     let reviewText: String
@@ -15,6 +17,8 @@ struct PlaceReview: Identifiable, Codable, Hashable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case author
+        case categoryId
+        case categoryName
         case createdAt = "createdAtUtc"
         case descriptionText = "body"
         case id
@@ -31,6 +35,8 @@ struct PlaceReview: Identifiable, Codable, Hashable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         placeId = try container.decode(UUID.self, forKey: .placeId)
+        categoryId = try container.decodeIfPresent(UUID.self, forKey: .categoryId)
+        categoryName = try container.decodeIfPresent(String.self, forKey: .categoryName)
         visibility = try container.decode(VisibilityStatus.self, forKey: .visibility)
         ratingOverall = try container.decode(Int.self, forKey: .ratingOverall)
         reviewText = try container.decodeIfPresent(String.self, forKey: .reviewText) ?? ""
@@ -45,6 +51,8 @@ struct PlaceReview: Identifiable, Codable, Hashable, Sendable {
     init(
         id: UUID = UUID(),
         placeId: UUID,
+        categoryId: UUID? = nil,
+        categoryName: String? = nil,
         visibility: VisibilityStatus = .friendsOnly,
         ratingOverall: Int,
         reviewText: String,
@@ -57,6 +65,8 @@ struct PlaceReview: Identifiable, Codable, Hashable, Sendable {
     ) {
         self.id = id
         self.placeId = placeId
+        self.categoryId = categoryId
+        self.categoryName = categoryName
         self.visibility = visibility
         self.ratingOverall = ratingOverall
         self.reviewText = reviewText

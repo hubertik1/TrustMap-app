@@ -26,6 +26,20 @@ struct PlaceListRowView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            if !item.categoryNames.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(item.categoryNames, id: \.self) { name in
+                            Text(name)
+                                .font(.caption.weight(.medium))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color(.secondarySystemBackground), in: Capsule())
+                        }
+                    }
+                }
+            }
         }
         .padding(.vertical, 8)
     }

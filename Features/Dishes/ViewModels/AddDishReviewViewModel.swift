@@ -24,6 +24,8 @@ final class AddDishReviewViewModel: ObservableObject {
     @Published var visibility: VisibilityStatus = .friendsOnly
     @Published var selectedPhotoData: Data?
     @Published var selectedPreviewImage: UIImage?
+    @Published private(set) var availableCategories: [CustomCategory] = []
+    @Published var selectedCategoryId: UUID?
     @Published private(set) var existingPhotos: [PhotoAsset] = []
     @Published private(set) var photoIDsMarkedForDeletion: Set<UUID> = []
     @Published var isSaving = false
@@ -37,18 +39,21 @@ final class AddDishReviewViewModel: ObservableObject {
     let place: Place
 
     private let dishReviewRepository: DishReviewRepository
+    private let categoryRepository: CategoryRepository
     private let refreshCenter: AppRefreshCenter
     private var existingReview: DishReview?
 
     init(
         place: Place,
         dishReviewRepository: DishReviewRepository,
+        categoryRepository: CategoryRepository,
         refreshCenter: AppRefreshCenter,
         existingReview: DishReview? = nil,
         existingPhotoData: Data? = nil
     ) {
         self.place = place
         self.dishReviewRepository = dishReviewRepository
+        self.categoryRepository = categoryRepository
         self.refreshCenter = refreshCenter
         self.existingReview = existingReview
         self.isEditing = existingReview != nil
@@ -64,6 +69,21 @@ final class AddDishReviewViewModel: ObservableObject {
 
     var navigationTitle: String {
         isEditing ? "Edit Dish Review" : "Add Dish Review"
+    }
+
+    func load() async {
+        if availableCategories.isEmpty {
+            do {
+                availableCategories = try await categoryRepository.fetchMyCategories()
+                selectedCategoryId = existingReview?.categoryId ?? defaultCategoryID(in: availableCategories)
+            } catch {
+                errorMessage = AppError.wrap(error).errorDescription
+            }
+        }
+
+        if let existingReview {
+            populateForm(with: existingReview)
+        }
     }
 
     func updateSelectedPhoto(with data: Data?) {
@@ -119,7 +139,8 @@ final class AddDishReviewViewModel: ObservableObject {
                 dishReviewText: dishReviewText,
                 price: price,
                 photoData: selectedPhotoData,
-                photoIDsToDelete: Array(photoIDsMarkedForDeletion)
+                photoIDsToDelete: Array(photoIDsMarkedForDeletion),
+                selectedCategoryId: selectedCategoryId
             )
 
             if let existingReview {
@@ -169,6 +190,7 @@ final class AddDishReviewViewModel: ObservableObject {
         dishRating = review.dishRating
         dishReviewText = review.dishReviewText
         visibility = review.visibility
+        selectedCategoryId = review.categoryId ?? selectedCategoryId ?? defaultCategoryID(in: availableCategories)
         existingPhotos = review.photos
         photoIDsMarkedForDeletion = []
         selectedPhotoData = nil
@@ -178,5 +200,9 @@ final class AddDishReviewViewModel: ObservableObject {
         } else {
             priceText = ""
         }
+    }
+
+    private func defaultCategoryID(in categories: [CustomCategory]) -> UUID? {
+        categories.first(where: \.isDefault)?.id ?? categories.first?.id
     }
 }

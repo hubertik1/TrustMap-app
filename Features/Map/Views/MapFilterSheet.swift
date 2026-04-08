@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MapFilterSheet: View {
     @Binding var filterState: MapFilterState
+    let categoryOptions: [PlaceCategoryOption]
     let onApply: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -9,6 +10,14 @@ struct MapFilterSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Category") {
+                    Picker("Show", selection: $filterState.selectedCategory) {
+                        ForEach(categoryOptions) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                }
+
                 Section("Rating Range") {
                     Stepper("Minimum Rating: \(filterState.minimumRating)", value: $filterState.minimumRating, in: 1...filterState.maximumRating)
                     Stepper("Maximum Rating: \(filterState.maximumRating)", value: $filterState.maximumRating, in: filterState.minimumRating...5)
@@ -33,5 +42,9 @@ struct MapFilterSheet: View {
 }
 
 #Preview {
-    MapFilterSheet(filterState: .constant(MapFilterState()), onApply: {})
+    MapFilterSheet(
+        filterState: .constant(MapFilterState()),
+        categoryOptions: [.all],
+        onApply: {}
+    )
 }

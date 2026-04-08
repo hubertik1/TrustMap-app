@@ -208,6 +208,7 @@ final class MapRepository {
         south: Double? = nil,
         east: Double? = nil,
         west: Double? = nil,
+        categoryID: UUID? = nil,
         take: Int = 250
     ) async throws -> [MapPlace] {
         var queryItems = [URLQueryItem(name: "take", value: String(take))]
@@ -219,6 +220,10 @@ final class MapRepository {
                 URLQueryItem(name: "east", value: String(east)),
                 URLQueryItem(name: "west", value: String(west))
             ])
+        }
+
+        if let categoryID {
+            queryItems.append(URLQueryItem(name: "categoryId", value: categoryID.uuidString))
         }
 
         return try await apiClient.send(

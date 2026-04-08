@@ -17,31 +17,17 @@ struct PlaceCategoryOption: Identifiable, Hashable, Sendable {
         categoryID: nil
     )
 
-    static let restaurants = PlaceCategoryOption(
-        id: "restaurants",
-        title: "Restaurants",
-        categoryID: nil
-    )
-
     init(category: CustomCategory) {
         self.id = category.id.uuidString
         self.title = category.name
         self.categoryID = category.id
     }
 
-    func matches(categoryNames: [String]) -> Bool {
-        if self == .all {
+    func matches(categoryIDs: [UUID]) -> Bool {
+        guard let categoryID else {
             return true
         }
 
-        if self == .restaurants {
-            return categoryNames.isEmpty || categoryNames.contains {
-                $0.caseInsensitiveCompare(Self.restaurants.title) == .orderedSame
-            }
-        }
-
-        return categoryNames.contains {
-            $0.caseInsensitiveCompare(title) == .orderedSame
-        }
+        return categoryIDs.contains(categoryID)
     }
 }

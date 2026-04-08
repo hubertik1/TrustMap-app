@@ -19,6 +19,7 @@ final class MapScreenViewModel: ObservableObject {
     @Published var searchText = ""
     @Published var searchResults: [PlaceSearchResult] = []
     @Published var annotations: [MapPlaceAnnotation] = []
+    @Published private(set) var availableCategoryOptions: [PlaceCategoryOption] = [.all]
     @Published var filterState = MapFilterState()
     @Published var isSatelliteEnabled = false
     @Published var selectedPlace: Place?
@@ -35,6 +36,7 @@ final class MapScreenViewModel: ObservableObject {
     private let logger = Logger(subsystem: "TrustMap", category: "MapScreenViewModel")
     private let mapRepository: MapRepository
     private let placeRepository: PlaceRepository
+    private let categoryRepository: CategoryRepository
     private let mapSearchService: MapSearchService
     private let userLocationService: UserLocationServicing
     private var promptPresentationTask: Task<Void, Never>?
@@ -47,11 +49,13 @@ final class MapScreenViewModel: ObservableObject {
     init(
         mapRepository: MapRepository,
         placeRepository: PlaceRepository,
+        categoryRepository: CategoryRepository,
         mapSearchService: MapSearchService,
         userLocationService: UserLocationServicing
     ) {
         self.mapRepository = mapRepository
         self.placeRepository = placeRepository
+        self.categoryRepository = categoryRepository
         self.mapSearchService = mapSearchService
         self.userLocationService = userLocationService
 
@@ -74,6 +78,7 @@ final class MapScreenViewModel: ObservableObject {
     func load() async {
         errorMessage = nil
         isLoading = true
+        await loadCategories()
         await reloadMapPlaces()
         isLoading = false
     }
@@ -209,6 +214,7 @@ final class MapScreenViewModel: ObservableObject {
                 south: bounds?.south,
                 east: bounds?.east,
                 west: bounds?.west,
+                categoryID: filterState.selectedCategory.categoryID,
                 take: 250
             )
 
@@ -239,6 +245,21 @@ final class MapScreenViewModel: ObservableObject {
             }
             logger.error("Unable to load map places: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
+        }
+    }
+
+    private func loadCategories() async {
+        do {
+            let categories = try await categoryRepository.fetchMyCategories()
+            let options = [.all] + categories.map(PlaceCategoryOption.init(category:))
+            availableCategoryOptions = options
+
+            if filterState.selectedCategory != .all,
+               !options.contains(filterState.selectedCategory) {
+                filterState.selectedCategory = .all
+            }
+        } catch {
+            logger.error("Unable to load map categories: \(error.localizedDescription, privacy: .public)")
         }
     }
 

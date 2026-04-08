@@ -4,6 +4,7 @@ import OSLog
 @MainActor
 final class PlaceDetailViewModel: ObservableObject {
     @Published private(set) var averageRating: Double?
+    @Published private(set) var categoryNames: [String] = []
     @Published private(set) var placeReviews: [PlaceReview] = []
     @Published private(set) var dishReviews: [DishReview] = []
     @Published private(set) var placePhotos: [PhotoAsset] = []
@@ -57,6 +58,7 @@ final class PlaceDetailViewModel: ObservableObject {
             let resolvedDishReviews = try await dishReviews
 
             self.averageRating = resolvedDetails.averagePlaceRating
+            self.categoryNames = resolvedDetails.categoryNames
             self.placeReviews = resolvedPlaceReviews
             self.dishReviews = resolvedDishReviews
             self.currentUserPlaceReview = resolvedPlaceReviews.first(where: { $0.authorUserId == currentUser.id })

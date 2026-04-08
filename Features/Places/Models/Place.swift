@@ -9,6 +9,18 @@ struct Place: Identifiable, Codable, Hashable, Sendable {
     let countryCode: String?
     let latitude: Double
     let longitude: Double
+    let categoryNames: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case address
+        case categoryNames
+        case city
+        case countryCode
+        case id
+        case latitude
+        case longitude
+        case name
+    }
 
     init(
         id: UUID = UUID(),
@@ -17,7 +29,8 @@ struct Place: Identifiable, Codable, Hashable, Sendable {
         longitude: Double,
         address: String,
         city: String? = nil,
-        countryCode: String? = nil
+        countryCode: String? = nil,
+        categoryNames: [String] = []
     ) {
         self.id = id
         self.name = name
@@ -26,6 +39,19 @@ struct Place: Identifiable, Codable, Hashable, Sendable {
         self.address = address
         self.city = city
         self.countryCode = countryCode
+        self.categoryNames = categoryNames
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        address = try container.decode(String.self, forKey: .address)
+        city = try container.decodeIfPresent(String.self, forKey: .city)
+        countryCode = try container.decodeIfPresent(String.self, forKey: .countryCode)
+        latitude = try container.decode(Double.self, forKey: .latitude)
+        longitude = try container.decode(Double.self, forKey: .longitude)
+        categoryNames = try container.decodeIfPresent([String].self, forKey: .categoryNames) ?? []
     }
 
     var coordinate: CLLocationCoordinate2D {
@@ -48,6 +74,7 @@ struct PlaceDetails: Codable, Hashable, Sendable {
     let countryCode: String?
     let latitude: Double
     let longitude: Double
+    let categoryNames: [String]
     let visiblePlaceReviewCount: Int
     let visibleDishReviewCount: Int
     let averagePlaceRating: Double?
@@ -63,7 +90,8 @@ struct PlaceDetails: Codable, Hashable, Sendable {
             longitude: longitude,
             address: address,
             city: city,
-            countryCode: countryCode
+            countryCode: countryCode,
+            categoryNames: categoryNames
         )
     }
 }
@@ -76,6 +104,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
     let countryCode: String?
     let latitude: Double
     let longitude: Double
+    let categoryNames: [String]
     let visiblePlaceReviewCount: Int
     let visibleDishReviewCount: Int
     let averagePlaceRating: Double?
@@ -94,7 +123,8 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
             longitude: longitude,
             address: address,
             city: city,
-            countryCode: countryCode
+            countryCode: countryCode,
+            categoryNames: categoryNames
         )
     }
 }

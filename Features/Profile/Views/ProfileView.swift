@@ -83,6 +83,15 @@ struct ProfileView: View {
                         } label: {
                             LabeledContent("Reviewed Dishes", value: "\(viewModel.stats.reviewedDishesCount)")
                         }
+
+                        NavigationLink {
+                            CategoriesView(
+                                categoryRepository: container.categoryRepository,
+                                refreshCenter: container.refreshCenter
+                            )
+                        } label: {
+                            LabeledContent("Categories", value: "Manage")
+                        }
                     }
 
                     Section {
@@ -200,5 +209,325 @@ private struct ProfileEditorSheet: View {
 #Preview {
     NavigationStack {
         ProfileView(container: PreviewAppFactory.makeContainer())
+    }
+}
+
+private struct CategoriesView: View {
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var viewModel: CategoriesViewModel
+    @State private var isPresentingAddCategory = false
+
+    init(categoryRepository: CategoryRepository, refreshCenter: AppRefreshCenter) {
+        _viewModel = StateObject(
+            wrappedValue: CategoriesViewModel(
+                categoryRepository: categoryRepository,
+                refreshCenter: refreshCenter
+            )
+        )
+    }
+
+    var body: some View {
+        Group {
+            if viewModel.isLoading && viewModel.myCategories.isEmpty && viewModel.friendCategories.isEmpty {
+                LoadingStateView(title: "Loading categories")
+            } else if let errorMessage = viewModel.errorMessage,
+                      viewModel.myCategories.isEmpty,
+                      viewModel.friendCategories.isEmpty {
+                ErrorStateView(message: errorMessage) {
+                    Task { await viewModel.load() }
+                }
+            } else {
+                List {
+                    Picker("Source", selection: $viewModel.selectedTab) {
+                        ForEach(CategoriesViewModel.Tab.allCases) { tab in
+                            Text(tab.title).tag(tab)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(Color.clear)
+
+                    switch viewModel.selectedTab {
+                    case .mine:
+                        if !viewModel.defaultCategories.isEmpty {
+                            Section("Default Categories") {
+                                ForEach(viewModel.defaultCategories) { category in
+                                    CategoryListRow(
+                                        category: category,
+                                        subtitle: "Available for everyone",
+                                        trailingText: "Default"
+                                    )
+                                }
+                            }
+                        }
+
+                        Section("Your Categories") {
+                            if viewModel.customCategories.isEmpty {
+                                Text("Add your first custom category or save one from a friend.")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(viewModel.customCategories) { category in
+                                    CategoryListRow(
+                                        category: category,
+                                        subtitle: viewModel.subtitle(forMyCategory: category),
+                                        trailingText: category.isOwnedByCurrentUser ? "You" : "Saved"
+                                    )
+                                }
+                            }
+                        }
+                    case .friends:
+                        Section("Categories from Friends") {
+                            if viewModel.friendCategories.isEmpty {
+                                Text("No new friend categories to add right now.")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(viewModel.friendCategories) { category in
+                                    HStack(spacing: 12) {
+                                        CategoryListRow(
+                                            category: category,
+                                            subtitle: viewModel.subtitle(forFriendCategory: category),
+                                            trailingText: nil
+                                        )
+
+                                        Button("Add") {
+                                            Task { await viewModel.adopt(category) }
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .disabled(viewModel.adoptingCategoryIDs.contains(category.id))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .listStyle(.insetGrouped)
+            }
+        }
+        .navigationTitle("Categories")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if viewModel.selectedTab == .mine {
+                    Button {
+                        isPresentingAddCategory = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+        }
+        .task {
+            await viewModel.load()
+        }
+        .sheet(isPresented: $isPresentingAddCategory) {
+            NavigationStack {
+                AddCategorySheet(viewModel: viewModel)
+            }
+        }
+        .alert(
+            "Categories",
+            isPresented: Binding(
+                get: { viewModel.errorMessage != nil },
+                set: { if !$0 { viewModel.errorMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "")
+        }
+    }
+}
+
+@MainActor
+private final class CategoriesViewModel: ObservableObject {
+    enum Tab: String, CaseIterable, Identifiable {
+        case mine
+        case friends
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .mine:
+                return "My Categories"
+            case .friends:
+                return "From Friends"
+            }
+        }
+    }
+
+    @Published var selectedTab: Tab = .mine
+    @Published private(set) var myCategories: [CustomCategory] = []
+    @Published private(set) var friendCategories: [CustomCategory] = []
+    @Published private(set) var adoptingCategoryIDs: Set<UUID> = []
+    @Published var isLoading = false
+    @Published var isSaving = false
+    @Published var errorMessage: String?
+
+    private let categoryRepository: CategoryRepository
+    private let refreshCenter: AppRefreshCenter
+
+    init(categoryRepository: CategoryRepository, refreshCenter: AppRefreshCenter) {
+        self.categoryRepository = categoryRepository
+        self.refreshCenter = refreshCenter
+    }
+
+    var defaultCategories: [CustomCategory] {
+        myCategories
+            .filter(\.isDefault)
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    var customCategories: [CustomCategory] {
+        myCategories
+            .filter { !$0.isDefault }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    func load() async {
+        errorMessage = nil
+        isLoading = true
+
+        do {
+            async let mine = categoryRepository.fetchMyCategories()
+            async let friends = categoryRepository.fetchFriendCategories()
+            myCategories = try await mine
+            friendCategories = try await friends
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
+        }
+
+        isLoading = false
+    }
+
+    func createCategory(named name: String) async -> Bool {
+        isSaving = true
+        defer { isSaving = false }
+
+        do {
+            let created = try await categoryRepository.createCategory(name: name)
+            if !myCategories.contains(where: { $0.id == created.id }) {
+                myCategories.append(created)
+            }
+            friendCategories.removeAll { $0.name.caseInsensitiveCompare(created.name) == .orderedSame }
+            refreshCenter.invalidateAll()
+            return true
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
+            return false
+        }
+    }
+
+    func adopt(_ category: CustomCategory) async {
+        guard !adoptingCategoryIDs.contains(category.id) else {
+            return
+        }
+
+        adoptingCategoryIDs.insert(category.id)
+        defer { adoptingCategoryIDs.remove(category.id) }
+
+        do {
+            let adopted = try await categoryRepository.adoptCategory(id: category.id)
+            if !myCategories.contains(where: { $0.id == adopted.id }) {
+                myCategories.append(adopted)
+            }
+            friendCategories.removeAll { $0.id == category.id }
+            refreshCenter.invalidateAll()
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
+        }
+    }
+
+    func subtitle(forMyCategory category: CustomCategory) -> String {
+        if category.isOwnedByCurrentUser {
+            return "Created by you"
+        }
+
+        if let owner = category.owner {
+            return "Saved from \(owner.displayName)"
+        }
+
+        return "Available in your account"
+    }
+
+    func subtitle(forFriendCategory category: CustomCategory) -> String {
+        if let owner = category.owner {
+            return "@\(owner.handle) · \(owner.displayName)"
+        }
+
+        return "Created by a friend"
+    }
+}
+
+private struct CategoryListRow: View {
+    let category: CustomCategory
+    let subtitle: String
+    let trailingText: String?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(category.name)
+                    .font(.body.weight(.semibold))
+
+                Text(subtitle)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if let trailingText {
+                Text(trailingText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(.secondarySystemBackground), in: Capsule())
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct AddCategorySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var viewModel: CategoriesViewModel
+    @State private var name = ""
+
+    var body: some View {
+        Form {
+            Section("New Category") {
+                TextField("Category name", text: $name)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+
+                Text("Default categories stay locked. New categories you add here become available in your own reviews and filters.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle("Add Category")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+
+            ToolbarItem(placement: .confirmationAction) {
+                if viewModel.isSaving {
+                    ProgressView()
+                } else {
+                    Button("Save") {
+                        Task {
+                            let didSave = await viewModel.createCategory(named: name)
+                            if didSave {
+                                dismiss()
+                            }
+                        }
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
     }
 }

@@ -10,4 +10,5 @@ struct DishReviewDraft: Sendable {
     let price: Double?
     let photoData: Data?
     let photoIDsToDelete: [UUID]
+    let selectedCategoryId: UUID?
 }

@@ -12,6 +12,7 @@ struct AddDishReviewView: View {
             wrappedValue: AddDishReviewViewModel(
                 place: place,
                 dishReviewRepository: container.dishReviewRepository,
+                categoryRepository: container.categoryRepository,
                 refreshCenter: container.refreshCenter,
                 existingReview: existingReview
             )
@@ -49,6 +50,16 @@ struct AddDishReviewView: View {
                     .lineLimit(3...5)
                 TextField("Price", text: $viewModel.priceText)
                     .keyboardType(.decimalPad)
+
+                Picker("Category", selection: $viewModel.selectedCategoryId) {
+                    if viewModel.availableCategories.isEmpty {
+                        Text("Loading categories...").tag(UUID?.none)
+                    } else {
+                        ForEach(viewModel.availableCategories) { category in
+                            Text(category.name).tag(Optional(category.id))
+                        }
+                    }
+                }
 
                 Picker("Visibility", selection: $viewModel.visibility) {
                     ForEach(VisibilityStatus.allCases) { status in
@@ -147,6 +158,9 @@ struct AddDishReviewView: View {
                 let data = try? await item?.loadTransferable(type: Data.self)
                 viewModel.updateSelectedPhoto(with: data)
             }
+        }
+        .task {
+            await viewModel.load()
         }
         .onChange(of: viewModel.didSave) { _, didSave in
             if didSave {

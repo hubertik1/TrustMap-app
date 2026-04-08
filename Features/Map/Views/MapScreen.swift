@@ -17,6 +17,7 @@ struct MapScreen: View {
             wrappedValue: MapScreenViewModel(
                 mapRepository: container.mapRepository,
                 placeRepository: container.placeRepository,
+                categoryRepository: container.categoryRepository,
                 mapSearchService: container.mapSearchService,
                 userLocationService: container.userLocationService
             )
@@ -172,7 +173,10 @@ struct MapScreen: View {
             }
         }
         .sheet(isPresented: $viewModel.isFilterPresented) {
-            MapFilterSheet(filterState: $viewModel.filterState) {
+            MapFilterSheet(
+                filterState: $viewModel.filterState,
+                categoryOptions: viewModel.availableCategoryOptions
+            ) {
                 Task { await viewModel.applyFilters() }
             }
         }
