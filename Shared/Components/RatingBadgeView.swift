@@ -12,7 +12,7 @@ struct RatingBadgeView: View {
             .background(rating.badgeFillColor, in: Capsule())
             .overlay {
                 Capsule()
-                    .strokeBorder(rating.badgeBorderColor, lineWidth: 1)
+                    .strokeBorder(rating.badgeBorderColor, lineWidth: 1.5)
             }
             .accessibilityLabel("Rating \(rating, specifier: "%.1f") out of 5")
     }

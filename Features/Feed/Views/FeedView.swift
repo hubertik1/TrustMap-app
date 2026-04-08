@@ -42,7 +42,7 @@ struct FeedView: View {
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.secondary)
 
-                            Text(item.createdAt, style: .relative)
+                            Text(item.createdAt.feedTimestampText)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -56,6 +56,25 @@ struct FeedView: View {
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
         }
+    }
+}
+
+private extension Date {
+    var feedTimestampText: String {
+        let elapsedSeconds = max(0, Int(Date.now.timeIntervalSince(self)))
+        let minutes = elapsedSeconds / 60
+
+        if minutes < 60 {
+            return "\(minutes) min"
+        }
+
+        let hours = minutes / 60
+        if hours < 24 {
+            return "\(hours) h"
+        }
+
+        let days = hours / 24
+        return "\(days) d"
     }
 }
 

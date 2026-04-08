@@ -26,11 +26,37 @@ struct ReviewCardView: View {
 
             PhotoGridView(assets: photos)
 
-            Text(review.updatedAt, style: .relative)
+            Text(review.createdAt.placeReviewTimestampText)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .padding()
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.systemBackground))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
+                }
+        )
+    }
+}
+
+private extension Date {
+    var placeReviewTimestampText: String {
+        let elapsedSeconds = max(0, Int(Date.now.timeIntervalSince(self)))
+        let minutes = elapsedSeconds / 60
+
+        if minutes < 60 {
+            return "\(minutes) min"
+        }
+
+        let hours = minutes / 60
+        if hours < 24 {
+            return "\(hours) h"
+        }
+
+        let days = hours / 24
+        return "\(days) d"
     }
 }
