@@ -18,7 +18,7 @@ final class AddDishReviewViewModel: ObservableObject {
     }
 
     @Published var dishName = ""
-    @Published var dishRating = 4
+    @Published var dishRating = 0
     @Published var dishReviewText = ""
     @Published var priceText = ""
     @Published var visibility: VisibilityStatus = .friendsOnly
@@ -118,6 +118,11 @@ final class AddDishReviewViewModel: ObservableObject {
         let trimmedDishName = dishName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedDishName.isEmpty else {
             errorMessage = AppError.validationFailure("Enter a dish name.").errorDescription
+            return
+        }
+
+        guard dishRating > 0 else {
+            errorMessage = AppError.validationFailure("Choose a rating.").errorDescription
             return
         }
 

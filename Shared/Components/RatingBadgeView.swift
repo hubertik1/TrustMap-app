@@ -41,7 +41,7 @@ struct StarRatingInputView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Rating")
-        .accessibilityValue("\(rating) out of \(maximumRating)")
+        .accessibilityValue(rating == 0 ? "No rating selected" : "\(rating) out of \(maximumRating)")
     }
 }
 

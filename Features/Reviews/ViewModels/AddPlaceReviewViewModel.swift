@@ -17,7 +17,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
         }
     }
 
-    @Published var ratingOverall = 4
+    @Published var ratingOverall = 0
     @Published var descriptionText = ""
     @Published var visibility: VisibilityStatus = .friendsOnly
     @Published var selectedPhotoData: [Data] = []
@@ -117,6 +117,11 @@ final class AddPlaceReviewViewModel: ObservableObject {
     }
 
     func save() async {
+        guard ratingOverall > 0 else {
+            errorMessage = AppError.validationFailure("Choose a rating.").errorDescription
+            return
+        }
+
         lastAction = .save
         isSaving = true
         errorMessage = nil
