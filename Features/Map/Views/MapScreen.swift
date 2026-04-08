@@ -317,12 +317,7 @@ struct MapScreen: View {
                 .foregroundStyle(.secondary)
 
             HStack {
-                Button("Close") {
-                    clearMapSelection()
-                }
-                .buttonStyle(.bordered)
-
-                Button("Open") {
+                Button("Details") {
                     viewModel.openPromptedPlaceDetails()
                 }
                 .buttonStyle(.borderedProminent)
