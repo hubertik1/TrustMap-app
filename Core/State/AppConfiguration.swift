@@ -5,6 +5,7 @@ enum AppConfiguration {
     static let inviteUniversalLinkBaseURL: URL? = nil
     static let networkTimeout: TimeInterval = 30
     static let preferredHandleMaxLength = 32
+    static let simulatorAPIBaseURL = URL(string: "http://127.0.0.1:8080")!
 
     static var apiBaseURL: URL {
         if let override = ProcessInfo.processInfo.environment["TRUSTMAP_API_BASE_URL"],
@@ -13,13 +14,17 @@ enum AppConfiguration {
             return normalized
         }
 
+        #if targetEnvironment(simulator)
+        return simulatorAPIBaseURL
+        #else
         if let rawValue = Bundle.main.object(forInfoDictionaryKey: "TrustMapAPIBaseURL") as? String,
            let url = URL(string: rawValue.trimmingCharacters(in: .whitespacesAndNewlines)),
            let normalized = normalizedBaseURL(from: url) {
             return normalized
         }
 
-        return URL(string: "http://127.0.0.1:8080")!
+        return simulatorAPIBaseURL
+        #endif
     }
 
     static var isRunningPreviews: Bool {
