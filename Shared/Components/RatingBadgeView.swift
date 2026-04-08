@@ -48,31 +48,31 @@ struct StarRatingInputView: View {
 extension Double {
     var badgeFillColor: Color {
         switch self {
-        case ..<2.0:
-            return Color(red: 0.62, green: 0.23, blue: 0.18)
-        case ..<3.0:
-            return Color(red: 0.79, green: 0.42, blue: 0.17)
-        case ..<3.7:
-            return Color(red: 0.82, green: 0.65, blue: 0.23)
-        case ..<4.4:
-            return Color(red: 0.43, green: 0.55, blue: 0.24)
+        case 1.0..<2.0:
+            return Color(red: 0.86, green: 0.26, blue: 0.21)
+        case 2.0..<3.0:
+            return Color(red: 0.93, green: 0.52, blue: 0.20)
+        case 3.0..<4.0:
+            return Color(red: 0.90, green: 0.76, blue: 0.24)
+        case 4.0..<4.5:
+            return Color(red: 0.42, green: 0.72, blue: 0.31)
         default:
-            return Color(red: 0.18, green: 0.42, blue: 0.24)
+            return Color(red: 0.22, green: 0.56, blue: 0.27)
         }
     }
 
     var badgeBorderColor: Color {
         switch self {
-        case ..<2.0:
-            return Color(red: 0.47, green: 0.16, blue: 0.12)
-        case ..<3.0:
-            return Color(red: 0.61, green: 0.30, blue: 0.11)
-        case ..<3.7:
-            return Color(red: 0.65, green: 0.50, blue: 0.15)
-        case ..<4.4:
-            return Color(red: 0.31, green: 0.42, blue: 0.16)
+        case 1.0..<2.0:
+            return Color(red: 0.74, green: 0.19, blue: 0.15)
+        case 2.0..<3.0:
+            return Color(red: 0.82, green: 0.43, blue: 0.15)
+        case 3.0..<4.0:
+            return Color(red: 0.77, green: 0.63, blue: 0.18)
+        case 4.0..<4.5:
+            return Color(red: 0.30, green: 0.58, blue: 0.22)
         default:
-            return Color(red: 0.12, green: 0.29, blue: 0.16)
+            return Color(red: 0.16, green: 0.43, blue: 0.21)
         }
     }
 }

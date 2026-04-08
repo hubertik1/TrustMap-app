@@ -202,7 +202,7 @@ private struct ProfileEditorSheet: View {
         ) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text(viewModel.errorMessage ?? "")
+             Text(viewModel.errorMessage ?? "")
         }
     }
 }
