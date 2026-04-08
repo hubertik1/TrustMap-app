@@ -173,6 +173,39 @@ final class BackendContractTests: XCTestCase {
     }
 
     @MainActor
+    func testPhotoUploadResponseDecodesCreatedAtUtc() async throws {
+        let protocolState = URLProtocolState(
+            responses: [
+                .json(
+                    statusCode: 201,
+                    body: """
+                    {
+                      "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                      "url": "/uploads/reviews/photo-1.jpg",
+                      "contentType": "image/jpeg",
+                      "sizeBytes": 12345,
+                      "createdAtUtc": "2026-04-08T12:00:00Z"
+                    }
+                    """
+                )
+            ]
+        )
+
+        let apiClient = makeAPIClient(protocolState: protocolState)
+        let asset = try await apiClient.send(
+            APIRequest<PhotoAsset>(
+                method: .post,
+                path: "photos/upload",
+                requiresAuthorization: false,
+                acceptedStatusCodes: [201]
+            )
+        )
+
+        XCTAssertEqual(asset.url, "/uploads/reviews/photo-1.jpg")
+        XCTAssertEqual(asset.createdAt, iso8601("2026-04-08T12:00:00Z"))
+    }
+
+    @MainActor
     func testAPIClientMapsProblemDetailsValidationError() async throws {
         let protocolState = URLProtocolState(
             responses: [

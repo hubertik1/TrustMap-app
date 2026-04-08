@@ -7,6 +7,14 @@ struct PhotoAsset: Identifiable, Codable, Hashable, Sendable {
     let sizeBytes: Int64
     let createdAt: Date
 
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case url
+        case contentType
+        case sizeBytes
+        case createdAt = "createdAtUtc"
+    }
+
     init(
         id: UUID = UUID(),
         url: String,
