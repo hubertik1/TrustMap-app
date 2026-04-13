@@ -33,9 +33,17 @@ struct PlaceListRowView: View {
                         ForEach(item.categoryNames, id: \.self) { name in
                             Text(name)
                                 .font(.caption.weight(.medium))
+                                .foregroundStyle(.primary)
                                 .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Color(.secondarySystemBackground), in: Capsule())
+                                .padding(.vertical, 5)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color(.tertiarySystemBackground))
+                                        .overlay {
+                                            Capsule(style: .continuous)
+                                                .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
+                                        }
+                                )
                         }
                     }
                 }
