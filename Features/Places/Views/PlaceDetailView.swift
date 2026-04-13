@@ -67,13 +67,15 @@ struct PlaceDetailView: View {
                         }
                     }
 
-                    Section("Dish Reviews") {
-                        if viewModel.dishReviews.isEmpty {
-                            Text("No visible dish reviews yet.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(viewModel.dishReviews, id: \.id) { review in
-                                dishReviewRow(for: review)
+                    if viewModel.canAddDishReview {
+                        Section("Dish Reviews") {
+                            if viewModel.dishReviews.isEmpty {
+                                Text("No visible dish reviews yet.")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(viewModel.dishReviews, id: \.id) { review in
+                                    dishReviewRow(for: review)
+                                }
                             }
                         }
                     }
