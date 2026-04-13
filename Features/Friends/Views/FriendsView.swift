@@ -25,27 +25,26 @@ struct FriendsView: View {
                 }
             } else {
                 List {
-                    Section("Find People") {
-                        if viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
-                            Text("Search by handle or display name.")
-                                .foregroundStyle(.secondary)
-                        } else if viewModel.searchResults.isEmpty {
-                            Text("No matching users.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(viewModel.searchResults) { result in
-                                SearchResultRow(
-                                    result: result,
-                                    isBusy: viewModel.activeUserID == result.userID
-                                ) {
-                                    Task { await viewModel.sendRequest(to: result) }
-                                }
+                    if viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2,
+                       viewModel.searchResults.isEmpty {
+                        Text("No matching users.")
+                            .foregroundStyle(.secondary)
+                    } else if viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 {
+                        ForEach(viewModel.searchResults) { result in
+                            SearchResultRow(
+                                result: result,
+                                isBusy: viewModel.activeUserID == result.userID
+                            ) {
+                                Task { await viewModel.sendRequest(to: result) }
                             }
                         }
                     }
 
-                    if !viewModel.incomingRequests.isEmpty {
-                        Section("Incoming Requests") {
+                    Section("Incoming Requests") {
+                        if viewModel.incomingRequests.isEmpty {
+                            Text("You don’t have any incoming requests right now.")
+                                .foregroundStyle(.secondary)
+                        } else {
                             ForEach(viewModel.incomingRequests) { request in
                                 RequestRow(
                                     title: request.displayName,
@@ -63,8 +62,11 @@ struct FriendsView: View {
                         }
                     }
 
-                    if !viewModel.outgoingRequests.isEmpty {
-                        Section("Outgoing Requests") {
+                    Section("Outgoing Requests") {
+                        if viewModel.outgoingRequests.isEmpty {
+                            Text("You haven’t sent any pending requests.")
+                                .foregroundStyle(.secondary)
+                        } else {
                             ForEach(viewModel.outgoingRequests) { request in
                                 RequestRow(
                                     title: request.displayName,
@@ -128,7 +130,7 @@ struct FriendsView: View {
             }
         }
         .navigationTitle("Friends")
-        .searchable(text: $viewModel.searchText, prompt: "Search users")
+        .searchable(text: $viewModel.searchText, prompt: "Search usernames")
         .onChange(of: viewModel.searchText) { _, _ in
             viewModel.handleSearchTextChange()
         }
@@ -148,8 +150,9 @@ private struct SearchResultRow: View {
             AvatarView(name: result.displayName)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(result.displayName)
                 Text("@\(result.handle)")
+                    .font(.headline.monospacedDigit())
+                Text(result.displayName)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

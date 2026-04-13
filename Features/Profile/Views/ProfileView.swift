@@ -144,10 +144,14 @@ private struct ProfileEditorSheet: View {
 
                     Divider()
 
-                    HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Username base")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
                         TextField(
                             text: $viewModel.editedHandle,
-                            prompt: Text("Handle").foregroundStyle(.secondary)
+                            prompt: Text("username").foregroundStyle(.secondary)
                         ) {
                             EmptyView()
                         }
@@ -155,17 +159,23 @@ private struct ProfileEditorSheet: View {
                         .font(.body)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                    }
 
-                        if !viewModel.editedHandleSuffix.isEmpty {
-                            Text(viewModel.editedHandleSuffix)
-                                .font(.body.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
+                    Divider()
+
+                    LabeledContent("Suffix") {
+                        Text(viewModel.editedHandleSuffix.isEmpty ? "Assigned automatically" : viewModel.editedHandleSuffix)
+                            .font(.body.monospacedDigit())
+                            .foregroundStyle(.secondary)
                     }
 
                     Divider()
                 }
                 .listRowSeparator(.hidden)
+
+                Text("Edit only the username base. The 4-digit suffix is managed automatically.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
 
                 TextField("Bio", text: $viewModel.editedBio, axis: .vertical)
                     .lineLimit(3...5)

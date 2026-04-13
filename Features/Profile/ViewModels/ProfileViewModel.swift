@@ -100,7 +100,7 @@ final class ProfileViewModel: ObservableObject {
             return
         }
 
-        let components = Self.splitHandle(user.handle)
+        let components = user.handleComponents
         editedHandle = components.base
         editedHandleSuffix = components.suffix
         editedDisplayName = user.displayName
@@ -124,7 +124,7 @@ final class ProfileViewModel: ObservableObject {
                 avatarURL: currentUser.avatarURLString
             )
             user = updatedUser
-            let components = Self.splitHandle(updatedUser.handle)
+            let components = updatedUser.handleComponents
             editedHandle = components.base
             editedHandleSuffix = components.suffix
             sessionStore.updateCurrentUser(updatedUser)
@@ -135,14 +135,5 @@ final class ProfileViewModel: ObservableObject {
             errorMessage = AppError.wrap(error).errorDescription
             return false
         }
-    }
-
-    private static func splitHandle(_ handle: String) -> (base: String, suffix: String) {
-        let parts = handle.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
-        guard parts.count == 2 else {
-            return (handle, "")
-        }
-
-        return (String(parts[0]), "#\(parts[1])")
     }
 }

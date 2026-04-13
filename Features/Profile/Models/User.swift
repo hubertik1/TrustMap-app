@@ -8,6 +8,24 @@ enum RelationshipStatus: String, Codable, Sendable {
     case `self` = "Self"
 }
 
+struct HandleComponents: Hashable, Sendable {
+    let base: String
+    let suffix: String
+
+    init(handle: String) {
+        let trimmed = handle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = trimmed.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
+
+        if parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty {
+            base = String(parts[0])
+            suffix = "#\(parts[1])"
+        } else {
+            base = trimmed
+            suffix = ""
+        }
+    }
+}
+
 struct UserSummary: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     let handle: String
@@ -95,5 +113,17 @@ struct UserSearchResult: Identifiable, Codable, Hashable, Sendable {
 
     var id: UUID {
         user.id
+    }
+}
+
+extension UserSummary {
+    var handleComponents: HandleComponents {
+        HandleComponents(handle: handle)
+    }
+}
+
+extension User {
+    var handleComponents: HandleComponents {
+        HandleComponents(handle: handle)
     }
 }

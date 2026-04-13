@@ -44,7 +44,7 @@ final class BackendContractTests: XCTestCase {
           {
             "user": {
               "id": "\(friendId.uuidString.lowercased())",
-              "handle": "friend_one",
+              "handle": "friend.one#1234",
               "displayName": "Friend One",
               "avatarUrl": null
             },
@@ -60,8 +60,22 @@ final class BackendContractTests: XCTestCase {
 
         XCTAssertEqual(friends.count, 1)
         XCTAssertEqual(friends[0].id, friendId)
-        XCTAssertEqual(friends[0].user.handle, "friend_one")
+        XCTAssertEqual(friends[0].user.handle, "friend.one#1234")
         XCTAssertEqual(friends[0].createdAt, iso8601("2026-04-07T12:00:00Z"))
+    }
+
+    func testHandleComponentsSplitCanonicalHandle() {
+        let components = HandleComponents(handle: "friend.one#1234")
+
+        XCTAssertEqual(components.base, "friend.one")
+        XCTAssertEqual(components.suffix, "#1234")
+    }
+
+    func testHandleComponentsKeepLegacyHandleWithoutSuffix() {
+        let components = HandleComponents(handle: "legacy-handle")
+
+        XCTAssertEqual(components.base, "legacy-handle")
+        XCTAssertEqual(components.suffix, "")
     }
 
     @MainActor
@@ -77,7 +91,7 @@ final class BackendContractTests: XCTestCase {
               "updatedAtUtc": "2026-04-07T12:30:00Z",
               "author": {
                 "id": "C5B43D5F-14FB-4E83-B5A5-0CC4B394B095",
-                "handle": "friend_one",
+                "handle": "friend.one#1234",
                 "displayName": "Friend One",
                 "avatarUrl": null
               },
@@ -104,7 +118,7 @@ final class BackendContractTests: XCTestCase {
               "updatedAtUtc": "2026-04-07T13:05:00Z",
               "author": {
                 "id": "6D78503B-757D-4A2E-9215-A79C0F38B52A",
-                "handle": "friend_two",
+                "handle": "friend.two#5678",
                 "displayName": "Friend Two",
                 "avatarUrl": null
               },
@@ -135,7 +149,7 @@ final class BackendContractTests: XCTestCase {
 
         XCTAssertEqual(items.count, 2)
         XCTAssertEqual(items[0].title, "Friend One added Ramen at Meme Bistro")
-        XCTAssertEqual(items[0].subtitle, "Rated 5/5")
+        XCTAssertNil(items[0].subtitle)
         XCTAssertEqual(items[1].title, "Friend Two added Cafe Uno")
         XCTAssertEqual(items[1].subtitle, "Solid coffee")
         XCTAssertEqual(items[1].createdAt, iso8601("2026-04-07T13:05:00Z"))
@@ -257,7 +271,7 @@ final class BackendContractTests: XCTestCase {
     func testUserSummaryResolvesRelativeAvatarURL() {
         let user = UserSummary(
             id: UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!,
-            handle: "hubert",
+            handle: "hubert#1234",
             displayName: "Hubert",
             avatarURLString: "/avatars/hubert.jpg"
         )
@@ -302,7 +316,7 @@ final class BackendContractTests: XCTestCase {
         """
         {
           "id": "7AD7BF4A-7D7C-4DDE-92CA-A6C4B635C922",
-          "handle": "hubert",
+          "handle": "hubert#1234",
           "displayName": "\(displayName)",
           "bio": null,
           "avatarUrl": null,
