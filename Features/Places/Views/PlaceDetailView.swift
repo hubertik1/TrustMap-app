@@ -90,10 +90,12 @@ struct PlaceDetailView: View {
                 }
                 .buttonStyle(.borderedProminent)
 
-                Button("Add Dish Review") {
-                    viewModel.isPresentingAddDishReview = true
+                if viewModel.canAddDishReview {
+                    Button("Add Dish Review") {
+                        viewModel.isPresentingAddDishReview = true
+                    }
+                    .buttonStyle(.bordered)
                 }
-                .buttonStyle(.bordered)
             }
             .padding()
             .background(.regularMaterial)

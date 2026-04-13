@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 final class AddHubViewModel: ObservableObject {
-    enum Flow: Identifiable {
+    enum Flow: Identifiable, Equatable {
         case placeReview
         case dishReview
 

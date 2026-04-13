@@ -46,9 +46,11 @@ struct AddHubView: View {
                                 activeFlow = .placeReview
                                 selectedPlace = place
                             }
-                            Button("Add Dish Review") {
-                                activeFlow = .dishReview
-                                selectedPlace = place
+                            if place.supportsDishReviews {
+                                Button("Add Dish Review") {
+                                    activeFlow = .dishReview
+                                    selectedPlace = place
+                                }
                             }
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {
@@ -85,7 +87,11 @@ struct AddHubView: View {
             }
         }
         .sheet(isPresented: $isSearchPresented) {
-            PlaceSearchSheet(container: container, title: activeFlow?.title ?? "Choose Place") { place in
+            PlaceSearchSheet(
+                container: container,
+                title: activeFlow?.title ?? "Choose Place",
+                requiresRestaurantCategory: activeFlow == .dishReview
+            ) { place in
                 selectedPlace = place
             }
         }

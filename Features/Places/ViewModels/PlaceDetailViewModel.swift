@@ -76,6 +76,13 @@ final class PlaceDetailViewModel: ObservableObject {
         currentUserPlaceReview == nil ? "Add Place Review" : "Edit Place Review"
     }
 
+    var canAddDishReview: Bool {
+        let effectiveCategoryNames = categoryNames.isEmpty ? place.categoryNames : categoryNames
+        return effectiveCategoryNames.contains { categoryName in
+            categoryName.compare("Restaurant", options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+        }
+    }
+
     func canEdit(_ review: DishReview) -> Bool {
         review.authorUserId == currentUserID
     }

@@ -64,6 +64,12 @@ struct Place: Identifiable, Codable, Hashable, Sendable {
             .filter { !$0.isEmpty }
             .joined(separator: ", ")
     }
+
+    var supportsDishReviews: Bool {
+        categoryNames.contains { categoryName in
+            categoryName.compare("Restaurant", options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+        }
+    }
 }
 
 struct PlaceDetails: Codable, Hashable, Sendable {
