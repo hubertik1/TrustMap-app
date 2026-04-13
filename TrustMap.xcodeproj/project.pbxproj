@@ -92,6 +92,7 @@
 		EC2BCDADB3037418F7050883 /* PlaceListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48C3F8C7AD64A46F6D942A3B /* PlaceListItem.swift */; };
 		EC84D6D5AF58C58B657AF163 /* PlaceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6511CB19CBDDD1BBFE9AC0F /* PlaceDetailView.swift */; };
 		F13B242BF11797BDCBE49FFD /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 835C82319B5D4040C77D6EEE /* AppConfiguration.swift */; };
+		A1D4B79C2E3F4A5B6C7D8E90 /* AppPreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D4B79C2E3F4A5B6C7D8E91 /* AppPreferencesStore.swift */; };
 		F1497476D362CCD46A4CF0BD /* PeopleFilterMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21FF5CAADE1EEB2943FE8E17 /* PeopleFilterMode.swift */; };
 		F505499EDE3A80F00EA85B15 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 83482BCC7BDDD8DCC10E2D50 /* Assets.xcassets */; };
 		F78FE5EDBA4AE59988303354 /* PlaceSummaryHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72922DE60EF51D4DDC45DEF2 /* PlaceSummaryHeaderView.swift */; };
@@ -156,6 +157,7 @@
 		82F928E1CC80394D694B2751 /* UserLocationAccessState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UserLocationAccessState.swift; path = Features/Map/Models/UserLocationAccessState.swift; sourceTree = "<group>"; };
 		83482BCC7BDDD8DCC10E2D50 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
 		835C82319B5D4040C77D6EEE /* AppConfiguration.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppConfiguration.swift; path = Core/State/AppConfiguration.swift; sourceTree = "<group>"; };
+		A1D4B79C2E3F4A5B6C7D8E91 /* AppPreferencesStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppPreferencesStore.swift; path = Core/State/AppPreferencesStore.swift; sourceTree = "<group>"; };
 		8D5C7D4224A7433877E526C8 /* KeychainTokenStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KeychainTokenStore.swift; path = Core/Security/KeychainTokenStore.swift; sourceTree = "<group>"; };
 		8E0F2A32381C59818C4CBDBD /* ReviewCardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ReviewCardView.swift; path = Shared/Components/ReviewCardView.swift; sourceTree = "<group>"; };
 		8EE18EBAAABA5F171F951732 /* PlaceSearchResult.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaceSearchResult.swift; path = Features/Map/Models/PlaceSearchResult.swift; sourceTree = "<group>"; };
@@ -808,6 +810,7 @@
 			isa = PBXGroup;
 			children = (
 				835C82319B5D4040C77D6EEE /* AppConfiguration.swift */,
+				A1D4B79C2E3F4A5B6C7D8E91 /* AppPreferencesStore.swift */,
 				4AE8E145EF83D2601FC52D6D /* AppError.swift */,
 				4E15F6D44D7533EB9C4420A3 /* SessionStore.swift */,
 			);
@@ -915,6 +918,7 @@
 				418897AB8FE42229035E2D20 /* KeychainTokenStore.swift in Sources */,
 				8FF43B57053F3EFF30409C9B /* BackendAPI.swift in Sources */,
 				F13B242BF11797BDCBE49FFD /* AppConfiguration.swift in Sources */,
+				A1D4B79C2E3F4A5B6C7D8E90 /* AppPreferencesStore.swift in Sources */,
 				8CBAA5EEB07B32087673A558 /* AppError.swift in Sources */,
 				242E11AEE38038DE565084D6 /* SessionStore.swift in Sources */,
 				1DF59B483F820593AFC8AF0F /* AvatarView.swift in Sources */,

@@ -5,6 +5,7 @@ final class AppContainer: ObservableObject {
     let apiClient: APIClient
     let authService: AppleAuthenticationService
     let authRepository: AuthRepository
+    let preferencesStore: AppPreferencesStore
     let refreshCenter: AppRefreshCenter
     let tokenStore: KeychainTokenStore
     let sessionStore: SessionStore
@@ -24,6 +25,15 @@ final class AppContainer: ObservableObject {
         let apiClient = APIClient(baseURL: AppConfiguration.apiBaseURL)
         let authService = AppleAuthenticationService()
         let authRepository = AuthRepository(apiClient: apiClient)
+        let preferencesDefaults: UserDefaults
+        if preview,
+           let previewDefaults = UserDefaults(suiteName: "TrustMap.PreviewPreferences") {
+            previewDefaults.removePersistentDomain(forName: "TrustMap.PreviewPreferences")
+            preferencesDefaults = previewDefaults
+        } else {
+            preferencesDefaults = .standard
+        }
+        let preferencesStore = AppPreferencesStore(userDefaults: preferencesDefaults)
         let refreshCenter = AppRefreshCenter()
         let tokenStore = KeychainTokenStore()
         let userRepository = UserProfileRepository(apiClient: apiClient)
@@ -50,6 +60,7 @@ final class AppContainer: ObservableObject {
         self.apiClient = apiClient
         self.authService = authService
         self.authRepository = authRepository
+        self.preferencesStore = preferencesStore
         self.refreshCenter = refreshCenter
         self.tokenStore = tokenStore
         self.sessionStore = sessionStore

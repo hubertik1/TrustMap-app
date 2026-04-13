@@ -14,6 +14,7 @@ struct AddDishReviewView: View {
                 dishReviewRepository: container.dishReviewRepository,
                 categoryRepository: container.categoryRepository,
                 refreshCenter: container.refreshCenter,
+                preferencesStore: container.preferencesStore,
                 existingReview: existingReview
             )
         )

@@ -46,6 +46,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
         placeReviewRepository: PlaceReviewRepository,
         categoryRepository: CategoryRepository,
         refreshCenter: AppRefreshCenter,
+        preferencesStore: AppPreferencesStore,
         existingReview: PlaceReview? = nil
     ) {
         self.place = place
@@ -54,6 +55,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
         self.refreshCenter = refreshCenter
         self.existingReview = existingReview
         self.isEditing = existingReview != nil
+        self.visibility = preferencesStore.defaultPlaceReviewVisibility
 
         if let existingReview {
             populateForm(with: existingReview)

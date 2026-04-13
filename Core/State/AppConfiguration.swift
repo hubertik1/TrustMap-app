@@ -6,6 +6,8 @@ enum AppConfiguration {
     static let networkTimeout: TimeInterval = 30
     static let preferredHandleMaxLength = 32
     static let simulatorAPIBaseURL = URL(string: "http://127.0.0.1:8080")!
+    static let privacyPolicyInfoKey = "TrustMapPrivacyPolicyURL"
+    static let termsOfServiceInfoKey = "TrustMapTermsOfServiceURL"
 
     static var apiBaseURL: URL {
         if let override = ProcessInfo.processInfo.environment["TRUSTMAP_API_BASE_URL"],
@@ -14,9 +16,6 @@ enum AppConfiguration {
             return normalized
         }
 
-        #if targetEnvironment(simulator)
-        return simulatorAPIBaseURL
-        #else
         if let rawValue = Bundle.main.object(forInfoDictionaryKey: "TrustMapAPIBaseURL") as? String,
            let url = URL(string: rawValue.trimmingCharacters(in: .whitespacesAndNewlines)),
            let normalized = normalizedBaseURL(from: url) {
@@ -24,13 +23,26 @@ enum AppConfiguration {
         }
 
         return simulatorAPIBaseURL
-        #endif
     }
 
     static var isRunningPreviews: Bool {
         let environment = ProcessInfo.processInfo.environment
         return environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
             || environment["XCODE_RUNNING_FOR_PLAYGROUNDS"] == "1"
+    }
+
+    static var privacyPolicyURL: URL? {
+        configuredURL(
+            environmentKey: "TRUSTMAP_PRIVACY_POLICY_URL",
+            infoDictionaryKey: privacyPolicyInfoKey
+        )
+    }
+
+    static var termsOfServiceURL: URL? {
+        configuredURL(
+            environmentKey: "TRUSTMAP_TERMS_OF_SERVICE_URL",
+            infoDictionaryKey: termsOfServiceInfoKey
+        )
     }
 
     static func resolvedBackendURL(from rawValue: String?) -> URL? {
@@ -73,5 +85,15 @@ enum AppConfiguration {
         let normalizedPath = components.path.isEmpty ? "" : "/\(components.path)"
         components.path = normalizedPath
         return components.url
+    }
+
+    private static func configuredURL(environmentKey: String, infoDictionaryKey: String) -> URL? {
+        if let override = ProcessInfo.processInfo.environment[environmentKey],
+           let url = resolvedBackendURL(from: override) {
+            return url
+        }
+
+        let rawValue = Bundle.main.object(forInfoDictionaryKey: infoDictionaryKey) as? String
+        return resolvedBackendURL(from: rawValue)
     }
 }

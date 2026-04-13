@@ -14,6 +14,7 @@ struct AddPlaceReviewView: View {
                 placeReviewRepository: container.placeReviewRepository,
                 categoryRepository: container.categoryRepository,
                 refreshCenter: container.refreshCenter,
+                preferencesStore: container.preferencesStore,
                 existingReview: existingReview
             )
         )

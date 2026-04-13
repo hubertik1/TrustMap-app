@@ -34,9 +34,44 @@ enum AppError: LocalizedError {
         }
     }
 
+    var isConnectivityFailure: Bool {
+        switch self {
+        case .syncFailure:
+            return true
+        case .authFailed,
+             .invalidSession,
+             .missingCurrentUser,
+             .invalidPlaceSelection,
+             .locationFailure,
+             .persistenceFailure,
+             .validationFailure,
+             .underlying:
+            return false
+        }
+    }
+
     static func wrap(_ error: Error) -> AppError {
         if let appError = error as? AppError {
             return appError
+        }
+
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            switch nsError.code {
+            case NSURLErrorTimedOut,
+                 NSURLErrorCannotFindHost,
+                 NSURLErrorCannotConnectToHost,
+                 NSURLErrorDNSLookupFailed,
+                 NSURLErrorNetworkConnectionLost,
+                 NSURLErrorNotConnectedToInternet,
+                 NSURLErrorInternationalRoamingOff,
+                 NSURLErrorCallIsActive,
+                 NSURLErrorDataNotAllowed,
+                 NSURLErrorCannotLoadFromNetwork:
+                return .syncFailure("Could not connect to the server.")
+            default:
+                break
+            }
         }
 
         return .underlying(error.localizedDescription)

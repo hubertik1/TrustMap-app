@@ -41,7 +41,6 @@ final class MapScreenViewModel: ObservableObject {
     private let userLocationService: UserLocationServicing
     private var promptPresentationTask: Task<Void, Never>?
     private var latestMapReloadRequestID = UUID()
-    private var hasCenteredOnUserLocation = false
     private var hasStartedLocationFlow = false
     private var shouldCenterOnNextLocationUpdate = true
     private var searchTask: Task<Void, Never>?
@@ -51,13 +50,16 @@ final class MapScreenViewModel: ObservableObject {
         placeRepository: PlaceRepository,
         categoryRepository: CategoryRepository,
         mapSearchService: MapSearchService,
-        userLocationService: UserLocationServicing
+        userLocationService: UserLocationServicing,
+        preferencesStore: AppPreferencesStore
     ) {
         self.mapRepository = mapRepository
         self.placeRepository = placeRepository
         self.categoryRepository = categoryRepository
         self.mapSearchService = mapSearchService
         self.userLocationService = userLocationService
+        self.isSatelliteEnabled = preferencesStore.defaultMapStyle == .satellite
+        self.shouldCenterOnNextLocationUpdate = preferencesStore.centerOnUserLocationOnLaunch
 
         self.userLocationService.onAuthorizationChange = { [weak self] status in
             self?.handleAuthorizationChange(status)
@@ -360,7 +362,7 @@ final class MapScreenViewModel: ObservableObject {
 
     private func handleLocationUpdate(_ location: CLLocation) {
         locationAccessState = .ready
-        guard !hasCenteredOnUserLocation || shouldCenterOnNextLocationUpdate else {
+        guard shouldCenterOnNextLocationUpdate else {
             return
         }
 
@@ -368,7 +370,6 @@ final class MapScreenViewModel: ObservableObject {
         region = userRegion
         requestedCameraRegion = userRegion
         requestedCameraRegionToken = UUID()
-        hasCenteredOnUserLocation = true
         shouldCenterOnNextLocationUpdate = false
     }
 

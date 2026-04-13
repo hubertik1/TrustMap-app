@@ -59,6 +59,13 @@ final class SessionStore: ObservableObject, APISessionProviding {
             let me = try await userRepository.fetchCurrentUser()
             state = .signedIn(me)
         } catch {
+            let wrappedError = AppError.wrap(error)
+            if wrappedError.isConnectivityFailure {
+                alertMessage = wrappedError.errorDescription
+                state = .signedOut
+                return
+            }
+
             do {
                 _ = try await refreshSession()
                 let me = try await userRepository.fetchCurrentUser()

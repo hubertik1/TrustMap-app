@@ -48,6 +48,7 @@ final class AddDishReviewViewModel: ObservableObject {
         dishReviewRepository: DishReviewRepository,
         categoryRepository: CategoryRepository,
         refreshCenter: AppRefreshCenter,
+        preferencesStore: AppPreferencesStore,
         existingReview: DishReview? = nil,
         existingPhotoData: Data? = nil
     ) {
@@ -57,6 +58,7 @@ final class AddDishReviewViewModel: ObservableObject {
         self.refreshCenter = refreshCenter
         self.existingReview = existingReview
         self.isEditing = existingReview != nil
+        self.visibility = preferencesStore.defaultDishReviewVisibility
 
         if let existingReview {
             populateForm(with: existingReview)

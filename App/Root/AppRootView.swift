@@ -4,10 +4,12 @@ struct AppRootView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject private var container: AppContainer
+    @ObservedObject private var preferencesStore: AppPreferencesStore
     @ObservedObject private var sessionStore: SessionStore
 
     init(container: AppContainer) {
         self.container = container
+        self.preferencesStore = container.preferencesStore
         self.sessionStore = container.sessionStore
     }
 
@@ -29,6 +31,7 @@ struct AppRootView: View {
                 MainTabView(container: container)
             }
         }
+        .preferredColorScheme(preferencesStore.preferredColorScheme)
         .task {
             if case .launching = sessionStore.state {
                 await sessionStore.bootstrap()
