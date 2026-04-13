@@ -164,6 +164,10 @@ final class APIClient {
         } catch let appError as AppError {
             throw appError
         } catch {
+            if Self.isCancellation(error) {
+                throw error
+            }
+
             throw AppError.wrap(error)
         }
     }
@@ -267,6 +271,15 @@ final class APIClient {
 
     private enum TransportError: Error {
         case unauthorized
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError {
+            return true
+        }
+
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
     }
 }
 

@@ -59,6 +59,7 @@ final class FriendsViewModel: ObservableObject {
     func load() async {
         errorMessage = nil
         isLoading = true
+        defer { isLoading = false }
 
         do {
             async let friends = friendRepository.fetchFriends()
@@ -97,11 +98,11 @@ final class FriendsViewModel: ObservableObject {
                     createdAt: $0.createdAt
                 )
             }
+            errorMessage = nil
         } catch {
+            guard !Self.isCancellation(error) else { return }
             errorMessage = AppError.wrap(error).errorDescription
         }
-
-        isLoading = false
     }
 
     func handleSearchTextChange() {
@@ -178,7 +179,9 @@ final class FriendsViewModel: ObservableObject {
                     relationshipStatus: $0.relationshipStatus
                 )
             }
+            errorMessage = nil
         } catch {
+            guard !Self.isCancellation(error) else { return }
             errorMessage = AppError.wrap(error).errorDescription
         }
     }
@@ -194,7 +197,17 @@ final class FriendsViewModel: ObservableObject {
             try await action()
             refreshCenter.invalidateAll()
         } catch {
+            guard !Self.isCancellation(error) else { return }
             errorMessage = AppError.wrap(error).errorDescription
         }
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError {
+            return true
+        }
+
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
     }
 }
