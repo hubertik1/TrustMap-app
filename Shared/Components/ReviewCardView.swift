@@ -33,7 +33,7 @@ struct ReviewCardView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(.systemBackground))
+                .fill(Color(.secondarySystemBackground))
                 .overlay {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .stroke(Color(.separator).opacity(0.35), lineWidth: 1)
