@@ -54,6 +54,9 @@ struct FeedView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .refreshable {
+                    await viewModel.load()
+                }
             }
         }
         .navigationTitle("Feed")

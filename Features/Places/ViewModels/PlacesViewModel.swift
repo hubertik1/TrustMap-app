@@ -21,6 +21,7 @@ final class PlacesViewModel: ObservableObject {
     func load() async {
         errorMessage = nil
         isLoading = true
+        defer { isLoading = false }
 
         do {
             async let categories = categoryRepository.fetchMyCategories()
@@ -54,13 +55,13 @@ final class PlacesViewModel: ObservableObject {
 
                 return lhs.averageRating > rhs.averageRating
             }
+            errorMessage = nil
         } catch {
+            guard !Self.isCancellation(error) else { return }
             logger.error("Unable to load places: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
             placeItems = []
         }
-
-        isLoading = false
     }
 
     func selectCategory(_ option: PlaceCategoryOption) async {
@@ -70,5 +71,14 @@ final class PlacesViewModel: ObservableObject {
 
         selectedCategory = option
         await load()
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError {
+            return true
+        }
+
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
     }
 }

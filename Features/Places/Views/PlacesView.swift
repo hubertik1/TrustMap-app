@@ -43,6 +43,9 @@ struct PlacesView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .refreshable {
+                    await viewModel.load()
+                }
             }
         }
         .navigationTitle("Places")
