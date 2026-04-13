@@ -3,7 +3,7 @@ import Foundation
 struct MapFilterState: Equatable, Sendable {
     var minimumRating: Int = 1
     var maximumRating: Int = 5
-    var selectedCategory = PlaceCategoryOption.all
+    var selectedCategory = PlaceCategoryOption.restaurant
 
     var ratingRange: ClosedRange<Int> {
         minimumRating...maximumRating

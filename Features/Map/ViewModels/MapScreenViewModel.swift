@@ -254,9 +254,10 @@ final class MapScreenViewModel: ObservableObject {
             let options = [.all] + categories.map(PlaceCategoryOption.init(category:))
             availableCategoryOptions = options
 
-            if filterState.selectedCategory != .all,
-               !options.contains(filterState.selectedCategory) {
-                filterState.selectedCategory = .all
+            if !options.contains(filterState.selectedCategory) {
+                filterState.selectedCategory = options.first(where: {
+                    $0.categoryID == PlaceCategoryOption.restaurantsCategoryID
+                }) ?? .all
             }
         } catch {
             logger.error("Unable to load map categories: \(error.localizedDescription, privacy: .public)")
