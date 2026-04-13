@@ -9,13 +9,26 @@ final class ProfileViewModel: ObservableObject {
     @Published private(set) var placeReviews: [PlaceReview] = []
     @Published private(set) var dishReviews: [DishReview] = []
     @Published private(set) var placeNames: [UUID: String] = [:]
-    @Published var editedHandle = ""
+    @Published var editedHandle = "" {
+        didSet {
+            let normalized = HandleComponents.normalizedEditableBase(from: editedHandle)
+            if editedHandle != normalized {
+                editedHandle = normalized
+                return
+            }
+
+            if usernameErrorMessage != nil {
+                usernameErrorMessage = nil
+            }
+        }
+    }
     @Published private(set) var editedHandleSuffix = ""
     @Published var editedDisplayName = ""
     @Published var editedBio = ""
     @Published var isLoading = false
     @Published var isSavingProfile = false
     @Published var errorMessage: String?
+    @Published var usernameErrorMessage: String?
 
     private let logger = Logger(subsystem: "TrustMap", category: "ProfileViewModel")
     private let refreshCenter: AppRefreshCenter
@@ -40,6 +53,16 @@ final class ProfileViewModel: ObservableObject {
         self.placeReviewRepository = placeReviewRepository
         self.dishReviewRepository = dishReviewRepository
         self.user = sessionStore.currentUser
+    }
+
+    var canSaveProfile: Bool {
+        guard let currentUser = user ?? sessionStore.currentUser else {
+            return false
+        }
+
+        return !isSavingProfile
+            && !normalizedEditedHandle.isEmpty
+            && hasProfileChanges(comparedTo: currentUser)
     }
 
     func load() async {
@@ -100,6 +123,8 @@ final class ProfileViewModel: ObservableObject {
             return
         }
 
+        errorMessage = nil
+        usernameErrorMessage = nil
         let components = user.handleComponents
         editedHandle = components.base
         editedHandleSuffix = components.suffix
@@ -113,27 +138,95 @@ final class ProfileViewModel: ObservableObject {
             return false
         }
 
+        let handle = normalizedEditedHandle
+        guard !handle.isEmpty else {
+            usernameErrorMessage = "Enter a username."
+            errorMessage = nil
+            return false
+        }
+
+        guard hasProfileChanges(comparedTo: currentUser) else {
+            usernameErrorMessage = nil
+            errorMessage = nil
+            return false
+        }
+
+        errorMessage = nil
+        usernameErrorMessage = nil
         isSavingProfile = true
         defer { isSavingProfile = false }
 
         do {
             let updatedUser = try await userRepository.updateCurrentUser(
-                handle: editedHandle,
-                displayName: editedDisplayName,
-                bio: editedBio,
+                handle: handle,
+                displayName: normalizedEditedDisplayName,
+                bio: normalizedEditedBio,
                 avatarURL: currentUser.avatarURLString
             )
-            user = updatedUser
-            let components = updatedUser.handleComponents
-            editedHandle = components.base
-            editedHandleSuffix = components.suffix
-            sessionStore.updateCurrentUser(updatedUser)
+            let resolvedUser = await refreshedUser(afterSaving: updatedUser)
+            applyEditedProfile(resolvedUser)
             refreshCenter.invalidateAll()
-            errorMessage = nil
             return true
         } catch {
-            errorMessage = AppError.wrap(error).errorDescription
+            let wrappedError = AppError.wrap(error)
+            if case .validationFailure(let message) = wrappedError,
+               Self.isUsernameValidationError(message) {
+                usernameErrorMessage = message
+                errorMessage = nil
+            } else {
+                errorMessage = wrappedError.errorDescription
+            }
             return false
         }
+    }
+
+    private var normalizedEditedHandle: String {
+        HandleComponents.normalizedEditableBase(from: editedHandle)
+    }
+
+    private var normalizedEditedDisplayName: String {
+        editedDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var normalizedEditedBio: String? {
+        editedBio.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
+    private func hasProfileChanges(comparedTo currentUser: User) -> Bool {
+        normalizedEditedHandle != currentUser.handleComponents.base
+            || normalizedEditedDisplayName != currentUser.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+            || normalizedEditedBio != currentUser.bio?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
+    private func refreshedUser(afterSaving fallbackUser: User) async -> User {
+        do {
+            return try await userRepository.fetchCurrentUser()
+        } catch {
+            logger.error("Unable to refresh profile after saving: \(error.localizedDescription, privacy: .public)")
+            return fallbackUser
+        }
+    }
+
+    private func applyEditedProfile(_ updatedUser: User) {
+        user = updatedUser
+        let components = updatedUser.handleComponents
+        editedHandle = components.base
+        editedHandleSuffix = components.suffix
+        editedDisplayName = updatedUser.displayName
+        editedBio = updatedUser.bio ?? ""
+        sessionStore.updateCurrentUser(updatedUser)
+        errorMessage = nil
+        usernameErrorMessage = nil
+    }
+
+    private static func isUsernameValidationError(_ message: String) -> Bool {
+        let normalized = message.lowercased()
+        return normalized.contains("handle") || normalized.contains("username")
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
     }
 }

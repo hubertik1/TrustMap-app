@@ -78,6 +78,18 @@ final class BackendContractTests: XCTestCase {
         XCTAssertEqual(components.suffix, "")
     }
 
+    func testHandleComponentsNormalizeEditableBaseFromDecoratedHandle() {
+        let normalized = HandleComponents.normalizedEditableBase(from: " @hubert#1234 ")
+
+        XCTAssertEqual(normalized, "hubert")
+    }
+
+    func testHandleComponentsNormalizeEditableBaseDropsLeadingAtSign() {
+        let normalized = HandleComponents.normalizedEditableBase(from: "@hubert")
+
+        XCTAssertEqual(normalized, "hubert")
+    }
+
     @MainActor
     func testFeedRepositoryMapsDishAndPlaceActivities() async throws {
         let response = """

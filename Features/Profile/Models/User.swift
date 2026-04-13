@@ -24,6 +24,13 @@ struct HandleComponents: Hashable, Sendable {
             suffix = ""
         }
     }
+
+    static func normalizedEditableBase(from input: String) -> String {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        let withoutAtPrefix = trimmed.drop(while: { $0 == "@" })
+        let base = withoutAtPrefix.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false).first
+        return String(base ?? Substring()).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 struct UserSummary: Identifiable, Codable, Hashable, Sendable {

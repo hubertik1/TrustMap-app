@@ -131,7 +131,7 @@ private struct ProfileEditorSheet: View {
     var body: some View {
         Form {
             Section("Profile") {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 16) {
                     TextField(
                         text: $viewModel.editedDisplayName,
                         prompt: Text("Display name").foregroundStyle(.secondary)
@@ -144,43 +144,37 @@ private struct ProfileEditorSheet: View {
 
                     Divider()
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Username base")
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Unique username")
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
-                        TextField(
-                            text: $viewModel.editedHandle,
-                            prompt: Text("username").foregroundStyle(.secondary)
-                        ) {
-                            EmptyView()
-                        }
-                        .textFieldStyle(.plain)
-                        .font(.body)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    }
+                        UniqueUsernameFieldRow(
+                            usernameBase: $viewModel.editedHandle,
+                            suffix: viewModel.editedHandleSuffix,
+                            isInvalid: viewModel.usernameErrorMessage != nil
+                        )
 
-                    Divider()
-
-                    LabeledContent("Suffix") {
-                        Text(viewModel.editedHandleSuffix.isEmpty ? "Assigned automatically" : viewModel.editedHandleSuffix)
-                            .font(.body.monospacedDigit())
+                        Text("Only the left part can be changed. The 4-digit suffix is assigned automatically.")
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
+
+                        if let usernameErrorMessage = viewModel.usernameErrorMessage {
+                            Text(usernameErrorMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                        }
                     }
 
                     Divider()
+
+                    TextField("Bio", text: $viewModel.editedBio, axis: .vertical)
+                        .lineLimit(3...5)
                 }
                 .listRowSeparator(.hidden)
-
-                Text("Edit only the username base. The 4-digit suffix is managed automatically.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-
-                TextField("Bio", text: $viewModel.editedBio, axis: .vertical)
-                    .lineLimit(3...5)
             }
         }
+        .disabled(viewModel.isSavingProfile)
         .navigationTitle("Edit Profile")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -188,6 +182,7 @@ private struct ProfileEditorSheet: View {
                 Button("Cancel") {
                     dismiss()
                 }
+                .disabled(viewModel.isSavingProfile)
             }
 
             ToolbarItem(placement: .confirmationAction) {
@@ -202,6 +197,7 @@ private struct ProfileEditorSheet: View {
                             }
                         }
                     }
+                    .disabled(!viewModel.canSaveProfile)
                 }
             }
         }
@@ -216,6 +212,62 @@ private struct ProfileEditorSheet: View {
         } message: {
              Text(viewModel.errorMessage ?? "")
         }
+    }
+}
+
+private struct UniqueUsernameFieldRow: View {
+    @Binding var usernameBase: String
+    let suffix: String
+    let isInvalid: Bool
+
+    private var displayedSuffix: String {
+        suffix.isEmpty ? "Assigned automatically" : suffix
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            TextField(
+                text: $usernameBase,
+                prompt: Text("username").foregroundStyle(.secondary)
+            ) {
+                EmptyView()
+            }
+            .textFieldStyle(.plain)
+            .font(.body)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .textContentType(.username)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .accessibilityLabel("Username base")
+            .accessibilityHint("Editable part of your unique username.")
+
+            Rectangle()
+                .fill(Color(uiColor: .separator).opacity(0.35))
+                .frame(width: 1)
+                .padding(.vertical, 10)
+
+            Text(displayedSuffix)
+                .font(.body.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(minWidth: 84, alignment: .center)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                .accessibilityElement()
+                .accessibilityLabel("Automatic suffix")
+                .accessibilityValue(suffix.isEmpty ? "Assigned automatically" : suffix)
+                .accessibilityHint("System managed and read only.")
+        }
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(isInvalid ? Color.red.opacity(0.8) : Color(uiColor: .separator).opacity(0.18))
+        }
+        .accessibilityElement(children: .contain)
     }
 }
 
