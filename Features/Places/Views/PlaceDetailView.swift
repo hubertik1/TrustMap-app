@@ -89,15 +89,20 @@ struct PlaceDetailView: View {
                     viewModel.isPresentingAddPlaceReview = true
                 }
                 .buttonStyle(.borderedProminent)
+                .frame(maxWidth: .infinity)
 
                 if viewModel.canAddDishReview {
                     Button("Add Dish Review") {
                         viewModel.isPresentingAddDishReview = true
                     }
                     .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
                 }
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+            .frame(minHeight: 52)
+            .frame(maxWidth: .infinity)
             .background(.regularMaterial)
         }
         .sheet(isPresented: $viewModel.isPresentingAddPlaceReview, onDismiss: {
