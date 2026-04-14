@@ -5,7 +5,7 @@ enum AppConfiguration {
     static let inviteUniversalLinkBaseURL: URL? = nil
     static let networkTimeout: TimeInterval = 30
     static let preferredHandleMaxLength = 32
-    static let simulatorAPIBaseURL = URL(string: "http://127.0.0.1:8080")!
+    static let simulatorAPIBaseURL = URL(string: "http://127.0.0.1:5104")!
     static let privacyPolicyInfoKey = "TrustMapPrivacyPolicyURL"
     static let termsOfServiceInfoKey = "TrustMapTermsOfServiceURL"
 

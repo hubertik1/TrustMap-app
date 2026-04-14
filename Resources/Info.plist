@@ -47,7 +47,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>TrustMapAPIBaseURL</key>
-	<string>http://192.168.0.45:8080</string>
+	<string>http://MacBookAir.local:5104</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
