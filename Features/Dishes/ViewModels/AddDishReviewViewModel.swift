@@ -38,6 +38,7 @@ final class AddDishReviewViewModel: ObservableObject {
 
     let place: Place
 
+    private let placeReviewID: UUID?
     private let dishReviewRepository: DishReviewRepository
     private let categoryRepository: CategoryRepository
     private let refreshCenter: AppRefreshCenter
@@ -45,6 +46,7 @@ final class AddDishReviewViewModel: ObservableObject {
 
     init(
         place: Place,
+        placeReviewID: UUID? = nil,
         dishReviewRepository: DishReviewRepository,
         categoryRepository: CategoryRepository,
         refreshCenter: AppRefreshCenter,
@@ -53,6 +55,7 @@ final class AddDishReviewViewModel: ObservableObject {
         existingPhotoData: Data? = nil
     ) {
         self.place = place
+        self.placeReviewID = placeReviewID
         self.dishReviewRepository = dishReviewRepository
         self.categoryRepository = categoryRepository
         self.refreshCenter = refreshCenter
@@ -133,7 +136,7 @@ final class AddDishReviewViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let existingPlaceReviewID = existingReview?.placeReviewId
+            let existingPlaceReviewID = existingReview?.placeReviewId ?? placeReviewID
 
             let price = Double(priceText.replacingOccurrences(of: ",", with: "."))
 

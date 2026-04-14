@@ -7,10 +7,16 @@ struct AddDishReviewView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var isDeleteConfirmationPresented = false
 
-    init(container: AppContainer, place: Place, existingReview: DishReview? = nil) {
+    init(
+        container: AppContainer,
+        place: Place,
+        placeReviewID: UUID? = nil,
+        existingReview: DishReview? = nil
+    ) {
         _viewModel = StateObject(
             wrappedValue: AddDishReviewViewModel(
                 place: place,
+                placeReviewID: placeReviewID,
                 dishReviewRepository: container.dishReviewRepository,
                 categoryRepository: container.categoryRepository,
                 refreshCenter: container.refreshCenter,

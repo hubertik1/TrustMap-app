@@ -27,20 +27,20 @@ struct MainTabView: View {
             .tag(AppTab.places)
 
             NavigationStack {
+                AddHubView(container: container)
+            }
+            .tabItem {
+                Label("Add", systemImage: "plus.circle.fill")
+            }
+            .tag(AppTab.add)
+
+            NavigationStack {
                 FeedView(container: container)
             }
             .tabItem {
                 Label("Feed", systemImage: "list.bullet.rectangle")
             }
             .tag(AppTab.feed)
-
-            NavigationStack {
-                FriendsView(container: container)
-            }
-            .tabItem {
-                Label("Friends", systemImage: "person.2")
-            }
-            .tag(AppTab.friends)
 
             NavigationStack {
                 ProfileView(container: container)

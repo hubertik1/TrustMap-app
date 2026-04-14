@@ -14,6 +14,7 @@ struct ProfileView: View {
                 refreshCenter: container.refreshCenter,
                 sessionStore: container.sessionStore,
                 userRepository: container.userRepository,
+                friendRepository: container.friendRepository,
                 categoryRepository: container.categoryRepository,
                 placeReviewRepository: container.placeReviewRepository,
                 dishReviewRepository: container.dishReviewRepository
@@ -58,6 +59,16 @@ struct ProfileView: View {
                                 .padding(.top, 6)
                             }
                         }
+                    }
+
+                    Section {
+                        NavigationLink {
+                            FriendsView(container: container)
+                        } label: {
+                            ProfileFriendsCard(summary: viewModel.friendsSummary)
+                        }
+                        .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                        .listRowBackground(Color.clear)
                     }
 
                     Section {
@@ -121,6 +132,56 @@ struct ProfileView: View {
                 ProfileEditorSheet(viewModel: viewModel)
             }
         }
+    }
+}
+
+private struct ProfileFriendsCard: View {
+    let summary: ProfileViewModel.FriendsSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Label("Friends", systemImage: "person.2.fill")
+                    .font(.headline)
+
+                Spacer()
+
+                Text(summary.friendCount.formatted())
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 8) {
+                if summary.pendingRequestCount > 0 {
+                    Circle()
+                        .fill(.red)
+                        .frame(width: 8, height: 8)
+                }
+
+                Text(summary.secondaryText)
+                    .font(.subheadline)
+                    .foregroundStyle(summary.pendingRequestCount > 0 ? .primary : .secondary)
+            }
+
+            if !summary.previewFriends.isEmpty {
+                HStack(spacing: -8) {
+                    ForEach(summary.previewFriends) { friend in
+                        AvatarView(name: friend.displayName, size: 28)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color(uiColor: .systemGroupedBackground), lineWidth: 2)
+                            )
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        )
     }
 }
 

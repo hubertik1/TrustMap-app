@@ -26,50 +26,134 @@ final class AddHubViewModel: ObservableObject {
     }
 
     @Published private(set) var recentPlaces: [Place] = []
-    @Published private(set) var availableCategoryOptions: [PlaceCategoryOption] = [.all]
-    @Published var selectedCategory = PlaceCategoryOption.all
+    @Published private(set) var eligibleDishPlaces: [Place] = []
     @Published var errorMessage: String?
 
-    private let mapRepository: MapRepository
-    private let categoryRepository: CategoryRepository
+    private let sessionStore: SessionStore
+    private let placeReviewRepository: PlaceReviewRepository
+    private let dishReviewRepository: DishReviewRepository
+    private var eligibleDishPlaceReviewIDs: [UUID: UUID] = [:]
+    private var placeReviewsByPlaceID: [UUID: PlaceReview] = [:]
 
     init(
-        mapRepository: MapRepository,
-        categoryRepository: CategoryRepository
+        sessionStore: SessionStore,
+        placeReviewRepository: PlaceReviewRepository,
+        dishReviewRepository: DishReviewRepository
     ) {
-        self.mapRepository = mapRepository
-        self.categoryRepository = categoryRepository
+        self.sessionStore = sessionStore
+        self.placeReviewRepository = placeReviewRepository
+        self.dishReviewRepository = dishReviewRepository
     }
 
     func load() async {
+        guard let currentUser = sessionStore.currentUser else {
+            recentPlaces = []
+            eligibleDishPlaces = []
+            eligibleDishPlaceReviewIDs = [:]
+            errorMessage = AppError.missingCurrentUser.errorDescription
+            return
+        }
+
         do {
-            async let categories = categoryRepository.fetchMyCategories()
-            async let places = mapRepository.fetchMapPlaces(
-                categoryID: selectedCategory.categoryID,
-                take: 50
+            async let placeReviewsTask = placeReviewRepository.fetchReviews(authorUserID: currentUser.id)
+            async let dishReviewsTask = dishReviewRepository.fetchReviews(authorUserID: currentUser.id)
+
+            let placeReviews = try await placeReviewsTask
+            let dishReviews = try await dishReviewsTask
+
+            placeReviewsByPlaceID = placeReviews
+                .sorted(by: { $0.updatedAt > $1.updatedAt })
+                .reduce(into: [:]) { partialResult, review in
+                    partialResult[review.placeId] = partialResult[review.placeId] ?? review
+                }
+
+            recentPlaces = Self.makeRecentPlaces(
+                placeReviews: placeReviews,
+                dishReviews: dishReviews
             )
 
-            let resolvedCategories = try await categories
-            let resolvedPlaces = try await places
-
-            availableCategoryOptions = [.all] + resolvedCategories.map(PlaceCategoryOption.init(category:))
-            if selectedCategory != .all,
-               !availableCategoryOptions.contains(selectedCategory) {
-                selectedCategory = .all
-            }
-
-            recentPlaces = resolvedPlaces.map(\.place)
+            let eligibleEntries = Self.makeEligibleDishPlaceEntries(from: placeReviews)
+            eligibleDishPlaces = eligibleEntries.map(\.place)
+            eligibleDishPlaceReviewIDs = Dictionary(
+                uniqueKeysWithValues: eligibleEntries.map { ($0.place.id, $0.placeReviewID) }
+            )
+            errorMessage = nil
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
     }
 
-    func applyCategoryFilter(_ option: PlaceCategoryOption) async {
-        guard selectedCategory != option else {
-            return
+    func isEligibleDishPlace(_ place: Place) -> Bool {
+        eligibleDishPlaceReviewIDs[place.id] != nil
+    }
+
+    func placeReviewID(for place: Place) -> UUID? {
+        eligibleDishPlaceReviewIDs[place.id]
+    }
+
+    func placeReview(for place: Place) -> PlaceReview? {
+        placeReviewsByPlaceID[place.id]
+    }
+
+    func placeReviewActionTitle(for place: Place) -> String {
+        placeReview(for: place) == nil ? "Add Place Review" : "Edit Place Review"
+    }
+
+    private static func makeRecentPlaces(
+        placeReviews: [PlaceReview],
+        dishReviews: [DishReview]
+    ) -> [Place] {
+        let entries =
+            placeReviews.map { RecentPlaceEntry(place: $0.place, updatedAt: $0.updatedAt) }
+            + dishReviews.map { RecentPlaceEntry(place: $0.place, updatedAt: $0.updatedAt) }
+
+        return deduplicatedPlaces(
+            from: entries.sorted { $0.updatedAt > $1.updatedAt }.map(\.place),
+            limit: 6
+        )
+    }
+
+    private static func makeEligibleDishPlaceEntries(from placeReviews: [PlaceReview]) -> [EligibleDishPlaceEntry] {
+        var seenPlaceIDs = Set<UUID>()
+        var entries: [EligibleDishPlaceEntry] = []
+
+        for review in placeReviews.sorted(by: { $0.updatedAt > $1.updatedAt }) where review.place.supportsDishReviews {
+            guard seenPlaceIDs.insert(review.placeId).inserted else {
+                continue
+            }
+
+            entries.append(
+                EligibleDishPlaceEntry(
+                    place: review.place,
+                    placeReviewID: review.id
+                )
+            )
         }
 
-        selectedCategory = option
-        await load()
+        return entries
     }
+
+    private static func deduplicatedPlaces(from places: [Place], limit: Int) -> [Place] {
+        var seenIDs = Set<UUID>()
+        var uniquePlaces: [Place] = []
+
+        for place in places where seenIDs.insert(place.id).inserted {
+            uniquePlaces.append(place)
+            if uniquePlaces.count == limit {
+                break
+            }
+        }
+
+        return uniquePlaces
+    }
+}
+
+private struct RecentPlaceEntry {
+    let place: Place
+    let updatedAt: Date
+}
+
+private struct EligibleDishPlaceEntry {
+    let place: Place
+    let placeReviewID: UUID
 }

@@ -3,12 +3,30 @@ import OSLog
 
 @MainActor
 final class ProfileViewModel: ObservableObject {
+    struct FriendsSummary: Equatable {
+        var friendCount = 0
+        var pendingRequestCount = 0
+        var previewFriends: [UserSummary] = []
+
+        var secondaryText: String {
+            switch pendingRequestCount {
+            case 1:
+                return "1 pending request"
+            case let count where count > 1:
+                return "\(count) pending requests"
+            default:
+                return "Your trusted network"
+            }
+        }
+    }
+
     @Published private(set) var user: User?
     @Published private(set) var stats = UserStats(ratedPlacesCount: 0, reviewedDishesCount: 0)
     @Published private(set) var categoryCount = 0
     @Published private(set) var placeReviews: [PlaceReview] = []
     @Published private(set) var dishReviews: [DishReview] = []
     @Published private(set) var placeNames: [UUID: String] = [:]
+    @Published private(set) var friendsSummary = FriendsSummary()
     @Published var editedHandle = "" {
         didSet {
             let normalized = HandleComponents.normalizedEditableBase(from: editedHandle)
@@ -34,6 +52,7 @@ final class ProfileViewModel: ObservableObject {
     private let refreshCenter: AppRefreshCenter
     private let sessionStore: SessionStore
     private let userRepository: UserProfileRepository
+    private let friendRepository: FriendRepository
     private let categoryRepository: CategoryRepository
     private let placeReviewRepository: PlaceReviewRepository
     private let dishReviewRepository: DishReviewRepository
@@ -42,6 +61,7 @@ final class ProfileViewModel: ObservableObject {
         refreshCenter: AppRefreshCenter,
         sessionStore: SessionStore,
         userRepository: UserProfileRepository,
+        friendRepository: FriendRepository,
         categoryRepository: CategoryRepository,
         placeReviewRepository: PlaceReviewRepository,
         dishReviewRepository: DishReviewRepository
@@ -49,6 +69,7 @@ final class ProfileViewModel: ObservableObject {
         self.refreshCenter = refreshCenter
         self.sessionStore = sessionStore
         self.userRepository = userRepository
+        self.friendRepository = friendRepository
         self.categoryRepository = categoryRepository
         self.placeReviewRepository = placeReviewRepository
         self.dishReviewRepository = dishReviewRepository
@@ -80,15 +101,18 @@ final class ProfileViewModel: ObservableObject {
             async let categories = categoryRepository.fetchMyCategories()
             async let placeReviews = placeReviewRepository.fetchReviews(authorUserID: currentUser.id)
             async let dishReviews = dishReviewRepository.fetchReviews(authorUserID: currentUser.id)
+            async let friendsSummary = loadFriendsSummary(fallbackFriendCount: currentProfile.friendCount)
 
             let resolvedCategories = try await categories
             let resolvedPlaceReviews = try await placeReviews
             let resolvedDishReviews = try await dishReviews
+            let resolvedFriendsSummary = await friendsSummary
 
             self.user = currentProfile
             self.categoryCount = resolvedCategories.count
             self.placeReviews = resolvedPlaceReviews
             self.dishReviews = resolvedDishReviews
+            self.friendsSummary = resolvedFriendsSummary
             self.placeNames = (resolvedPlaceReviews.map { ($0.placeId, $0.place.name) }
                 + resolvedDishReviews.map { ($0.placeId, $0.place.name) })
                 .reduce(into: [:]) { partialResult, item in
@@ -217,6 +241,25 @@ final class ProfileViewModel: ObservableObject {
         sessionStore.updateCurrentUser(updatedUser)
         errorMessage = nil
         usernameErrorMessage = nil
+    }
+
+    private func loadFriendsSummary(fallbackFriendCount: Int) async -> FriendsSummary {
+        do {
+            async let friendsTask = friendRepository.fetchFriends()
+            async let incomingRequestsTask = friendRepository.fetchIncomingRequests()
+
+            let friends = try await friendsTask
+            let incomingRequests = try await incomingRequestsTask
+
+            return FriendsSummary(
+                friendCount: friends.count,
+                pendingRequestCount: incomingRequests.count,
+                previewFriends: Array(friends.prefix(3).map(\.user))
+            )
+        } catch {
+            logger.error("Unable to load friends summary: \(error.localizedDescription, privacy: .public)")
+            return FriendsSummary(friendCount: fallbackFriendCount)
+        }
     }
 
     private static func isUsernameValidationError(_ message: String) -> Bool {
