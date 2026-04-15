@@ -6,6 +6,7 @@ struct PlacesView: View {
     @StateObject private var viewModel: PlacesViewModel
     @State private var isFilterPresented = false
     @State private var draftCategory = PlaceCategoryOption.all
+    @State private var draftOwnershipFilter: PlaceOwnershipFilter = .all
 
     init(container: AppContainer) {
         self.container = container
@@ -13,7 +14,8 @@ struct PlacesView: View {
         _viewModel = StateObject(
             wrappedValue: PlacesViewModel(
                 mapRepository: container.mapRepository,
-                categoryRepository: container.categoryRepository
+                categoryRepository: container.categoryRepository,
+                sessionStore: container.sessionStore
             )
         )
     }
@@ -54,6 +56,7 @@ struct PlacesView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     draftCategory = viewModel.selectedCategory
+                    draftOwnershipFilter = viewModel.selectedOwnershipFilter
                     isFilterPresented = true
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
@@ -63,9 +66,15 @@ struct PlacesView: View {
         .sheet(isPresented: $isFilterPresented) {
             PlacesFilterSheet(
                 selectedCategory: $draftCategory,
+                selectedOwnershipFilter: $draftOwnershipFilter,
                 categoryOptions: viewModel.availableCategoryOptions
             ) {
-                Task { await viewModel.selectCategory(draftCategory) }
+                Task {
+                    await viewModel.applyFilters(
+                        category: draftCategory,
+                        ownershipFilter: draftOwnershipFilter
+                    )
+                }
             }
         }
         .task(id: refreshCenter.globalRevision) {
@@ -82,6 +91,7 @@ struct PlacesView: View {
 
 private struct PlacesFilterSheet: View {
     @Binding var selectedCategory: PlaceCategoryOption
+    @Binding var selectedOwnershipFilter: PlaceOwnershipFilter
     let categoryOptions: [PlaceCategoryOption]
     let onApply: () -> Void
 
@@ -90,6 +100,14 @@ private struct PlacesFilterSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Owner") {
+                    Picker("Show", selection: $selectedOwnershipFilter) {
+                        ForEach(PlaceOwnershipFilter.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                }
+
                 Section("Category") {
                     Picker("Show", selection: $selectedCategory) {
                         ForEach(categoryOptions) { option in

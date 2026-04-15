@@ -110,6 +110,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
     let countryCode: String?
     let latitude: Double
     let longitude: Double
+    let createdByUserId: UUID?
     let categoryNames: [String]
     let visiblePlaceReviewCount: Int
     let visibleDishReviewCount: Int

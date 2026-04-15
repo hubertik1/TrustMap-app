@@ -38,6 +38,7 @@ final class MapScreenViewModel: ObservableObject {
     private let placeRepository: PlaceRepository
     private let categoryRepository: CategoryRepository
     private let mapSearchService: MapSearchService
+    private let sessionStore: SessionStore
     private let userLocationService: UserLocationServicing
     private var promptPresentationTask: Task<Void, Never>?
     private var latestMapReloadRequestID = UUID()
@@ -50,6 +51,7 @@ final class MapScreenViewModel: ObservableObject {
         placeRepository: PlaceRepository,
         categoryRepository: CategoryRepository,
         mapSearchService: MapSearchService,
+        sessionStore: SessionStore,
         userLocationService: UserLocationServicing,
         preferencesStore: AppPreferencesStore
     ) {
@@ -57,6 +59,7 @@ final class MapScreenViewModel: ObservableObject {
         self.placeRepository = placeRepository
         self.categoryRepository = categoryRepository
         self.mapSearchService = mapSearchService
+        self.sessionStore = sessionStore
         self.userLocationService = userLocationService
         self.isSatelliteEnabled = preferencesStore.defaultMapStyle == .satellite
         self.shouldCenterOnNextLocationUpdate = preferencesStore.centerOnUserLocationOnLaunch
@@ -224,22 +227,7 @@ final class MapScreenViewModel: ObservableObject {
                 return
             }
 
-            annotations = places
-                .filter { mapPlace in
-                    guard let average = mapPlace.averagePlaceRating else {
-                        return filterState.minimumRating <= 1
-                    }
-
-                    return filterState.ratingRange.contains(Int(round(average)))
-                }
-                .map {
-                    MapPlaceAnnotation(
-                        id: $0.placeId,
-                        place: $0.place,
-                        averageRating: $0.averagePlaceRating ?? 0,
-                        reviewCount: $0.visiblePlaceReviewCount + $0.visibleDishReviewCount
-                    )
-                }
+            annotations = makeAnnotations(from: places)
             errorMessage = nil
         } catch {
             guard latestMapReloadRequestID == requestID else {
@@ -276,6 +264,37 @@ final class MapScreenViewModel: ObservableObject {
             if reportErrors {
                 errorMessage = AppError.wrap(error).errorDescription
             }
+        }
+    }
+
+    private func makeAnnotations(from places: [MapPlace]) -> [MapPlaceAnnotation] {
+        let visiblePlaces = places.filter { mapPlace in
+            let matchesOwnership: Bool
+            switch filterState.selectedOwnershipFilter {
+            case .all:
+                matchesOwnership = true
+            case .mine:
+                matchesOwnership = mapPlace.createdByUserId == sessionStore.currentUser?.id
+            }
+
+            guard matchesOwnership else {
+                return false
+            }
+
+            guard let average = mapPlace.averagePlaceRating else {
+                return filterState.minimumRating <= 1
+            }
+
+            return filterState.ratingRange.contains(Int(round(average)))
+        }
+
+        return visiblePlaces.map {
+            MapPlaceAnnotation(
+                id: $0.placeId,
+                place: $0.place,
+                averageRating: $0.averagePlaceRating ?? 0,
+                reviewCount: $0.visiblePlaceReviewCount + $0.visibleDishReviewCount
+            )
         }
     }
 

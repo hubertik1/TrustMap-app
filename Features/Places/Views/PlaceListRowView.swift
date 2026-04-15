@@ -64,7 +64,8 @@ struct PlaceListRowView: View {
             averageRating: 8.7,
             reviewCount: 3,
             categoryNames: [],
-            reviewerRatings: []
+            reviewerRatings: [],
+            createdByUserId: nil
         )
     )
     .padding()

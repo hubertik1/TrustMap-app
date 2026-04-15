@@ -10,6 +10,14 @@ struct MapFilterSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Owner") {
+                    Picker("Show", selection: $filterState.selectedOwnershipFilter) {
+                        ForEach(PlaceOwnershipFilter.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                }
+
                 Section("Category") {
                     Picker("Show", selection: $filterState.selectedCategory) {
                         ForEach(categoryOptions) { option in

@@ -7,4 +7,5 @@ struct PlaceListItem: Identifiable, Hashable {
     let reviewCount: Int
     let categoryNames: [String]
     let reviewerRatings: [PlaceReviewerRating]
+    let createdByUserId: UUID?
 }
