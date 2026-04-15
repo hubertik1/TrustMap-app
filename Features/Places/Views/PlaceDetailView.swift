@@ -122,7 +122,11 @@ struct PlaceDetailView: View {
             Task { await viewModel.load() }
         }) {
             NavigationStack {
-                AddDishReviewView(container: container, place: viewModel.place)
+                AddDishReviewView(
+                    container: container,
+                    place: viewModel.place,
+                    placeReviewID: viewModel.currentUserPlaceReview?.id
+                )
             }
         }
         .sheet(item: $viewModel.editingDishReview, onDismiss: {
