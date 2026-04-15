@@ -117,7 +117,7 @@ final class AddHubViewModel: ObservableObject {
         var seenPlaceIDs = Set<UUID>()
         var entries: [EligibleDishPlaceEntry] = []
 
-        for review in placeReviews.sorted(by: { $0.updatedAt > $1.updatedAt }) where review.place.supportsDishReviews {
+        for review in placeReviews.sorted(by: { $0.updatedAt > $1.updatedAt }) where review.supportsDishReviews {
             guard seenPlaceIDs.insert(review.placeId).inserted else {
                 continue
             }

@@ -279,6 +279,7 @@ private struct RecentPlacesCard: View {
 
 private struct DishReviewPlacePickerSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isSearching) private var isSearching
     @State private var searchText = ""
 
     let places: [Place]
@@ -304,37 +305,41 @@ private struct DishReviewPlacePickerSheet: View {
         searchText.normalizedSearchText
     }
 
+    private var isSearchActive: Bool {
+        isSearching || hasSearchText
+    }
+
     var body: some View {
-        NavigationStack {
-            Group {
-                if places.isEmpty {
-                    VStack(spacing: 14) {
-                        Image(systemName: "fork.knife.circle")
-                            .font(.system(size: 32))
-                            .foregroundStyle(.secondary)
-
-                        Text("You need to review a place before adding a dish review.")
-                            .font(.body.weight(.medium))
-                            .multilineTextAlignment(.center)
-
-                        Button("Add Place Review") {
-                            onAddPlaceReview()
-                            dismiss()
-                        }
-                        .buttonStyle(.borderedProminent)
+        GeometryReader { proxy in
+            NavigationStack {
+                Group {
+                    if !isSearchActive {
+                        defaultInfoView
+                    } else if places.isEmpty {
+                        noRestaurantsView
+                    } else if filteredPlaces.isEmpty {
+                        ContentUnavailableView.search(text: searchText)
+                    } else {
+                        Color.clear
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(24)
-                } else {
-                    dishPlacesList
                 }
-            }
-            .navigationTitle("Add Dish Review")
-            .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "Search your reviewed places")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .navigationTitle("Add Dish Review")
+                .navigationBarTitleDisplayMode(.inline)
+                .searchable(text: $searchText, prompt: "Search reviewed restaurants")
+                .safeAreaInset(edge: .top) {
+                    let suggestionPlaces = hasSearchText ? filteredPlaces : places
+                    if isSearchActive, !suggestionPlaces.isEmpty {
+                        searchResultsView(
+                            places: suggestionPlaces,
+                            maxHeight: max(320, proxy.size.height - 180)
+                        )
+                    }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") { dismiss() }
+                    }
                 }
             }
         }
@@ -345,12 +350,43 @@ private struct DishReviewPlacePickerSheet: View {
         dismiss()
     }
 
-    private var dishPlacesList: some View {
-        Group {
-            if filteredPlaces.isEmpty {
-                ContentUnavailableView.search(text: searchText)
-            } else {
-                List(filteredPlaces) { place in
+    private var defaultInfoView: some View {
+        VStack(spacing: 20) {
+            EmptyStateView(
+                title: "Add Dish Review",
+                message: "To add a dish review for a place, you need to rate that place first.",
+                systemImage: "fork.knife.circle"
+            )
+            .frame(maxHeight: .infinity)
+
+            Button("Add Place Review") {
+                onAddPlaceReview()
+                dismiss()
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.bottom, 24)
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private var noRestaurantsView: some View {
+        ContentUnavailableView(
+            "No Reviewed Restaurants",
+            systemImage: "fork.knife.circle",
+            description: Text("Only places you've already rated in the Restaurant category can be used for a dish review.")
+        )
+    }
+
+    private func searchableText(for place: Place) -> String {
+        [place.name, place.address]
+            .joined(separator: " ")
+            .normalizedSearchText
+    }
+
+    private func searchResultsView(places: [Place], maxHeight: CGFloat) -> some View {
+        ScrollView {
+            LazyVStack(spacing: 8) {
+                ForEach(places) { place in
                     Button {
                         select(place)
                     } label: {
@@ -363,17 +399,16 @@ private struct DishReviewPlacePickerSheet: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
+                    .buttonStyle(.plain)
                 }
-                .listStyle(.plain)
             }
+            .padding(.horizontal)
         }
-    }
-
-    private func searchableText(for place: Place) -> String {
-        [place.name, place.address]
-            .joined(separator: " ")
-            .normalizedSearchText
+        .frame(height: maxHeight, alignment: .top)
     }
 }
 

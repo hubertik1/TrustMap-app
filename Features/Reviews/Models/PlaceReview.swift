@@ -81,4 +81,13 @@ struct PlaceReview: Identifiable, Codable, Hashable, Sendable {
     var authorUserId: UUID {
         author.id
     }
+
+    var supportsDishReviews: Bool {
+        if let categoryName,
+           categoryName.compare("Restaurant", options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame {
+            return true
+        }
+
+        return place.supportsDishReviews
+    }
 }
