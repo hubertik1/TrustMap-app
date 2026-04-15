@@ -61,7 +61,7 @@ final class AddDishReviewViewModel: ObservableObject {
         self.refreshCenter = refreshCenter
         self.existingReview = existingReview
         self.isEditing = existingReview != nil
-        self.visibility = preferencesStore.defaultDishReviewVisibility
+        self.visibility = preferencesStore.defaultDishReviewVisibility.selectableValue
 
         if let existingReview {
             populateForm(with: existingReview)
@@ -143,7 +143,7 @@ final class AddDishReviewViewModel: ObservableObject {
             let draft = DishReviewDraft(
                 placeId: place.id,
                 placeReviewId: existingPlaceReviewID,
-                visibility: visibility,
+                visibility: visibility.selectableValue,
                 dishName: trimmedDishName,
                 dishRating: dishRating,
                 dishReviewText: dishReviewText,
@@ -199,7 +199,7 @@ final class AddDishReviewViewModel: ObservableObject {
         dishName = review.dishName
         dishRating = review.dishRating
         dishReviewText = review.dishReviewText
-        visibility = review.visibility
+        visibility = review.visibility.selectableValue
         selectedCategoryId = review.categoryId ?? selectedCategoryId ?? defaultCategoryID(in: availableCategories)
         existingPhotos = review.photos
         photoIDsMarkedForDeletion = []

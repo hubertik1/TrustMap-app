@@ -5,6 +5,10 @@ enum VisibilityStatus: String, Codable, CaseIterable, Identifiable {
     case onlyMe = "Private"
     case `public` = "Public"
 
+    static var allCases: [VisibilityStatus] {
+        [.onlyMe, .friendsOnly]
+    }
+
     var id: String { rawValue }
 
     var displayName: String {
@@ -15,6 +19,15 @@ enum VisibilityStatus: String, Codable, CaseIterable, Identifiable {
             return "Only Me"
         case .public:
             return "Public"
+        }
+    }
+
+    var selectableValue: VisibilityStatus {
+        switch self {
+        case .onlyMe, .friendsOnly:
+            return self
+        case .public:
+            return .friendsOnly
         }
     }
 }

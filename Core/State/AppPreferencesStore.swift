@@ -95,12 +95,12 @@ final class AppPreferencesStore: ObservableObject {
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
-        self.defaultPlaceReviewVisibility = VisibilityStatus(
+        self.defaultPlaceReviewVisibility = (VisibilityStatus(
             rawValue: userDefaults.string(forKey: Keys.defaultPlaceReviewVisibility) ?? ""
-        ) ?? .friendsOnly
-        self.defaultDishReviewVisibility = VisibilityStatus(
+        ) ?? .friendsOnly).selectableValue
+        self.defaultDishReviewVisibility = (VisibilityStatus(
             rawValue: userDefaults.string(forKey: Keys.defaultDishReviewVisibility) ?? ""
-        ) ?? .friendsOnly
+        ) ?? .friendsOnly).selectableValue
         self.defaultMapStyle = AppMapStylePreference(
             rawValue: userDefaults.string(forKey: Keys.defaultMapStyle) ?? ""
         ) ?? .standard

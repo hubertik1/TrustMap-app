@@ -55,7 +55,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
         self.refreshCenter = refreshCenter
         self.existingReview = existingReview
         self.isEditing = existingReview != nil
-        self.visibility = preferencesStore.defaultPlaceReviewVisibility
+        self.visibility = preferencesStore.defaultPlaceReviewVisibility.selectableValue
 
         if let existingReview {
             populateForm(with: existingReview)
@@ -134,7 +134,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
                 ratingOverall: ratingOverall,
                 reviewText: "",
                 descriptionText: descriptionText,
-                visibility: visibility,
+                visibility: visibility.selectableValue,
                 photoDataItems: selectedPhotoData,
                 photoIDsToDelete: Array(photoIDsMarkedForDeletion),
                 selectedCategoryId: selectedCategoryId
@@ -184,7 +184,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
     private func populateForm(with review: PlaceReview) {
         ratingOverall = review.ratingOverall
         descriptionText = review.descriptionText
-        visibility = review.visibility
+        visibility = review.visibility.selectableValue
         selectedCategoryId = review.categoryId ?? selectedCategoryId ?? defaultCategoryID(in: availableCategories)
         existingPhotos = review.photos
         photoIDsMarkedForDeletion = []
