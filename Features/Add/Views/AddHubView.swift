@@ -56,7 +56,7 @@ struct AddHubView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Recent Places")
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.78))
+                        .foregroundStyle(.primary)
 
                     if viewModel.recentPlaces.isEmpty {
                         Text("Places you've reviewed recently will show up here.")
@@ -82,6 +82,7 @@ struct AddHubView: View {
                 }
             }
         }
+        .background(Color(uiColor: .systemGroupedBackground))
         .contentMargins(.top, 8, for: .scrollContent)
         .contentMargins(.horizontal, 16, for: .scrollContent)
         .navigationTitle("Add")
@@ -191,21 +192,21 @@ private struct AddHubActionCard: View {
         HStack(spacing: 14) {
             Image(systemName: systemImage)
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .frame(width: 46, height: 46)
                 .background(
                     Circle()
-                        .fill(.white.opacity(0.1))
+                        .fill(Color(uiColor: .secondarySystemGroupedBackground))
                 )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
 
                 Text(subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.72))
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.leading)
             }
 
@@ -220,7 +221,7 @@ private struct AddHubActionCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                .fill(Color(uiColor: .systemBackground))
         )
     }
 }
@@ -249,11 +250,11 @@ private struct RecentPlacesCard: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(place.name)
                             .font(.headline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
 
                         Text(place.address)
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.72))
+                            .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 14)
@@ -264,14 +265,14 @@ private struct RecentPlacesCard: View {
 
                 if index < places.index(before: places.endIndex) {
                     Divider()
-                        .overlay(.white.opacity(0.08))
+                        .overlay(Color(uiColor: .separator).opacity(0.25))
                         .padding(.horizontal, 16)
                 }
             }
         }
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                .fill(Color(uiColor: .systemBackground))
         )
     }
 }
