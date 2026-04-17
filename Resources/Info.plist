@@ -47,7 +47,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>TrustMapAPIBaseURL</key>
-	<string>http://MacBookAir.local:5104</string>
+	<string>https://app-trust-map-g3a7egahhtdqgzae.polandcentral-01.azurewebsites.net</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
