@@ -1,0 +1,5 @@
+#include "Base.xcconfig"
+
+TRUSTMAP_ENVIRONMENT_NAME = Prod
+API_BASE_URL = https:$(URL_SLASH)$(URL_SLASH)app-trust-map-g3a7egahhtdqgzae.polandcentral-01.azurewebsites.net
+INFOPLIST_FILE = Resources/Info-Prod.plist

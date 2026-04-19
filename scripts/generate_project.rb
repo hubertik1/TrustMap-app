@@ -7,6 +7,18 @@ require 'pathname'
 ROOT = Pathname.new(File.expand_path('..', __dir__))
 PROJECT_PATH = ROOT.join('TrustMap.xcodeproj')
 APP_NAME = 'TrustMap'
+CONFIGURATIONS = [
+  {
+    existing_name: 'Debug',
+    name: 'Local',
+    type: :debug
+  },
+  {
+    existing_name: 'Release',
+    name: 'Prod',
+    type: :release
+  }
+].freeze
 
 FileUtils.rm_rf(PROJECT_PATH) if PROJECT_PATH.exist?
 
@@ -25,36 +37,30 @@ project.root_object.attributes['TargetAttributes'][target.uuid] = {
   }
 }
 
-project.build_configurations.each do |config|
-  config.build_settings['SWIFT_VERSION'] = '6.0'
-  config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '18.0'
-end
+main_group = project.main_group
+config_group = main_group.find_subpath('Config', true)
 
-target.build_configurations.each do |config|
-  config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = 'com.hubert.TrustMap'
-  config.build_settings['PRODUCT_NAME'] = APP_NAME
-  config.build_settings['CURRENT_PROJECT_VERSION'] = '1'
-  config.build_settings['MARKETING_VERSION'] = '1.0'
-  config.build_settings['SWIFT_VERSION'] = '6.0'
-  config.build_settings['TARGETED_DEVICE_FAMILY'] = '1'
-  config.build_settings['GENERATE_INFOPLIST_FILE'] = 'NO'
-  config.build_settings['INFOPLIST_FILE'] = 'Resources/Info.plist'
-  config.build_settings['ASSETCATALOG_COMPILER_APPICON_NAME'] = 'AppIcon'
-  config.build_settings['ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME'] = 'AccentColor'
-  config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
-  config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'Resources/TrustMap.entitlements'
-  config.build_settings['DEVELOPMENT_ASSET_PATHS'] = '"Resources/Preview Content"'
-  config.build_settings['ENABLE_PREVIEWS'] = 'YES'
-  config.build_settings['SUPPORTED_PLATFORMS'] = 'iphoneos iphonesimulator'
-  config.build_settings['SUPPORTS_MACCATALYST'] = 'NO'
-  if config.name == 'Debug'
-    config.build_settings['TRUSTMAP_API_BASE_URL'] = 'http://192.168.0.47:5104'
-  else
-    config.build_settings['TRUSTMAP_API_BASE_URL'] = 'https://app-trust-map-g3a7egahhtdqgzae.polandcentral-01.azurewebsites.net'
+config_file_refs = {
+  'Base' => config_group.new_file('Config/Base.xcconfig'),
+  'Local' => config_group.new_file('Config/Local.xcconfig'),
+  'LocalExample' => config_group.new_file('Config/Local.override.xcconfig.example'),
+  'Prod' => config_group.new_file('Config/Prod.xcconfig')
+}
+
+def configure_build_configurations(owner, config_file_refs)
+  CONFIGURATIONS.each do |entry|
+    configuration = owner.build_configurations.find { |config| config.name == entry[:existing_name] || config.name == entry[:name] }
+    configuration ||= owner.add_build_configuration(entry[:name], entry[:type])
+    configuration.name = entry[:name]
+    configuration.base_configuration_reference = config_file_refs.fetch(entry[:name])
+  end
+
+  owner.build_configurations
+       .reject { |config| CONFIGURATIONS.any? { |entry| entry[:name] == config.name } }
+       .each do |config|
+    owner.build_configuration_list.build_configurations.delete(config)
   end
 end
-
-main_group = project.main_group
 
 def add_folder_references(group, path, target)
   Dir.children(path).sort.each do |entry|
@@ -82,10 +88,24 @@ end
   add_folder_references(group, ROOT.join(folder).to_s, target)
 end
 
-resources_group = main_group.find_subpath('Resources', true)
-assets_ref = resources_group.new_file('Resources/Assets.xcassets')
-target.resources_build_phase.add_file_reference(assets_ref)
-resources_group.new_file('Resources/Info.plist')
-resources_group.new_file('Resources/TrustMap.entitlements')
+%w[Resources].each do |folder|
+  group = main_group.find_subpath(folder, true)
+  add_folder_references(group, ROOT.join(folder).to_s, target)
+end
+
+configure_build_configurations(project, config_file_refs)
+configure_build_configurations(target, config_file_refs)
+project.root_object.build_configuration_list.default_configuration_name = 'Prod'
+
+CONFIGURATIONS.each do |entry|
+  scheme = Xcodeproj::XCScheme.new
+  scheme.configure_with_targets(target, nil, launch_target: true)
+  scheme.test_action.build_configuration = entry[:name]
+  scheme.launch_action.build_configuration = entry[:name]
+  scheme.profile_action.build_configuration = entry[:name]
+  scheme.analyze_action.build_configuration = entry[:name]
+  scheme.archive_action.build_configuration = entry[:name]
+  scheme.save_as(PROJECT_PATH, entry[:name], true)
+end
 
 project.save

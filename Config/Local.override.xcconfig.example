@@ -1,0 +1,5 @@
+// Copy this file to Local.override.xcconfig and set your Mac's reachable LAN host.
+// Use either a Bonjour hostname, for example:
+// TRUSTMAP_LAN_HOST = huberts-macbook-pro.local
+// or a direct LAN IP address:
+// TRUSTMAP_LAN_HOST = 192.168.1.42

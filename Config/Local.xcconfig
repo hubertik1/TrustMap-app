@@ -1,0 +1,10 @@
+#include "Base.xcconfig"
+
+TRUSTMAP_ENVIRONMENT_NAME = Local
+TRUSTMAP_LAN_HOST = trustmap.local
+TRUSTMAP_LAN_PORT = 5104
+
+API_BASE_URL = http:$(URL_SLASH)$(URL_SLASH)$(TRUSTMAP_LAN_HOST):$(TRUSTMAP_LAN_PORT)
+INFOPLIST_FILE = Resources/Info-Local.plist
+
+#include? "Local.override.xcconfig"

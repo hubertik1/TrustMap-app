@@ -3,6 +3,25 @@ import XCTest
 @testable import TrustMapContractSupport
 
 final class BackendContractTests: XCTestCase {
+    private var originalAPIBaseURL: String?
+    private var originalEnvironmentName: String?
+
+    override func setUp() {
+        super.setUp()
+
+        originalAPIBaseURL = ProcessInfo.processInfo.environment["TRUSTMAP_API_BASE_URL"]
+        originalEnvironmentName = ProcessInfo.processInfo.environment["TRUSTMAP_ENVIRONMENT_NAME"]
+
+        setenv("TRUSTMAP_API_BASE_URL", "http://127.0.0.1:5104", 1)
+        setenv("TRUSTMAP_ENVIRONMENT_NAME", "Local", 1)
+    }
+
+    override func tearDown() {
+        restoreEnvironmentVariable("TRUSTMAP_API_BASE_URL", originalValue: originalAPIBaseURL)
+        restoreEnvironmentVariable("TRUSTMAP_ENVIRONMENT_NAME", originalValue: originalEnvironmentName)
+        super.tearDown()
+    }
+
     @MainActor
     func testAPIClientRefreshesSessionAfterUnauthorized() async throws {
         let firstResponse = makeUserResponse(displayName: "Hubert")
@@ -366,6 +385,14 @@ final class BackendContractTests: XCTestCase {
 
     private func iso8601(_ value: String) -> Date {
         ISO8601DateFormatter().date(from: value)!
+    }
+
+    private func restoreEnvironmentVariable(_ name: String, originalValue: String?) {
+        if let originalValue {
+            setenv(name, originalValue, 1)
+        } else {
+            unsetenv(name)
+        }
     }
 }
 

@@ -33,40 +33,23 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.food-and-drink</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>192.168.0.47</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-			</dict>
-			<key>localhost</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-			</dict>
-		</dict>
 	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>TrustMap uses your local network to reach the Local development API running on your Mac.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>TrustMap uses your location to center the map around you and help you discover nearby places.</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>TrustMap needs access to your local network to connect to the development backend running on your Mac.</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>TrustMapAPIBaseURL</key>
-	<string>$(TRUSTMAP_API_BASE_URL)</string>
+	<string>$(API_BASE_URL)</string>
+	<key>TrustMapEnvironmentName</key>
+	<string>$(TRUSTMAP_ENVIRONMENT_NAME)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
