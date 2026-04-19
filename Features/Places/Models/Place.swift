@@ -7,6 +7,7 @@ struct Place: Identifiable, Codable, Hashable, Sendable {
     let displayName: String
     let customDisplayName: String?
     let sourceType: PlaceSourceType
+    let canEditCustomDisplayName: Bool
     let address: String
     let city: String?
     let countryCode: String?
@@ -19,6 +20,7 @@ struct Place: Identifiable, Codable, Hashable, Sendable {
         case address
         case categoryNames
         case city
+        case canEditCustomDisplayName
         case countryCode
         case createdByUserId
         case customDisplayName
@@ -36,6 +38,7 @@ struct Place: Identifiable, Codable, Hashable, Sendable {
         displayName: String? = nil,
         customDisplayName: String? = nil,
         sourceType: PlaceSourceType = .providerVenue,
+        canEditCustomDisplayName: Bool = false,
         latitude: Double,
         longitude: Double,
         address: String,
@@ -48,6 +51,7 @@ struct Place: Identifiable, Codable, Hashable, Sendable {
         self.name = name
         self.customDisplayName = customDisplayName
         self.sourceType = sourceType
+        self.canEditCustomDisplayName = canEditCustomDisplayName
         self.displayName = displayName ?? Self.resolvedDisplayName(
             name: name,
             address: address,
@@ -69,6 +73,7 @@ struct Place: Identifiable, Codable, Hashable, Sendable {
         name = try container.decode(String.self, forKey: .name)
         customDisplayName = try container.decodeIfPresent(String.self, forKey: .customDisplayName)
         sourceType = try container.decodeIfPresent(PlaceSourceType.self, forKey: .sourceType) ?? .providerVenue
+        canEditCustomDisplayName = try container.decodeIfPresent(Bool.self, forKey: .canEditCustomDisplayName) ?? false
         address = try container.decode(String.self, forKey: .address)
         city = try container.decodeIfPresent(String.self, forKey: .city)
         countryCode = try container.decodeIfPresent(String.self, forKey: .countryCode)
@@ -120,7 +125,7 @@ struct Place: Identifiable, Codable, Hashable, Sendable {
     }
 
     func canRenameCustomDisplayName(as userID: UUID?) -> Bool {
-        isCustomPin && createdByUserId == userID
+        canEditCustomDisplayName
     }
 
     private static func resolvedDisplayName(
@@ -144,6 +149,7 @@ struct PlaceDetails: Codable, Hashable, Sendable {
     let displayName: String
     let customDisplayName: String?
     let sourceType: PlaceSourceType
+    let canEditCustomDisplayName: Bool
     let address: String
     let city: String?
     let countryCode: String?
@@ -164,6 +170,7 @@ struct PlaceDetails: Codable, Hashable, Sendable {
         case displayName
         case customDisplayName
         case sourceType
+        case canEditCustomDisplayName
         case address
         case city
         case countryCode
@@ -185,6 +192,7 @@ struct PlaceDetails: Codable, Hashable, Sendable {
         name = try container.decode(String.self, forKey: .name)
         customDisplayName = try container.decodeIfPresent(String.self, forKey: .customDisplayName)
         sourceType = try container.decodeIfPresent(PlaceSourceType.self, forKey: .sourceType) ?? .providerVenue
+        canEditCustomDisplayName = try container.decodeIfPresent(Bool.self, forKey: .canEditCustomDisplayName) ?? false
         address = try container.decode(String.self, forKey: .address)
         city = try container.decodeIfPresent(String.self, forKey: .city)
         countryCode = try container.decodeIfPresent(String.self, forKey: .countryCode)
@@ -204,6 +212,7 @@ struct PlaceDetails: Codable, Hashable, Sendable {
                 name: name,
                 customDisplayName: customDisplayName,
                 sourceType: sourceType,
+                canEditCustomDisplayName: canEditCustomDisplayName,
                 latitude: latitude,
                 longitude: longitude,
                 address: address,
@@ -220,6 +229,7 @@ struct PlaceDetails: Codable, Hashable, Sendable {
             displayName: displayName,
             customDisplayName: customDisplayName,
             sourceType: sourceType,
+            canEditCustomDisplayName: canEditCustomDisplayName,
             latitude: latitude,
             longitude: longitude,
             address: address,
@@ -237,6 +247,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
     let displayName: String
     let customDisplayName: String?
     let sourceType: PlaceSourceType
+    let canEditCustomDisplayName: Bool
     let address: String
     let city: String?
     let countryCode: String?
@@ -256,6 +267,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
         case displayName
         case customDisplayName
         case sourceType
+        case canEditCustomDisplayName
         case address
         case city
         case countryCode
@@ -276,6 +288,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
         name = try container.decode(String.self, forKey: .name)
         customDisplayName = try container.decodeIfPresent(String.self, forKey: .customDisplayName)
         sourceType = try container.decodeIfPresent(PlaceSourceType.self, forKey: .sourceType) ?? .providerVenue
+        canEditCustomDisplayName = try container.decodeIfPresent(Bool.self, forKey: .canEditCustomDisplayName) ?? false
         address = try container.decode(String.self, forKey: .address)
         city = try container.decodeIfPresent(String.self, forKey: .city)
         countryCode = try container.decodeIfPresent(String.self, forKey: .countryCode)
@@ -294,6 +307,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
                 name: name,
                 customDisplayName: customDisplayName,
                 sourceType: sourceType,
+                canEditCustomDisplayName: canEditCustomDisplayName,
                 latitude: latitude,
                 longitude: longitude,
                 address: address,
@@ -314,6 +328,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
             displayName: displayName,
             customDisplayName: customDisplayName,
             sourceType: sourceType,
+            canEditCustomDisplayName: canEditCustomDisplayName,
             latitude: latitude,
             longitude: longitude,
             address: address,

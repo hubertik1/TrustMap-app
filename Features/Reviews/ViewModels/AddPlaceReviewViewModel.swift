@@ -25,6 +25,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
     @Published var selectedCategoryId: UUID?
     @Published private(set) var existingPhotos: [PhotoAsset] = []
     @Published private(set) var photoIDsMarkedForDeletion: Set<UUID> = []
+    @Published var customPlaceDisplayName = ""
     @Published var isSaving = false
     @Published var isDeleting = false
     @Published var errorMessage: String?
@@ -33,15 +34,21 @@ final class AddPlaceReviewViewModel: ObservableObject {
     @Published private(set) var isEditing = false
     @Published private(set) var lastAction: ReviewAction = .save
 
-    let place: Place
+    @Published private(set) var place: Place
 
+    private let currentUserID: UUID?
+    private let placeRepository: PlaceRepository
     private let placeReviewRepository: PlaceReviewRepository
     private let categoryRepository: CategoryRepository
     private let refreshCenter: AppRefreshCenter
+    private let provisionalCanEditCustomPlaceDisplayName: Bool
     private var existingReview: PlaceReview?
+    private var editablePlaceNameBaseline: String
 
     init(
         place: Place,
+        currentUserID: UUID?,
+        placeRepository: PlaceRepository,
         placeReviewRepository: PlaceReviewRepository,
         categoryRepository: CategoryRepository,
         refreshCenter: AppRefreshCenter,
@@ -49,12 +56,19 @@ final class AddPlaceReviewViewModel: ObservableObject {
         existingReview: PlaceReview? = nil
     ) {
         self.place = place
+        self.currentUserID = currentUserID
+        self.placeRepository = placeRepository
         self.placeReviewRepository = placeReviewRepository
         self.categoryRepository = categoryRepository
         self.refreshCenter = refreshCenter
+        self.provisionalCanEditCustomPlaceDisplayName =
+            place.isCustomPin && (place.createdByUserId == currentUserID || place.createdByUserId == nil)
         self.existingReview = existingReview
         self.isEditing = existingReview != nil
         self.visibility = preferencesStore.defaultPlaceReviewVisibility.selectableValue
+        let editablePlaceName = place.customDisplayName ?? place.displayName
+        self.customPlaceDisplayName = editablePlaceName
+        self.editablePlaceNameBaseline = editablePlaceName
 
         if let existingReview {
             populateForm(with: existingReview)
@@ -73,18 +87,42 @@ final class AddPlaceReviewViewModel: ObservableObject {
         selectedPhotos.map(\.previewImage)
     }
 
-    func load() async {
-        if availableCategories.isEmpty {
-            do {
-                availableCategories = try await categoryRepository.fetchMyCategories()
-                selectedCategoryId = existingReview?.categoryId ?? defaultCategoryID(in: availableCategories)
-            } catch {
-                errorMessage = AppError.wrap(error).errorDescription
-            }
+    var canEditCustomPlaceDisplayName: Bool {
+        place.canRenameCustomDisplayName(as: currentUserID) || provisionalCanEditCustomPlaceDisplayName
+    }
+
+    var placeAddressLine: String? {
+        let trimmedAddress = place.address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedAddress.isEmpty else {
+            return nil
         }
 
-        if let existingReview {
-            populateForm(with: existingReview)
+        let trimmedSubtitle = place.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedSubtitle.isEmpty ? trimmedAddress : trimmedSubtitle
+    }
+
+    func load() async {
+        do {
+            async let categoriesTask: [CustomCategory] = availableCategories.isEmpty
+                ? categoryRepository.fetchMyCategories()
+                : availableCategories
+            async let placeDetailsTask = placeRepository.fetchPlaceDetails(id: place.id)
+
+            let (resolvedCategories, resolvedPlaceDetails) = try await (categoriesTask, placeDetailsTask)
+
+            if availableCategories.isEmpty {
+                availableCategories = resolvedCategories
+            }
+
+            place = resolvedPlaceDetails.place
+            syncEditablePlaceNameInput()
+            selectedCategoryId = existingReview?.categoryId ?? selectedCategoryId ?? defaultCategoryID(in: availableCategories)
+
+            if let existingReview {
+                populateForm(with: existingReview)
+            }
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
         }
     }
 
@@ -132,6 +170,8 @@ final class AddPlaceReviewViewModel: ObservableObject {
         errorMessage = nil
 
         do {
+            try await saveCustomPlaceDisplayNameIfNeeded()
+
             let draft = PlaceReviewDraft(
                 placeId: place.id,
                 ratingOverall: ratingOverall,
@@ -192,9 +232,36 @@ final class AddPlaceReviewViewModel: ObservableObject {
         existingPhotos = review.photos
         photoIDsMarkedForDeletion = []
         selectedPhotos = []
+        syncEditablePlaceNameInput()
     }
 
     private func defaultCategoryID(in categories: [CustomCategory]) -> UUID? {
         categories.first(where: \.isDefault)?.id ?? categories.first?.id
+    }
+
+    private func saveCustomPlaceDisplayNameIfNeeded() async throws {
+        guard canEditCustomPlaceDisplayName else {
+            return
+        }
+
+        let trimmedDisplayName = customPlaceDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let baselineDisplayName = editablePlaceNameBaseline.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedDisplayName.isEmpty, trimmedDisplayName != baselineDisplayName else {
+            return
+        }
+
+        let updatedPlace = try await placeRepository.updateCustomDisplayName(
+            placeID: place.id,
+            displayName: trimmedDisplayName
+        )
+        place = updatedPlace
+        syncEditablePlaceNameInput()
+    }
+
+    private func syncEditablePlaceNameInput() {
+        let editablePlaceName = place.customDisplayName ?? place.displayName
+        customPlaceDisplayName = editablePlaceName
+        editablePlaceNameBaseline = editablePlaceName
     }
 }

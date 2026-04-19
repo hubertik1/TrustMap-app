@@ -81,13 +81,33 @@ final class PlaceRepository {
             providerPlaceId: result.mapItem == nil ? nil : result.id
         )
 
-        return try await apiClient.send(
+        let place = try await apiClient.send(
             APIRequest<Place>(
                 method: .post,
                 path: "places",
                 body: .json(AnyEncodable(payload)),
                 acceptedStatusCodes: [201]
             )
+        )
+
+        guard result.mapItem == nil else {
+            return place
+        }
+
+        return Place(
+            id: place.id,
+            name: place.name,
+            displayName: place.customDisplayName ?? place.address,
+            customDisplayName: place.customDisplayName,
+            sourceType: .customPin,
+            canEditCustomDisplayName: place.canEditCustomDisplayName,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            address: place.address,
+            city: place.city,
+            countryCode: place.countryCode,
+            createdByUserId: place.createdByUserId,
+            categoryNames: place.categoryNames
         )
     }
 

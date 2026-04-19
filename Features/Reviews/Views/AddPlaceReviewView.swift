@@ -11,6 +11,8 @@ struct AddPlaceReviewView: View {
         _viewModel = StateObject(
             wrappedValue: AddPlaceReviewViewModel(
                 place: place,
+                currentUserID: container.sessionStore.currentUser?.id,
+                placeRepository: container.placeRepository,
                 placeReviewRepository: container.placeReviewRepository,
                 categoryRepository: container.categoryRepository,
                 refreshCenter: container.refreshCenter,
@@ -89,11 +91,18 @@ struct AddPlaceReviewView: View {
     }
 
     private var placeSection: some View {
-        Section {
-            Text(viewModel.place.displayName)
-                .font(.headline)
-            if let secondaryDisplayText = viewModel.place.secondaryDisplayText {
-                Text(secondaryDisplayText)
+        Section("Place") {
+            if viewModel.canEditCustomPlaceDisplayName {
+                TextField("Place name", text: $viewModel.customPlaceDisplayName)
+                    .font(.headline)
+                    .textInputAutocapitalization(.words)
+            } else {
+                Text(viewModel.place.displayName)
+                    .font(.headline)
+            }
+
+            if let addressLine = viewModel.placeAddressLine {
+                Text(addressLine)
                     .foregroundStyle(.secondary)
             }
         }
