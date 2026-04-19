@@ -90,12 +90,21 @@ def add_folder_references(group, path, target)
     next if entry.start_with?('.')
 
     full_path = File.join(path, entry)
+    relative_path = full_path.sub("#{ROOT.to_s}/", '')
+
+    # Asset catalogs must be added as catalog resources. Recursing into them
+    # drops the compiled Assets.car from archive builds.
+    if File.directory?(full_path) && File.extname(full_path) == '.xcassets'
+      file_ref = group.new_file(relative_path)
+      target.resources_build_phase.add_file_reference(file_ref)
+      next
+    end
 
     if File.directory?(full_path)
       child_group = group.find_subpath(entry, true)
       add_folder_references(child_group, full_path, target)
     else
-      file_ref = group.new_file(full_path.sub("#{ROOT.to_s}/", ''))
+      file_ref = group.new_file(relative_path)
       case File.extname(full_path)
       when '.swift'
         target.source_build_phase.add_file_reference(file_ref)
