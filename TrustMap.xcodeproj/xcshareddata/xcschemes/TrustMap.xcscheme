@@ -15,7 +15,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "1966397F1ABDCD9DB0195992"
+               BlueprintIdentifier = "C6B12D148B3A5CC763FFEFD7"
                BuildableName = "TrustMap.app"
                BlueprintName = "TrustMap"
                ReferencedContainer = "container:TrustMap.xcodeproj">
@@ -45,7 +45,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "1966397F1ABDCD9DB0195992"
+            BlueprintIdentifier = "C6B12D148B3A5CC763FFEFD7"
             BuildableName = "TrustMap.app"
             BlueprintName = "TrustMap"
             ReferencedContainer = "container:TrustMap.xcodeproj">
@@ -62,7 +62,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "1966397F1ABDCD9DB0195992"
+            BlueprintIdentifier = "C6B12D148B3A5CC763FFEFD7"
             BuildableName = "TrustMap.app"
             BlueprintName = "TrustMap"
             ReferencedContainer = "container:TrustMap.xcodeproj">

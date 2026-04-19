@@ -37,8 +37,27 @@
 	<string>public.app-category.food-and-drink</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>192.168.0.47</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>TrustMap uses your location to center the map around you and help you discover nearby places.</string>
@@ -47,7 +66,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>TrustMapAPIBaseURL</key>
-	<string>https://app-trust-map-g3a7egahhtdqgzae.polandcentral-01.azurewebsites.net</string>
+	<string>$(TRUSTMAP_API_BASE_URL)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

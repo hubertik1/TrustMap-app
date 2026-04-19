@@ -22,8 +22,7 @@ final class AddDishReviewViewModel: ObservableObject {
     @Published var dishReviewText = ""
     @Published var priceText = ""
     @Published var visibility: VisibilityStatus = .friendsOnly
-    @Published var selectedPhotoData: Data?
-    @Published var selectedPreviewImage: UIImage?
+    @Published private(set) var selectedPhoto: SelectedPhotoUpload?
     @Published private(set) var availableCategories: [CustomCategory] = []
     @Published var selectedCategoryId: UUID?
     @Published private(set) var existingPhotos: [PhotoAsset] = []
@@ -68,12 +67,20 @@ final class AddDishReviewViewModel: ObservableObject {
         }
 
         if let existingPhotoData, let image = UIImage(data: existingPhotoData) {
-            selectedPreviewImage = image
+            selectedPhoto = SelectedPhotoUpload(uploadData: existingPhotoData, previewImage: image)
         }
     }
 
     var navigationTitle: String {
         isEditing ? "Edit Dish Review" : "Add Dish Review"
+    }
+
+    var selectedPhotoData: Data? {
+        selectedPhoto?.uploadData
+    }
+
+    var selectedPreviewImage: UIImage? {
+        selectedPhoto?.previewImage
     }
 
     func load() async {
@@ -91,20 +98,17 @@ final class AddDishReviewViewModel: ObservableObject {
         }
     }
 
-    func updateSelectedPhoto(with data: Data?) {
-        guard let data else {
-            return
-        }
+    func setSelectedPhoto(_ photo: SelectedPhotoUpload?) {
+        selectedPhoto = photo
+        errorMessage = nil
+    }
 
-        if let image = UIImage(data: data) {
-            selectedPhotoData = data
-            selectedPreviewImage = image
-        }
+    func showPhotoPreparationFailure() {
+        errorMessage = AppError.validationFailure("The selected photo couldn't be prepared.").errorDescription
     }
 
     func removeSelectedPhoto() {
-        selectedPhotoData = nil
-        selectedPreviewImage = nil
+        selectedPhoto = nil
     }
 
     func toggleExistingPhotoRemoval(_ photo: PhotoAsset) {
@@ -203,8 +207,7 @@ final class AddDishReviewViewModel: ObservableObject {
         selectedCategoryId = review.categoryId ?? selectedCategoryId ?? defaultCategoryID(in: availableCategories)
         existingPhotos = review.photos
         photoIDsMarkedForDeletion = []
-        selectedPhotoData = nil
-        selectedPreviewImage = nil
+        selectedPhoto = nil
         if let price = review.price {
             priceText = String(price)
         } else {

@@ -210,6 +210,10 @@ final class BackendContractTests: XCTestCase {
                       "url": "/uploads/reviews/photo-1.jpg",
                       "contentType": "image/jpeg",
                       "sizeBytes": 12345,
+                      "width": 1440,
+                      "height": 1080,
+                      "mediumUrl": "/uploads/reviews/photo-1-medium.jpg",
+                      "thumbnailUrl": "/uploads/reviews/photo-1-thumb.jpg",
                       "createdAtUtc": "2026-04-08T12:00:00Z"
                     }
                     """
@@ -228,6 +232,8 @@ final class BackendContractTests: XCTestCase {
         )
 
         XCTAssertEqual(asset.url, "/uploads/reviews/photo-1.jpg")
+        XCTAssertEqual(asset.mediumURLString, "/uploads/reviews/photo-1-medium.jpg")
+        XCTAssertEqual(asset.thumbnailURLString, "/uploads/reviews/photo-1-thumb.jpg")
         XCTAssertEqual(asset.createdAt, iso8601("2026-04-08T12:00:00Z"))
     }
 
@@ -277,7 +283,24 @@ final class BackendContractTests: XCTestCase {
             url: "/uploads/reviews/photo-1.jpg"
         )
 
-        XCTAssertEqual(asset.resolvedURL?.absoluteString, "http://127.0.0.1:8080/uploads/reviews/photo-1.jpg")
+        XCTAssertEqual(asset.resolvedURL?.absoluteString, "http://127.0.0.1:5104/uploads/reviews/photo-1.jpg")
+    }
+
+    func testPhotoAssetFallsBackToOriginalWhenPreferredVariantIsMissing() {
+        let asset = PhotoAsset(
+            id: UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!,
+            url: "/uploads/reviews/photo-1.jpg",
+            thumbnailURLString: nil,
+            mediumURLString: "/uploads/reviews/photo-1-medium.jpg"
+        )
+
+        XCTAssertEqual(
+            asset.resolvedURLs(for: .thumbnail).map(\.absoluteString),
+            [
+                "http://127.0.0.1:5104/uploads/reviews/photo-1-medium.jpg",
+                "http://127.0.0.1:5104/uploads/reviews/photo-1.jpg"
+            ]
+        )
     }
 
     func testUserSummaryResolvesRelativeAvatarURL() {
@@ -288,7 +311,7 @@ final class BackendContractTests: XCTestCase {
             avatarURLString: "/avatars/hubert.jpg"
         )
 
-        XCTAssertEqual(user.avatarURL?.absoluteString, "http://127.0.0.1:8080/avatars/hubert.jpg")
+        XCTAssertEqual(user.avatarURL?.absoluteString, "http://127.0.0.1:5104/avatars/hubert.jpg")
     }
 
     @MainActor

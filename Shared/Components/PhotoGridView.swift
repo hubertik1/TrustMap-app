@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private struct PhotoGridSelectedPhoto: Identifiable {
     let asset: PhotoAsset
@@ -36,13 +37,21 @@ struct PhotoGridView: View {
             Button {
                 selectedPhoto = PhotoGridSelectedPhoto(asset: asset)
             } label: {
-                RemotePhotoView(asset: asset)
+                RemotePhotoView(
+                    asset: asset,
+                    preferredVariant: .thumbnail,
+                    targetDisplaySize: CGSize(width: 96, height: 96)
+                )
                     .frame(width: 96, height: 96)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
         } else {
-            RemotePhotoView(asset: asset)
+            RemotePhotoView(
+                asset: asset,
+                preferredVariant: .thumbnail,
+                targetDisplaySize: CGSize(width: 96, height: 96)
+            )
                 .frame(width: 96, height: 96)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
@@ -66,8 +75,12 @@ private struct PhotoLightboxView: View {
 
             TabView(selection: $selectedPhotoID) {
                 ForEach(photos) { photo in
-                    RemotePhotoView(asset: photo)
-                        .scaledToFit()
+                    RemotePhotoView(
+                        asset: photo,
+                        preferredVariant: .medium,
+                        contentMode: .fit,
+                        targetDisplaySize: UIScreen.main.bounds.size
+                    )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding()
                         .background(Color.black)
@@ -83,39 +96,5 @@ private struct PhotoLightboxView: View {
             .padding(.trailing, 16)
             .foregroundStyle(.white)
         }
-    }
-}
-
-struct RemotePhotoView: View {
-    let asset: PhotoAsset
-    var placeholderSystemImage = "photo"
-
-    var body: some View {
-        if let resolvedURL = asset.resolvedURL {
-            AsyncImage(url: resolvedURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                case .empty:
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color(.secondarySystemBackground))
-                case .failure:
-                    photoPlaceholder
-                @unknown default:
-                    photoPlaceholder
-                }
-            }
-        } else {
-            photoPlaceholder
-        }
-    }
-
-    private var photoPlaceholder: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(Color(.secondarySystemBackground))
-            .overlay(Image(systemName: placeholderSystemImage).foregroundStyle(.secondary))
     }
 }

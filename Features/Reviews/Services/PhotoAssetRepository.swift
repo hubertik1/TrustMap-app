@@ -1,6 +1,5 @@
 import Foundation
 import UniformTypeIdentifiers
-import UIKit
 
 @MainActor
 final class PhotoRepository {
@@ -71,13 +70,12 @@ final class PhotoRepository {
     }
 
     private func prepareUpload(from imageData: Data) throws -> PreparedUpload {
-        guard let image = UIImage(data: imageData),
-              let jpegData = image.jpegData(compressionQuality: 0.9) else {
+        guard !imageData.isEmpty else {
             throw AppError.validationFailure("Select a supported image before uploading.")
         }
 
         return PreparedUpload(
-            data: jpegData,
+            data: imageData,
             fileExtension: "jpg",
             mimeType: UTType.jpeg.preferredMIMEType ?? "image/jpeg"
         )

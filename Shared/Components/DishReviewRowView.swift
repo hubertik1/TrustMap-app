@@ -9,9 +9,14 @@ struct DishReviewRowView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             if let photo {
-                RemotePhotoView(asset: photo, placeholderSystemImage: "fork.knife")
-                .frame(width: 64, height: 64)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                RemotePhotoView(
+                    asset: photo,
+                    preferredVariant: .thumbnail,
+                    placeholderSystemImage: "fork.knife",
+                    targetDisplaySize: CGSize(width: 64, height: 64)
+                )
+                    .frame(width: 64, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             } else {
                 placeholder
             }

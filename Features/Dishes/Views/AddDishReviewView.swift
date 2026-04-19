@@ -162,8 +162,8 @@ struct AddDishReviewView: View {
         }
         .onChange(of: selectedPhotoItem) { _, item in
             Task {
-                let data = try? await item?.loadTransferable(type: Data.self)
-                viewModel.updateSelectedPhoto(with: data)
+                await prepareSelectedPhoto(from: item)
+                selectedPhotoItem = nil
             }
         }
         .task {
@@ -194,7 +194,11 @@ struct AddDishReviewView: View {
 
     private func existingPhotoThumbnail(_ photo: PhotoAsset) -> some View {
         ZStack(alignment: .topTrailing) {
-            RemotePhotoView(asset: photo)
+            RemotePhotoView(
+                asset: photo,
+                preferredVariant: .thumbnail,
+                targetDisplaySize: CGSize(width: 96, height: 96)
+            )
                 .frame(width: 96, height: 96)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay {
@@ -219,6 +223,27 @@ struct AddDishReviewView: View {
             }
             .buttonStyle(.plain)
             .padding(6)
+        }
+    }
+
+    @MainActor
+    private func prepareSelectedPhoto(from item: PhotosPickerItem?) async {
+        guard let item else {
+            return
+        }
+
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
+                viewModel.setSelectedPhoto(nil)
+                return
+            }
+
+            let preparedPhoto = try await PhotoUploadPreparation.prepareSelectedPhoto(from: data)
+            viewModel.setSelectedPhoto(preparedPhoto)
+        } catch is CancellationError {
+            return
+        } catch {
+            viewModel.showPhotoPreparationFailure()
         }
     }
 }

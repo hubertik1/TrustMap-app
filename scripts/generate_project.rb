@@ -37,13 +37,8 @@ target.build_configurations.each do |config|
   config.build_settings['MARKETING_VERSION'] = '1.0'
   config.build_settings['SWIFT_VERSION'] = '6.0'
   config.build_settings['TARGETED_DEVICE_FAMILY'] = '1'
-  config.build_settings['GENERATE_INFOPLIST_FILE'] = 'YES'
-  config.build_settings['INFOPLIST_KEY_CFBundleDisplayName'] = APP_NAME
-  config.build_settings['INFOPLIST_KEY_LSApplicationCategoryType'] = 'public.app-category.food-and-drink'
-  config.build_settings['INFOPLIST_KEY_NSLocationWhenInUseUsageDescription'] = 'TrustMap uses your location to center the map around you and help you discover nearby places.'
-  config.build_settings['INFOPLIST_KEY_UIApplicationSceneManifest_Generation'] = 'YES'
-  config.build_settings['INFOPLIST_KEY_UILaunchScreen_Generation'] = 'NO'
-  config.build_settings['INFOPLIST_KEY_UILaunchStoryboardName'] = 'LaunchScreen'
+  config.build_settings['GENERATE_INFOPLIST_FILE'] = 'NO'
+  config.build_settings['INFOPLIST_FILE'] = 'Resources/Info.plist'
   config.build_settings['ASSETCATALOG_COMPILER_APPICON_NAME'] = 'AppIcon'
   config.build_settings['ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME'] = 'AccentColor'
   config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
@@ -52,7 +47,11 @@ target.build_configurations.each do |config|
   config.build_settings['ENABLE_PREVIEWS'] = 'YES'
   config.build_settings['SUPPORTED_PLATFORMS'] = 'iphoneos iphonesimulator'
   config.build_settings['SUPPORTS_MACCATALYST'] = 'NO'
-  config.build_settings['INFOPLIST_KEY_UIStatusBarHidden'] = 'NO'
+  if config.name == 'Debug'
+    config.build_settings['TRUSTMAP_API_BASE_URL'] = 'http://192.168.0.47:5104'
+  else
+    config.build_settings['TRUSTMAP_API_BASE_URL'] = 'https://app-trust-map-g3a7egahhtdqgzae.polandcentral-01.azurewebsites.net'
+  end
 end
 
 main_group = project.main_group
@@ -86,6 +85,7 @@ end
 resources_group = main_group.find_subpath('Resources', true)
 assets_ref = resources_group.new_file('Resources/Assets.xcassets')
 target.resources_build_phase.add_file_reference(assets_ref)
+resources_group.new_file('Resources/Info.plist')
 resources_group.new_file('Resources/TrustMap.entitlements')
 
 project.save

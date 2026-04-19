@@ -48,16 +48,13 @@ struct AddPlaceReviewView: View {
             await viewModel.load()
         }
         .onChange(of: selectedPhotoItems) { _, items in
+            guard !items.isEmpty else {
+                return
+            }
+
             Task {
-                var dataItems: [Data] = []
-
-                for item in items {
-                    if let data = try? await item.loadTransferable(type: Data.self) {
-                        dataItems.append(data)
-                    }
-                }
-
-                viewModel.updateSelectedPhotos(with: dataItems)
+                selectedPhotoItems = []
+                await prepareSelectedPhotos(from: items)
             }
         }
         .onChange(of: viewModel.didSave) { _, didSave in
@@ -211,7 +208,11 @@ struct AddPlaceReviewView: View {
 
     private func existingPhotoThumbnail(_ photo: PhotoAsset) -> some View {
         ZStack(alignment: .topTrailing) {
-            RemotePhotoView(asset: photo)
+            RemotePhotoView(
+                asset: photo,
+                preferredVariant: .thumbnail,
+                targetDisplaySize: CGSize(width: 96, height: 96)
+            )
                 .frame(width: 96, height: 96)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay {
@@ -258,6 +259,37 @@ struct AddPlaceReviewView: View {
             .buttonStyle(.plain)
             .padding(6)
         }
+    }
+
+    @MainActor
+    private func prepareSelectedPhotos(from items: [PhotosPickerItem]) async {
+        guard !items.isEmpty else {
+            return
+        }
+
+        var preparedPhotos: [SelectedPhotoUpload] = []
+        var didSkipAnyPhotos = false
+
+        for item in items {
+            if Task.isCancelled {
+                return
+            }
+
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else {
+                    didSkipAnyPhotos = true
+                    continue
+                }
+
+                preparedPhotos.append(try await PhotoUploadPreparation.prepareSelectedPhoto(from: data))
+            } catch is CancellationError {
+                return
+            } catch {
+                didSkipAnyPhotos = true
+            }
+        }
+
+        viewModel.appendSelectedPhotos(preparedPhotos, didSkipAnyPhotos: didSkipAnyPhotos)
     }
 }
 

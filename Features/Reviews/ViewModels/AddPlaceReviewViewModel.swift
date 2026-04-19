@@ -20,8 +20,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
     @Published var ratingOverall = 0
     @Published var descriptionText = ""
     @Published var visibility: VisibilityStatus = .friendsOnly
-    @Published var selectedPhotoData: [Data] = []
-    @Published var selectedPreviewImages: [UIImage] = []
+    @Published private(set) var selectedPhotos: [SelectedPhotoUpload] = []
     @Published private(set) var availableCategories: [CustomCategory] = []
     @Published var selectedCategoryId: UUID?
     @Published private(set) var existingPhotos: [PhotoAsset] = []
@@ -66,6 +65,14 @@ final class AddPlaceReviewViewModel: ObservableObject {
         isEditing ? "Edit Place Review" : "Add Place Review"
     }
 
+    var selectedPhotoData: [Data] {
+        selectedPhotos.map(\.uploadData)
+    }
+
+    var selectedPreviewImages: [UIImage] {
+        selectedPhotos.map(\.previewImage)
+    }
+
     func load() async {
         if availableCategories.isEmpty {
             do {
@@ -81,29 +88,25 @@ final class AddPlaceReviewViewModel: ObservableObject {
         }
     }
 
-    func updateSelectedPhotos(with dataItems: [Data]) {
-        var newData: [Data] = []
-        var newImages: [UIImage] = []
-
-        for data in dataItems {
-            if let image = UIImage(data: data) {
-                newData.append(data)
-                newImages.append(image)
-            }
-        }
-
-        selectedPhotoData = newData
-        selectedPreviewImages = newImages
-    }
-
-    func removeSelectedPhoto(at index: Int) {
-        guard selectedPreviewImages.indices.contains(index),
-              selectedPhotoData.indices.contains(index) else {
+    func appendSelectedPhotos(_ photos: [SelectedPhotoUpload], didSkipAnyPhotos: Bool) {
+        guard !photos.isEmpty || didSkipAnyPhotos else {
             return
         }
 
-        selectedPreviewImages.remove(at: index)
-        selectedPhotoData.remove(at: index)
+        selectedPhotos.append(contentsOf: photos)
+        if didSkipAnyPhotos {
+            errorMessage = AppError.validationFailure("Some selected photos couldn't be prepared.").errorDescription
+        } else {
+            errorMessage = nil
+        }
+    }
+
+    func removeSelectedPhoto(at index: Int) {
+        guard selectedPhotos.indices.contains(index) else {
+            return
+        }
+
+        selectedPhotos.remove(at: index)
     }
 
     func toggleExistingPhotoRemoval(_ photo: PhotoAsset) {
@@ -188,8 +191,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
         selectedCategoryId = review.categoryId ?? selectedCategoryId ?? defaultCategoryID(in: availableCategories)
         existingPhotos = review.photos
         photoIDsMarkedForDeletion = []
-        selectedPhotoData = []
-        selectedPreviewImages = []
+        selectedPhotos = []
     }
 
     private func defaultCategoryID(in categories: [CustomCategory]) -> UUID? {
