@@ -37,6 +37,29 @@ project.root_object.attributes['TargetAttributes'][target.uuid] = {
   }
 }
 
+project.build_configurations.each do |config|
+  config.build_settings['SWIFT_VERSION'] = '6.0'
+  config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '18.0'
+end
+
+target.build_configurations.each do |config|
+  config.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = 'com.hubertik.TrustMap'
+  config.build_settings['PRODUCT_NAME'] = APP_NAME
+  config.build_settings['CURRENT_PROJECT_VERSION'] = '1'
+  config.build_settings['MARKETING_VERSION'] = '1.0'
+  config.build_settings['SWIFT_VERSION'] = '6.0'
+  config.build_settings['TARGETED_DEVICE_FAMILY'] = '1'
+  config.build_settings['GENERATE_INFOPLIST_FILE'] = 'NO'
+  config.build_settings['ASSETCATALOG_COMPILER_APPICON_NAME'] = 'AppIcon'
+  config.build_settings['ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME'] = 'AccentColor'
+  config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
+  config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'Resources/TrustMap.entitlements'
+  config.build_settings['DEVELOPMENT_ASSET_PATHS'] = '"Resources/Preview Content"'
+  config.build_settings['ENABLE_PREVIEWS'] = 'YES'
+  config.build_settings['SUPPORTED_PLATFORMS'] = 'iphoneos iphonesimulator'
+  config.build_settings['SUPPORTS_MACCATALYST'] = 'NO'
+end
+
 main_group = project.main_group
 config_group = main_group.find_subpath('Config', true)
 
