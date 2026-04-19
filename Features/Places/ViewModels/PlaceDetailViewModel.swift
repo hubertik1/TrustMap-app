@@ -3,6 +3,7 @@ import OSLog
 
 @MainActor
 final class PlaceDetailViewModel: ObservableObject {
+    @Published private(set) var place: Place
     @Published private(set) var averageRating: Double?
     @Published private(set) var categoryNames: [String] = []
     @Published private(set) var placeReviews: [PlaceReview] = []
@@ -11,14 +12,16 @@ final class PlaceDetailViewModel: ObservableObject {
     @Published private(set) var currentUserPlaceReview: PlaceReview?
     @Published private(set) var currentUserID: UUID?
     @Published var editingDishReview: DishReview?
+    @Published var customDisplayNameDraft = ""
     @Published var errorMessage: String?
     @Published var isLoading = false
     @Published var isPresentingAddPlaceReview = false
     @Published var isPresentingAddDishReview = false
-
-    let place: Place
+    @Published var isPresentingCustomNameEditor = false
+    @Published var isSavingCustomName = false
 
     private let logger = Logger(subsystem: "TrustMap", category: "PlaceDetailViewModel")
+    private let refreshCenter: AppRefreshCenter
     private let sessionStore: SessionStore
     private let placeRepository: PlaceRepository
     private let placeReviewRepository: PlaceReviewRepository
@@ -26,12 +29,14 @@ final class PlaceDetailViewModel: ObservableObject {
 
     init(
         place: Place,
+        refreshCenter: AppRefreshCenter,
         sessionStore: SessionStore,
         placeRepository: PlaceRepository,
         placeReviewRepository: PlaceReviewRepository,
         dishReviewRepository: DishReviewRepository
     ) {
         self.place = place
+        self.refreshCenter = refreshCenter
         self.sessionStore = sessionStore
         self.placeRepository = placeRepository
         self.placeReviewRepository = placeReviewRepository
@@ -57,6 +62,7 @@ final class PlaceDetailViewModel: ObservableObject {
             let resolvedPlaceReviews = try await placeReviews
             let resolvedDishReviews = try await dishReviews
 
+            self.place = resolvedDetails.place
             self.averageRating = resolvedDetails.averagePlaceRating
             self.categoryNames = resolvedDetails.categoryNames
             self.placeReviews = resolvedPlaceReviews
@@ -89,6 +95,49 @@ final class PlaceDetailViewModel: ObservableObject {
 
     func beginEditing(_ review: DishReview) {
         editingDishReview = review
+    }
+
+    var canRenameCustomPlace: Bool {
+        place.canRenameCustomDisplayName(as: currentUserID)
+    }
+
+    var customPlaceActionTitle: String {
+        place.customDisplayName == nil ? "Name Custom Place" : "Rename Custom Place"
+    }
+
+    func beginRenamingCustomPlace() {
+        customDisplayNameDraft = place.customDisplayName ?? ""
+        isPresentingCustomNameEditor = true
+    }
+
+    func saveCustomPlaceName() async {
+        guard canRenameCustomPlace else {
+            return
+        }
+
+        let trimmedDraft = customDisplayNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDraft.isEmpty else {
+            errorMessage = "Enter a place name."
+            return
+        }
+
+        errorMessage = nil
+        isSavingCustomName = true
+        defer { isSavingCustomName = false }
+
+        do {
+            let updatedPlace = try await placeRepository.updateCustomDisplayName(
+                placeID: place.id,
+                displayName: trimmedDraft
+            )
+            place = updatedPlace
+            customDisplayNameDraft = updatedPlace.customDisplayName ?? ""
+            isPresentingCustomNameEditor = false
+            refreshCenter.invalidateAll()
+        } catch {
+            logger.error("Unable to update custom place name: \(error.localizedDescription, privacy: .public)")
+            errorMessage = AppError.wrap(error).errorDescription
+        }
     }
 
     func authorName(for userID: UUID) -> String {

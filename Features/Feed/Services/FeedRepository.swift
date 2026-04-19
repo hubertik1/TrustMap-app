@@ -48,10 +48,10 @@ final class FeedRepository {
 
             if item.activityType == "DishReview" {
                 let dishName = item.dishName ?? "dish"
-                title = "\(item.author.displayName) added \(dishName) at \(item.place.name)"
+                title = "\(item.author.displayName) added \(dishName) at \(item.place.displayName)"
                 subtitle = nil
             } else {
-                title = "\(item.author.displayName) added \(item.place.name)"
+                title = "\(item.author.displayName) added \(item.place.displayName)"
                 subtitle = item.title?.nilIfEmpty
             }
 

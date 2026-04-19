@@ -29,10 +29,12 @@ struct AddDishReviewView: View {
     var body: some View {
         Form {
             Section("Place") {
-                Text(viewModel.place.name)
+                Text(viewModel.place.displayName)
                     .font(.headline)
-                Text(viewModel.place.address)
-                    .foregroundStyle(.secondary)
+                if let secondaryDisplayText = viewModel.place.secondaryDisplayText {
+                    Text(secondaryDisplayText)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Dish Review") {

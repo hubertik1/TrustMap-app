@@ -9,12 +9,14 @@ struct PlaceSummaryHeaderView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(place.name)
+                    Text(place.displayName)
                         .font(.title2.weight(.semibold))
 
-                    Text(place.address)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    if let secondaryDisplayText = place.secondaryDisplayText {
+                        Text(secondaryDisplayText)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Spacer()

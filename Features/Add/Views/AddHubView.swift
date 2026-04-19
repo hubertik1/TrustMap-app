@@ -248,13 +248,15 @@ private struct RecentPlacesCard: View {
                     }
                 } label: {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(place.name)
+                        Text(place.displayName)
                             .font(.headline)
                             .foregroundStyle(.primary)
 
-                        Text(place.address)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        if let secondaryDisplayText = place.secondaryDisplayText {
+                            Text(secondaryDisplayText)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 14)
@@ -378,7 +380,7 @@ private struct DishReviewPlacePickerSheet: View {
     }
 
     private func searchableText(for place: Place) -> String {
-        [place.name, place.address]
+        [place.displayName, place.address]
             .joined(separator: " ")
             .normalizedSearchText
     }
@@ -391,13 +393,15 @@ private struct DishReviewPlacePickerSheet: View {
                         select(place)
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(place.name)
+                            Text(place.displayName)
                                 .font(.headline)
                                 .foregroundStyle(.primary)
 
-                            Text(place.address)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                            if let secondaryDisplayText = place.secondaryDisplayText {
+                                Text(secondaryDisplayText)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()

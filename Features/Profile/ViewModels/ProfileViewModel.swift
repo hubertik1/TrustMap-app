@@ -113,8 +113,8 @@ final class ProfileViewModel: ObservableObject {
             self.placeReviews = resolvedPlaceReviews
             self.dishReviews = resolvedDishReviews
             self.friendsSummary = resolvedFriendsSummary
-            self.placeNames = (resolvedPlaceReviews.map { ($0.placeId, $0.place.name) }
-                + resolvedDishReviews.map { ($0.placeId, $0.place.name) })
+            self.placeNames = (resolvedPlaceReviews.map { ($0.placeId, $0.place.displayName) }
+                + resolvedDishReviews.map { ($0.placeId, $0.place.displayName) })
                 .reduce(into: [:]) { partialResult, item in
                     partialResult[item.0] = item.1
                 }

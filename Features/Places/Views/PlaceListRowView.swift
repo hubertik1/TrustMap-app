@@ -7,14 +7,16 @@ struct PlaceListRowView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(item.place.name)
+                    Text(item.place.displayName)
                         .font(.headline)
                         .foregroundStyle(.primary)
 
-                    Text(item.place.address)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                    if let secondaryDisplayText = item.place.secondaryDisplayText {
+                        Text(secondaryDisplayText)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
                 }
 
                 Spacer(minLength: 8)

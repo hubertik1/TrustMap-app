@@ -59,7 +59,7 @@ final class PlacesViewModel: ObservableObject {
             }
             .sorted { lhs, rhs in
                 if lhs.averageRating == rhs.averageRating {
-                    return lhs.place.name.localizedStandardCompare(rhs.place.name) == .orderedAscending
+                    return lhs.place.displayName.localizedStandardCompare(rhs.place.displayName) == .orderedAscending
                 }
 
                 return lhs.averageRating > rhs.averageRating

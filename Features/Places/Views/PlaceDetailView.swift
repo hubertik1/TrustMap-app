@@ -12,6 +12,7 @@ struct PlaceDetailView: View {
         _viewModel = StateObject(
             wrappedValue: PlaceDetailViewModel(
                 place: place,
+                refreshCenter: container.refreshCenter,
                 sessionStore: container.sessionStore,
                 placeRepository: container.placeRepository,
                 placeReviewRepository: container.placeReviewRepository,
@@ -36,6 +37,12 @@ struct PlaceDetailView: View {
                             averageRating: viewModel.averageRating,
                             categoryNames: viewModel.categoryNames
                         )
+
+                        if viewModel.canRenameCustomPlace {
+                            Button(viewModel.customPlaceActionTitle) {
+                                viewModel.beginRenamingCustomPlace()
+                            }
+                        }
                     }
 
                     Section("Place Reviews") {
@@ -83,7 +90,7 @@ struct PlaceDetailView: View {
                 .listStyle(.insetGrouped)
             }
         }
-        .navigationTitle(viewModel.place.name)
+        .navigationTitle(viewModel.place.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 12) {
@@ -142,6 +149,20 @@ struct PlaceDetailView: View {
         }
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
+        }
+        .alert("Custom Place Name", isPresented: $viewModel.isPresentingCustomNameEditor) {
+            TextField("Shared name", text: $viewModel.customDisplayNameDraft)
+
+            Button("Cancel", role: .cancel) {
+                viewModel.customDisplayNameDraft = viewModel.place.customDisplayName ?? ""
+            }
+
+            Button("Save") {
+                Task { await viewModel.saveCustomPlaceName() }
+            }
+            .disabled(viewModel.isSavingCustomName)
+        } message: {
+            Text("Only the original creator of a custom map pin can change this shared name.")
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

@@ -14,6 +14,10 @@ final class PlaceRepository {
         let providerPlaceId: String?
     }
 
+    private struct UpdateCustomPlaceDisplayNamePayload: Encodable {
+        let displayName: String
+    }
+
     private let apiClient: APIClient
 
     init(apiClient: APIClient) {
@@ -73,7 +77,7 @@ final class PlaceRepository {
             countryCode: result.mapItem?.placemark.isoCountryCode,
             latitude: coordinate.latitude,
             longitude: coordinate.longitude,
-            provider: result.mapItem == nil ? "manual" : "apple-maps",
+            provider: result.mapItem == nil ? nil : "apple-maps",
             providerPlaceId: result.mapItem == nil ? nil : result.id
         )
 
@@ -83,6 +87,22 @@ final class PlaceRepository {
                 path: "places",
                 body: .json(AnyEncodable(payload)),
                 acceptedStatusCodes: [201]
+            )
+        )
+    }
+
+    func updateCustomDisplayName(placeID: UUID, displayName: String) async throws -> Place {
+        let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDisplayName.isEmpty else {
+            throw AppError.validationFailure("Enter a place name.")
+        }
+
+        return try await apiClient.send(
+            APIRequest<Place>(
+                method: .patch,
+                path: "places/\(placeID.uuidString)/custom-display-name",
+                body: .json(AnyEncodable(UpdateCustomPlaceDisplayNamePayload(displayName: trimmedDisplayName))),
+                acceptedStatusCodes: [200]
             )
         )
     }

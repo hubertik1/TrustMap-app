@@ -275,7 +275,7 @@ struct MapScreen: View {
 
     @MapContentBuilder
     private func mapAnnotationView(for annotation: MapPlaceAnnotation) -> some MapContent {
-        Annotation(annotation.place.name, coordinate: annotation.coordinate, anchor: .bottom) {
+        Annotation(annotation.place.displayName, coordinate: annotation.coordinate, anchor: .bottom) {
             let isSelected = viewModel.selectedAnnotationID == annotation.id
 
             Button {
@@ -308,19 +308,21 @@ struct MapScreen: View {
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
-            .accessibilityLabel("Open \(annotation.place.name)")
+            .accessibilityLabel("Open \(annotation.place.displayName)")
         }
         .tag(annotation.id)
     }
 
     private func selectionPromptView(for place: Place) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(place.name)
+            Text(place.displayName)
                 .font(.headline)
 
-            Text(place.address)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            if let secondaryDisplayText = place.secondaryDisplayText {
+                Text(secondaryDisplayText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
 
             HStack {
                 Button("Details") {
