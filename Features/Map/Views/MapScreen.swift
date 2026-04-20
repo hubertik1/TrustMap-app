@@ -289,18 +289,17 @@ struct MapScreen: View {
                 mapSelection = nil
                 viewModel.selectPlace(withID: annotation.id)
             } label: {
-                VStack(spacing: isSelected ? 6 : 0) {
+                ZStack {
+                    if isSelected {
+                        Circle()
+                            .fill(annotation.averageRating.badgeFillColor.opacity(0.28))
+                            .frame(width: 40, height: 40)
+                            .blur(radius: 10)
+                            .offset(y: 7)
+                            .transition(.opacity)
+                    }
+
                     ZStack {
-                        if isSelected {
-                            Circle()
-                                .fill(annotation.averageRating.badgeFillColor.opacity(0.18))
-                                .frame(width: 56, height: 56)
-
-                            Circle()
-                                .strokeBorder(.white.opacity(0.92), lineWidth: 4)
-                                .frame(width: 42, height: 42)
-                        }
-
                         HStack(spacing: 6) {
                             Image(systemName: "fork.knife")
                                 .font(.caption.weight(.semibold))
@@ -317,34 +316,20 @@ struct MapScreen: View {
                         .overlay {
                             Capsule()
                                 .strokeBorder(
-                                    isSelected ? .white.opacity(0.95) : annotation.averageRating.badgeBorderColor,
-                                    lineWidth: isSelected ? 2 : 1
+                                    isSelected ? annotation.averageRating.badgeBorderColor.opacity(0.9) : annotation.averageRating.badgeBorderColor,
+                                    lineWidth: 1
                                 )
                         }
                     }
-
-                    if isSelected {
-                        Text("Selected")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(.ultraThinMaterial, in: Capsule())
-                            .overlay {
-                                Capsule()
-                                    .strokeBorder(.white.opacity(0.65), lineWidth: 1)
-                            }
-                            .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                    }
                 }
                 .scaleEffect(isSelected ? 1.08 : 1)
-                .offset(y: isSelected ? -18 : 0)
-                .shadow(color: .black.opacity(isSelected ? 0.22 : 0.12), radius: isSelected ? 14 : 8, y: isSelected ? 8 : 4)
-                .animation(.spring(response: 0.28, dampingFraction: 0.78), value: isSelected)
+                .shadow(color: .black.opacity(isSelected ? 0.28 : 0.12), radius: isSelected ? 18 : 8, y: isSelected ? 10 : 4)
+                .animation(.easeOut(duration: 0.18), value: isSelected)
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
             .accessibilityLabel("Open \(annotation.place.displayName)")
+            .zIndex(isSelected ? 10 : 0)
         }
         .tag(annotation.id)
     }
@@ -353,13 +338,6 @@ struct MapScreen: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Label("Selected", systemImage: "location.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color(.secondarySystemBackground), in: Capsule())
-
                     Text(place.displayName)
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(.primary)
