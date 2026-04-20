@@ -108,9 +108,7 @@ private struct WelcomePreviewCard: View {
                 .resizable()
                 .interpolation(.high)
                 .scaledToFit()
-                .frame(maxWidth: 316)
-                .frame(height: 420)
-                .background(theme.previewImageBackground)
+                .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -274,12 +272,6 @@ private struct WelcomeTheme {
         isDark
             ? Color.white.opacity(0.08)
             : Color.black.opacity(0.05)
-    }
-
-    var previewImageBackground: Color {
-        isDark
-            ? Color(red: 0.08, green: 0.09, blue: 0.13)
-            : Color.white
     }
 
     var appleButtonStyle: SignInWithAppleButton.Style {
