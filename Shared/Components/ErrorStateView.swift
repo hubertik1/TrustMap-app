@@ -6,26 +6,41 @@ struct ErrorStateView: View {
     var retryAction: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 36))
-                .foregroundStyle(.orange)
+        ZStack {
+            Color(uiColor: .systemGroupedBackground)
+                .ignoresSafeArea()
 
-            Text("Something Went Wrong")
-                .font(.headline)
+            VStack(spacing: 16) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.orange)
+                    .frame(width: 64, height: 64)
+                    .background(
+                        Circle()
+                            .fill(Color.orange.opacity(0.12))
+                    )
 
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                Text("Something Went Wrong")
+                    .font(.headline)
 
-            if let retryAction {
-                Button(retryTitle, action: retryAction)
-                    .buttonStyle(.borderedProminent)
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                if let retryAction {
+                    Button(retryTitle, action: retryAction)
+                        .buttonStyle(.borderedProminent)
+                }
             }
+            .frame(maxWidth: 320)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 28)
+            .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.04), radius: 18, y: 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
+        .padding(24)
     }
 }
 

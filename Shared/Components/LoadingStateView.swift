@@ -4,14 +4,25 @@ struct LoadingStateView: View {
     let title: String
 
     var body: some View {
-        VStack(spacing: 12) {
-            ProgressView()
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        ZStack {
+            Color(uiColor: .systemGroupedBackground)
+                .ignoresSafeArea()
+
+            VStack(spacing: 14) {
+                ProgressView()
+                    .controlSize(.large)
+
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: 280)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 28)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.04), radius: 18, y: 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
     }
 }
 
