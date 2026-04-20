@@ -19,15 +19,20 @@ struct WelcomeView: View {
             ZStack {
                 WelcomeBackgroundView(theme: theme)
 
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 28) {
-                        WelcomeBrandHeader(theme: theme)
-                        heroSection
-                        WelcomePreviewCard(theme: theme)
+                GeometryReader { geometry in
+                    ViewThatFits(in: .vertical) {
+                        welcomeContent(allowsFlexibleSpacing: true)
+                            .frame(
+                                width: geometry.size.width,
+                                height: geometry.size.height,
+                                alignment: .top
+                            )
+
+                        ScrollView(showsIndicators: false) {
+                            welcomeContent(allowsFlexibleSpacing: false)
+                                .frame(maxWidth: .infinity, alignment: .top)
+                        }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 28)
-                    .padding(.bottom, 36)
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -43,25 +48,50 @@ struct WelcomeView: View {
         }
     }
 
+    @ViewBuilder
+    private func welcomeContent(allowsFlexibleSpacing: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            WelcomeBrandHeader(theme: theme)
+
+            heroSection
+                .padding(.top, 22)
+
+            if allowsFlexibleSpacing {
+                Spacer(minLength: 24)
+            } else {
+                WelcomePreviewCard(theme: theme)
+                    .padding(.top, 28)
+            }
+
+            if allowsFlexibleSpacing {
+                WelcomePreviewCard(theme: theme)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
+        .padding(.bottom, allowsFlexibleSpacing ? 16 : 32)
+    }
+
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             (
-                Text("Keep the places ")
+                Text("Keep the places your")
                     .foregroundStyle(.primary) +
-                Text("your people trust")
+                Text("\npeople trust")
                     .foregroundStyle(theme.headlineAccent) +
                 Text("\nall in one map.")
                     .foregroundStyle(.primary)
             )
-            .font(.system(size: 33, weight: .bold, design: .rounded))
-            .tracking(-0.3)
-            .lineSpacing(4)
+            .font(.system(size: 27, weight: .bold, design: .rounded))
+            .tracking(-0.15)
+            .lineSpacing(3)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityLabel("Keep the places your people trust all in one map.")
 
-            Text("Save favorite spots, compare notes, and revisit trusted picks from your accepted friends without turning it into a public feed.")
-                .font(.system(size: 17))
+            Text("Save favorite spots, compare notes, and revisit trusted picks from your friends.")
+                .font(.system(size: 16))
                 .foregroundStyle(.secondary)
+                .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -71,7 +101,7 @@ private struct WelcomeBrandHeader: View {
     let theme: WelcomeTheme
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 14) {
             Image("TrustMapBrandMark")
                 .resizable()
                 .interpolation(.high)
@@ -84,12 +114,12 @@ private struct WelcomeBrandHeader: View {
                 }
                 .shadow(color: theme.brandShadow, radius: 18, y: 10)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text("TrustMap")
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
 
-                Text("Private recommendations from people you trust")
+                Text("Private recommendations from trusted friends")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -103,7 +133,7 @@ private struct WelcomePreviewCard: View {
     let theme: WelcomeTheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 0) {
             Image("WelcomeScreenMap")
                 .resizable()
                 .interpolation(.high)
@@ -115,14 +145,8 @@ private struct WelcomePreviewCard: View {
                         .stroke(theme.imageStroke, lineWidth: 1)
                 }
                 .frame(maxWidth: .infinity)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("See trusted spots, ratings, and notes at a glance.")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-            }
         }
-        .padding(18)
+        .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 30, style: .continuous)
                 .fill(theme.cardFill)
@@ -165,8 +189,8 @@ private struct WelcomeCTASection: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .padding(.bottom, 14)
+        .padding(.top, 38)
+        .padding(.bottom, 20)
     }
 }
 
