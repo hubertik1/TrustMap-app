@@ -246,7 +246,7 @@ final class MapScreenViewModel: ObservableObject {
 
             if !options.contains(filterState.selectedCategory) {
                 filterState.selectedCategory = options.first(where: {
-                    $0.categoryID == PlaceCategoryOption.restaurantsCategoryID
+                    $0.categoryID == TrustMapCategory.restaurantsCategoryID
                 }) ?? .all
             }
         } catch {

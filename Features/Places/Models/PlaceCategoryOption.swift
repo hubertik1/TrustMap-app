@@ -1,8 +1,6 @@
 import Foundation
 
 struct PlaceCategoryOption: Identifiable, Hashable, Sendable {
-    static let restaurantsCategoryID = UUID(uuidString: "D53A109F-9617-4A0A-B95A-5AD277A30764")!
-
     let id: String
     let title: String
     let categoryID: UUID?
@@ -19,10 +17,10 @@ struct PlaceCategoryOption: Identifiable, Hashable, Sendable {
         categoryID: nil
     )
 
-    static let restaurant = PlaceCategoryOption(
-        id: restaurantsCategoryID.uuidString,
-        title: "Restaurant",
-        categoryID: restaurantsCategoryID
+    static let restaurants = PlaceCategoryOption(
+        id: TrustMapCategory.restaurantsCategoryID.uuidString,
+        title: TrustMapCategory.restaurantsName,
+        categoryID: TrustMapCategory.restaurantsCategoryID
     )
 
     init(category: CustomCategory) {

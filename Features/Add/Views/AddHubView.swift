@@ -98,7 +98,7 @@ struct AddHubView: View {
             PlaceSearchSheet(
                 container: container,
                 title: activeFlow?.title ?? "Choose Place",
-                requiresRestaurantCategory: false
+                requiresRestaurantsCategory: false
             ) { place in
                 selectedPlace = place
                 selectedPlaceReview = nil
@@ -375,7 +375,7 @@ private struct DishReviewPlacePickerSheet: View {
         ContentUnavailableView(
             "No Reviewed Restaurants",
             systemImage: "fork.knife.circle",
-            description: Text("Only places you've already rated in the Restaurant category can be used for a dish review.")
+            description: Text("Only places you've already rated in the \(TrustMapCategory.restaurantsName) category can be used for a dish review.")
         )
     }
 

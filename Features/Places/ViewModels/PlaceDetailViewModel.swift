@@ -85,7 +85,7 @@ final class PlaceDetailViewModel: ObservableObject {
     var canAddDishReview: Bool {
         let effectiveCategoryNames = categoryNames.isEmpty ? place.categoryNames : categoryNames
         return effectiveCategoryNames.contains { categoryName in
-            categoryName.compare("Restaurant", options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+            TrustMapCategory.isRestaurants(categoryName)
         }
     }
 

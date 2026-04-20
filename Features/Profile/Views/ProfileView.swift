@@ -98,14 +98,7 @@ struct ProfileView: View {
                             LabeledContent("Reviewed Dishes", value: "\(viewModel.stats.reviewedDishesCount)")
                         }
 
-                        NavigationLink {
-                            CategoriesView(
-                                categoryRepository: container.categoryRepository,
-                                refreshCenter: container.refreshCenter
-                            )
-                        } label: {
-                            LabeledContent("Categories", value: "\(viewModel.categoryCount)")
-                        }
+                        LabeledContent("Category", value: TrustMapCategory.restaurantsName)
                     }
 
                     Section {

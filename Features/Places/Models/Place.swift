@@ -1,6 +1,15 @@
 import Foundation
 import MapKit
 
+enum TrustMapCategory {
+    static let restaurantsCategoryID = UUID(uuidString: "D53A109F-9617-4A0A-B95A-5AD277A30764")!
+    static let restaurantsName = "Restaurants"
+
+    static func isRestaurants(_ categoryName: String) -> Bool {
+        categoryName.compare(restaurantsName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+    }
+}
+
 struct Place: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     let name: String
@@ -103,7 +112,7 @@ struct Place: Identifiable, Codable, Hashable, Sendable {
 
     var supportsDishReviews: Bool {
         categoryNames.contains { categoryName in
-            categoryName.compare("Restaurant", options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+            TrustMapCategory.isRestaurants(categoryName)
         }
     }
 

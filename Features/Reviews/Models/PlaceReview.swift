@@ -84,7 +84,7 @@ struct PlaceReview: Identifiable, Codable, Hashable, Sendable {
 
     var supportsDishReviews: Bool {
         if let categoryName,
-           categoryName.compare("Restaurant", options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame {
+           TrustMapCategory.isRestaurants(categoryName) {
             return true
         }
 

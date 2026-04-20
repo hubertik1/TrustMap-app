@@ -5,7 +5,7 @@ struct PlaceSearchSheet: View {
     @StateObject private var viewModel: PlaceSearchViewModel
     @State private var selectionErrorMessage: String?
     let title: String
-    let requiresRestaurantCategory: Bool
+    let requiresRestaurantsCategory: Bool
     let onPlaceSelected: (Place) -> Void
 
     private var hasSearchQuery: Bool {
@@ -15,11 +15,11 @@ struct PlaceSearchSheet: View {
     init(
         container: AppContainer,
         title: String,
-        requiresRestaurantCategory: Bool = false,
+        requiresRestaurantsCategory: Bool = false,
         onPlaceSelected: @escaping (Place) -> Void
     ) {
         self.title = title
-        self.requiresRestaurantCategory = requiresRestaurantCategory
+        self.requiresRestaurantsCategory = requiresRestaurantsCategory
         self.onPlaceSelected = onPlaceSelected
         _viewModel = StateObject(
             wrappedValue: PlaceSearchViewModel(
@@ -115,8 +115,8 @@ struct PlaceSearchSheet: View {
         Task {
             do {
                 let place = try await viewModel.select(result)
-                if requiresRestaurantCategory && !place.supportsDishReviews {
-                    selectionErrorMessage = "Dish reviews are available only for places in the Restaurant category."
+                if requiresRestaurantsCategory && !place.supportsDishReviews {
+                    selectionErrorMessage = "Dish reviews are available only for places in the \(TrustMapCategory.restaurantsName) category."
                     return
                 }
                 onPlaceSelected(place)
