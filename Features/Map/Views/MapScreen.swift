@@ -100,7 +100,10 @@ struct MapScreen: View {
 
                     VStack {
                         Spacer()
-                        selectionPromptView(for: promptContext.place)
+                        selectionPromptView(
+                            for: promptContext.place,
+                            annotation: selectedAnnotation(for: promptContext.place.id)
+                        )
                             .padding(.horizontal, 16)
                             .padding(.bottom, promptBottomInset)
                     }
@@ -255,7 +258,11 @@ struct MapScreen: View {
     }
 
     private var promptBottomInset: CGFloat {
-        viewModel.locationAccessState.message == nil ? 120 : 176
+        viewModel.locationAccessState.message == nil ? 20 : 76
+    }
+
+    private func selectedAnnotation(for placeID: UUID) -> MapPlaceAnnotation? {
+        viewModel.annotations.first(where: { $0.place.id == placeID })
     }
 
     private func longPressGesture(proxy: MapProxy) -> some Gesture {
@@ -282,27 +289,56 @@ struct MapScreen: View {
                 mapSelection = nil
                 viewModel.selectPlace(withID: annotation.id)
             } label: {
-                VStack(spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "fork.knife")
-                            .font(.caption.weight(.semibold))
-                        Text(annotation.averageRating, format: .number.precision(.fractionLength(1)))
-                            .font(.caption.weight(.semibold))
+                VStack(spacing: isSelected ? 6 : 0) {
+                    ZStack {
+                        if isSelected {
+                            Circle()
+                                .fill(annotation.averageRating.badgeFillColor.opacity(0.18))
+                                .frame(width: 56, height: 56)
+
+                            Circle()
+                                .strokeBorder(.white.opacity(0.92), lineWidth: 4)
+                                .frame(width: 42, height: 42)
+                        }
+
+                        HStack(spacing: 6) {
+                            Image(systemName: "fork.knife")
+                                .font(.caption.weight(.semibold))
+                            Text(annotation.averageRating, format: .number.precision(.fractionLength(1)))
+                                .font(.caption.weight(.semibold))
+                        }
+                        .padding(.horizontal, isSelected ? 12 : 10)
+                        .padding(.vertical, isSelected ? 7 : 6)
+                        .foregroundStyle(.white)
+                        .background(
+                            annotation.averageRating.badgeFillColor.gradient,
+                            in: Capsule()
+                        )
+                        .overlay {
+                            Capsule()
+                                .strokeBorder(
+                                    isSelected ? .white.opacity(0.95) : annotation.averageRating.badgeBorderColor,
+                                    lineWidth: isSelected ? 2 : 1
+                                )
+                        }
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .foregroundStyle(.white)
-                    .background(
-                        annotation.averageRating.badgeFillColor,
-                        in: Capsule()
-                    )
-                    .overlay {
-                        Capsule()
-                            .strokeBorder(annotation.averageRating.badgeBorderColor, lineWidth: 1)
+
+                    if isSelected {
+                        Text("Selected")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .overlay {
+                                Capsule()
+                                    .strokeBorder(.white.opacity(0.65), lineWidth: 1)
+                            }
+                            .transition(.opacity.combined(with: .scale(scale: 0.96)))
                     }
                 }
-                .scaleEffect(isSelected ? 1.12 : 1)
-                .offset(y: isSelected ? -12 : 0)
+                .scaleEffect(isSelected ? 1.08 : 1)
+                .offset(y: isSelected ? -18 : 0)
                 .shadow(color: .black.opacity(isSelected ? 0.22 : 0.12), radius: isSelected ? 14 : 8, y: isSelected ? 8 : 4)
                 .animation(.spring(response: 0.28, dampingFraction: 0.78), value: isSelected)
             }
@@ -313,27 +349,72 @@ struct MapScreen: View {
         .tag(annotation.id)
     }
 
-    private func selectionPromptView(for place: Place) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(place.displayName)
-                .font(.headline)
+    private func selectionPromptView(for place: Place, annotation: MapPlaceAnnotation?) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Selected", systemImage: "location.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color(.secondarySystemBackground), in: Capsule())
 
-            if let secondaryDisplayText = place.secondaryDisplayText {
-                Text(secondaryDisplayText)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+                    Text(place.displayName)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
 
-            HStack {
-                Button("Details") {
-                    viewModel.openPromptedPlaceDetails()
+                    if let secondaryDisplayText = place.secondaryDisplayText {
+                        Label {
+                            Text(secondaryDisplayText)
+                                .lineLimit(2)
+                        } icon: {
+                            Image(systemName: "mappin.and.ellipse")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
+
+                Spacer(minLength: 12)
+
+                if let annotation {
+                    VStack(alignment: .trailing, spacing: 8) {
+                        RatingBadgeView(rating: annotation.averageRating)
+
+                        Text(reviewCountText(annotation.reviewCount))
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
+
+            Button {
+                viewModel.openPromptedPlaceDetails()
+            } label: {
+                Label("View Place", systemImage: "arrow.right")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
         }
-        .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 12, y: 8)
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(.regularMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .strokeBorder(.white.opacity(0.55), lineWidth: 1)
+                }
+        )
+        .shadow(color: .black.opacity(0.10), radius: 18, y: 10)
+    }
+
+    private func reviewCountText(_ count: Int) -> String {
+        count == 1 ? "1 review" : "\(count) reviews"
     }
 }
 
