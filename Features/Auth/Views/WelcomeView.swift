@@ -1,6 +1,10 @@
 import AuthenticationServices
 import SwiftUI
 
+private enum WelcomeLayout {
+    static let horizontalContentPadding: CGFloat = 32
+}
+
 struct WelcomeView: View {
     @Environment(\.colorScheme) private var colorScheme
 
@@ -67,7 +71,7 @@ struct WelcomeView: View {
                 WelcomePreviewCard(theme: theme)
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, WelcomeLayout.horizontalContentPadding)
         .padding(.top, 16)
         .padding(.bottom, allowsFlexibleSpacing ? 16 : 32)
     }
@@ -190,7 +194,7 @@ private struct WelcomeCTASection: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, WelcomeLayout.horizontalContentPadding)
         .padding(.top, 38)
         .padding(.bottom, 20)
     }
