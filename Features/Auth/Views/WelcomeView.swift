@@ -137,8 +137,10 @@ private struct WelcomePreviewCard: View {
             Image("WelcomeScreenMap")
                 .resizable()
                 .interpolation(.high)
-                .scaledToFit()
+                .scaledToFill()
                 .frame(maxWidth: .infinity)
+                .aspectRatio(1, contentMode: .fit)
+                .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
