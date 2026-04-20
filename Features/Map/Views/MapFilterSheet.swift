@@ -11,7 +11,7 @@ struct MapFilterSheet: View {
         NavigationStack {
             Form {
                 Section("Owner") {
-                    Picker("Show", selection: $filterState.selectedOwnershipFilter) {
+                    Picker("Selection", selection: $filterState.selectedOwnershipFilter) {
                         ForEach(PlaceOwnershipFilter.allCases) { option in
                             Text(option.title).tag(option)
                         }
@@ -19,7 +19,7 @@ struct MapFilterSheet: View {
                 }
 
                 Section("Category") {
-                    Picker("Show", selection: $filterState.selectedCategory) {
+                    Picker("Selection", selection: $filterState.selectedCategory) {
                         ForEach(categoryOptions) { option in
                             Text(option.title).tag(option)
                         }
