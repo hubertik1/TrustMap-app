@@ -10,16 +10,14 @@ struct MapFilterSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Owner") {
-                    Picker("Selection", selection: $filterState.selectedOwnershipFilter) {
+                Section("Filters") {
+                    Picker("Added by", selection: $filterState.selectedOwnershipFilter) {
                         ForEach(PlaceOwnershipFilter.allCases) { option in
                             Text(option.title).tag(option)
                         }
                     }
-                }
 
-                Section("Category") {
-                    Picker("Selection", selection: $filterState.selectedCategory) {
+                    Picker("Category", selection: $filterState.selectedCategory) {
                         ForEach(categoryOptions) { option in
                             Text(option.title).tag(option)
                         }
@@ -29,6 +27,12 @@ struct MapFilterSheet: View {
                 Section("Rating Range") {
                     Stepper("Minimum Rating: \(filterState.minimumRating)", value: $filterState.minimumRating, in: 1...filterState.maximumRating)
                     Stepper("Maximum Rating: \(filterState.maximumRating)", value: $filterState.maximumRating, in: filterState.minimumRating...5)
+                }
+
+                Section {
+                    Button("Reset Filters", role: .destructive) {
+                        filterState = .defaultState
+                    }
                 }
             }
             .navigationTitle("Map Filters")

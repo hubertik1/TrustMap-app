@@ -15,7 +15,7 @@ struct PlaceCategoryOption: Identifiable, Hashable, Sendable {
 
     static let all = PlaceCategoryOption(
         id: "all",
-        title: "All",
+        title: "All Categories",
         categoryID: nil
     )
 

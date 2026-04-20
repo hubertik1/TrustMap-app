@@ -9,14 +9,16 @@ enum PlaceOwnershipFilter: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .all:
-            return "All Places"
+            return "Anyone"
         case .mine:
-            return "Added by Me"
+            return "Me"
         }
     }
 }
 
 struct MapFilterState: Equatable, Sendable {
+    static let defaultState = Self()
+
     var minimumRating: Int = 1
     var maximumRating: Int = 5
     var selectedCategory = PlaceCategoryOption.restaurant
