@@ -24,10 +24,14 @@ struct MyDishReviewsView: View {
     var body: some View {
         Group {
             if reviews.isEmpty {
-                EmptyStateView(
-                    title: "No Dish Reviews Yet",
-                    message: "Your saved dish reviews will show up here.",
-                    systemImage: "fork.knife.circle"
+                ProductEmptyStateView(
+                    title: "No reviewed dishes yet",
+                    message: "Dishes you review will appear here.",
+                    systemImage: "fork.knife.circle.fill",
+                    primaryActionTitle: "Add Review",
+                    onPrimaryAction: {
+                        container.selectedTab = .add
+                    }
                 )
             } else {
                 List {
@@ -79,6 +83,7 @@ struct MyDishReviewsView: View {
                 .listStyle(.insetGrouped)
             }
         }
+        .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("My Dish Reviews")
         .alert("Couldn't Delete Review", isPresented: isShowingDeletionError) {
             Button("OK", role: .cancel) {}

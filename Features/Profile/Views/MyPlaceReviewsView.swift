@@ -24,10 +24,14 @@ struct MyPlaceReviewsView: View {
     var body: some View {
         Group {
             if reviews.isEmpty {
-                EmptyStateView(
-                    title: "No Place Reviews Yet",
-                    message: "Your saved place reviews will show up here.",
-                    systemImage: "mappin.slash"
+                ProductEmptyStateView(
+                    title: "No rated places yet",
+                    message: "Places you review will appear here.",
+                    systemImage: "mappin.and.ellipse",
+                    primaryActionTitle: "Add Review",
+                    onPrimaryAction: {
+                        container.selectedTab = .add
+                    }
                 )
             } else {
                 List {
@@ -75,6 +79,7 @@ struct MyPlaceReviewsView: View {
                 .listStyle(.insetGrouped)
             }
         }
+        .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("My Place Reviews")
         .alert("Couldn't Delete Review", isPresented: isShowingDeletionError) {
             Button("OK", role: .cancel) {}
