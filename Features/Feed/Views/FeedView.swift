@@ -4,6 +4,7 @@ struct FeedView: View {
     private let container: AppContainer
     @ObservedObject private var refreshCenter: AppRefreshCenter
     @StateObject private var viewModel: FeedViewModel
+    @State private var selectedPlace: Place?
 
     init(container: AppContainer) {
         self.container = container
@@ -35,27 +36,37 @@ struct FeedView: View {
                 )
             } else {
                 List(viewModel.feedItems) { item in
-                    NavigationLink {
-                        PlaceDetailView(container: container, place: item.place)
+                    Button {
+                        selectedPlace = item.place
                     } label: {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(item.title)
-                                .font(.headline)
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(item.title)
+                                    .font(.headline)
 
-                            if let subtitle = item.subtitle {
-                                Text(subtitle)
-                                    .font(.subheadline.weight(.medium))
+                                if let subtitle = item.subtitle {
+                                    Text(subtitle)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                FeedStarRatingView(rating: item.rating)
+
+                                Text(item.createdAt.feedTimestampText)
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
 
-                            FeedStarRatingView(rating: item.rating)
+                            Spacer(minLength: 12)
 
-                            Text(item.createdAt.feedTimestampText)
-                                .font(.caption)
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.bold))
                                 .foregroundStyle(.secondary)
+                                .frame(width: 28, height: 28)
                         }
                         .padding(.vertical, 4)
                     }
+                    .buttonStyle(.plain)
                 }
                 .listStyle(.insetGrouped)
                 .refreshable {
@@ -67,6 +78,9 @@ struct FeedView: View {
         .navigationTitle("Feed")
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
+        }
+        .navigationDestination(item: $selectedPlace) { place in
+            PlaceDetailView(container: container, place: place)
         }
     }
 }

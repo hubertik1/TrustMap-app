@@ -220,10 +220,6 @@ private struct AddHubActionCard: View {
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.secondary)
                 .frame(width: 30, height: 30)
-                .background(
-                    Circle()
-                        .fill(Color(uiColor: .secondarySystemBackground))
-                )
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 13)

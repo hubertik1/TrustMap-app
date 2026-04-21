@@ -68,10 +68,6 @@ struct PlaceListRowView: View {
                 Circle()
                     .fill(Color(uiColor: .systemBackground).opacity(0.9))
             )
-            .overlay {
-                Circle()
-                    .stroke(Color(uiColor: .separator).opacity(0.18), lineWidth: 1)
-            }
             .accessibilityHidden(true)
     }
 
