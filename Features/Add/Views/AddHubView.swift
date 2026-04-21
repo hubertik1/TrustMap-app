@@ -85,7 +85,7 @@ struct AddHubView: View {
         .background(Color(uiColor: .systemGroupedBackground))
         .contentMargins(.top, 8, for: .scrollContent)
         .contentMargins(.horizontal, 16, for: .scrollContent)
-        .navigationTitle("Add")
+        .navigationTitle("Add Review")
         .sheet(
             isPresented: $isPlaceSearchPresented,
             onDismiss: {
@@ -190,14 +190,18 @@ private struct AddHubActionCard: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: systemImage)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.primary)
-                .frame(width: 46, height: 46)
-                .background(
-                    Circle()
-                        .fill(Color(uiColor: .secondarySystemGroupedBackground))
-                )
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.18))
+
+                Circle()
+                    .stroke(Color.accentColor.opacity(0.24), lineWidth: 1)
+
+                Image(systemName: systemImage)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+            }
+            .frame(width: 48, height: 48)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
@@ -213,8 +217,13 @@ private struct AddHubActionCard: View {
             Spacer(minLength: 12)
 
             Image(systemName: "arrow.up.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.secondary)
+                .frame(width: 30, height: 30)
+                .background(
+                    Circle()
+                        .fill(Color(uiColor: .secondarySystemBackground))
+                )
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
@@ -222,6 +231,10 @@ private struct AddHubActionCard: View {
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color(uiColor: .systemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.primary.opacity(0.04), lineWidth: 1)
         )
     }
 }
