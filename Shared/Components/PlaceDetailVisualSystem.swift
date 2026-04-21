@@ -15,8 +15,8 @@ enum PlaceDetailVisualSystem {
         static let primary = Color.primary
         static let secondary = Color(uiColor: .secondaryLabel)
         static let tertiary = Color(uiColor: .tertiaryLabel)
-        static let cardFill = Color(uiColor: .systemBackground)
-        static let cardStroke = Color(uiColor: .separator).opacity(0.22)
+        static let cardFill = Color(uiColor: .secondarySystemGroupedBackground)
+        static let cardStroke = Color(uiColor: .separator).opacity(0.12)
         static let placeholderFill = Color(uiColor: .secondarySystemBackground)
         static let placeholderAccent = Color.accentColor
     }
