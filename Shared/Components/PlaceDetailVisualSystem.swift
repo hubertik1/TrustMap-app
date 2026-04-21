@@ -137,17 +137,14 @@ struct PlaceDetailReviewCard<LeadingVisual: View, Content: View>: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                VStack(alignment: .trailing, spacing: 10) {
+                ZStack(alignment: .topTrailing) {
                     RatingBadgeView(rating: rating)
 
                     if showsChevron {
-                        Spacer(minLength: 0)
-
                         Image(systemName: "chevron.right")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
-
-                        Spacer(minLength: 0)
+                            .frame(maxHeight: .infinity, alignment: .center)
                     }
                 }
                 .frame(minWidth: 36, maxHeight: .infinity, alignment: .trailing)
