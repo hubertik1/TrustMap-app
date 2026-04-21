@@ -3,10 +3,11 @@ import OSLog
 
 @MainActor
 final class PlacesViewModel: ObservableObject {
+    static let defaultFilterState = MapFilterState(selectedCategory: .all)
+
     @Published private(set) var placeItems: [PlaceListItem] = []
     @Published private(set) var availableCategoryOptions: [PlaceCategoryOption] = [.all]
-    @Published private(set) var selectedCategory = PlaceCategoryOption.all
-    @Published private(set) var selectedOwnershipFilter: PlaceOwnershipFilter = .all
+    @Published private(set) var filterState = defaultFilterState
     @Published var isLoading = false
     @Published var errorMessage: String?
 
@@ -34,16 +35,16 @@ final class PlacesViewModel: ObservableObject {
         do {
             async let categories = categoryRepository.fetchMyCategories()
             async let places = mapRepository.fetchMapPlaces(
-                categoryID: selectedCategory.categoryID,
+                categoryID: filterState.selectedCategory.categoryID,
                 take: 250
             )
             let resolvedCategories = try await categories
             let resolvedPlaces = try await places
 
             availableCategoryOptions = [.all] + resolvedCategories.map(PlaceCategoryOption.init(category:))
-            if selectedCategory != .all,
-               !availableCategoryOptions.contains(selectedCategory) {
-                selectedCategory = .all
+            if filterState.selectedCategory != .all,
+               !availableCategoryOptions.contains(filterState.selectedCategory) {
+                filterState.selectedCategory = .all
             }
 
             allPlaceItems = resolvedPlaces.map {
@@ -64,7 +65,7 @@ final class PlacesViewModel: ObservableObject {
 
                 return lhs.averageRating > rhs.averageRating
             }
-            applyOwnershipFilter()
+            applyLocalFilters()
             errorMessage = nil
         } catch {
             guard !Self.isCancellation(error) else { return }
@@ -75,24 +76,19 @@ final class PlacesViewModel: ObservableObject {
         }
     }
 
-    func applyFilters(
-        category option: PlaceCategoryOption,
-        ownershipFilter: PlaceOwnershipFilter
-    ) async {
-        let categoryChanged = selectedCategory != option
-        let ownershipChanged = selectedOwnershipFilter != ownershipFilter
+    func applyFilters(_ nextFilterState: MapFilterState) async {
+        let categoryChanged = filterState.selectedCategory != nextFilterState.selectedCategory
 
-        guard categoryChanged || ownershipChanged else {
+        guard filterState != nextFilterState else {
             return
         }
 
-        selectedCategory = option
-        selectedOwnershipFilter = ownershipFilter
+        filterState = nextFilterState
 
         if categoryChanged {
             await load()
         } else {
-            applyOwnershipFilter()
+            applyLocalFilters()
         }
     }
 
@@ -105,17 +101,23 @@ final class PlacesViewModel: ObservableObject {
         return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
     }
 
-    private func applyOwnershipFilter() {
-        guard selectedOwnershipFilter == .mine else {
-            placeItems = allPlaceItems
-            return
-        }
+    private func applyLocalFilters() {
+        let currentUserID = sessionStore.currentUser?.id
 
-        guard let currentUserID = sessionStore.currentUser?.id else {
-            placeItems = []
-            return
-        }
+        placeItems = allPlaceItems.filter { item in
+            let matchesOwnership: Bool
+            switch filterState.selectedOwnershipFilter {
+            case .all:
+                matchesOwnership = true
+            case .mine:
+                matchesOwnership = item.createdByUserId == currentUserID
+            }
 
-        placeItems = allPlaceItems.filter { $0.createdByUserId == currentUserID }
+            guard matchesOwnership else {
+                return false
+            }
+
+            return filterState.ratingRange.contains(Int(round(item.averageRating)))
+        }
     }
 }

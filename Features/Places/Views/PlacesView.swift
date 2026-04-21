@@ -5,8 +5,7 @@ struct PlacesView: View {
     @ObservedObject private var refreshCenter: AppRefreshCenter
     @StateObject private var viewModel: PlacesViewModel
     @State private var isFilterPresented = false
-    @State private var draftCategory = PlaceCategoryOption.all
-    @State private var draftOwnershipFilter: PlaceOwnershipFilter = .all
+    @State private var draftFilterState = MapFilterState(selectedCategory: .all)
 
     init(container: AppContainer) {
         self.container = container
@@ -37,13 +36,10 @@ struct PlacesView: View {
                     onPrimaryAction: {
                         container.selectedTab = .add
                     },
-                    secondaryActionTitle: viewModel.selectedCategory != .all || viewModel.selectedOwnershipFilter != .all ? "Reset Filters" : nil,
-                    onSecondaryAction: viewModel.selectedCategory != .all || viewModel.selectedOwnershipFilter != .all ? {
+                    secondaryActionTitle: viewModel.filterState != PlacesViewModel.defaultFilterState ? "Reset Filters" : nil,
+                    onSecondaryAction: viewModel.filterState != PlacesViewModel.defaultFilterState ? {
                         Task {
-                            await viewModel.applyFilters(
-                                category: .all,
-                                ownershipFilter: .all
-                            )
+                            await viewModel.applyFilters(PlacesViewModel.defaultFilterState)
                         }
                     } : nil
                 )
@@ -69,8 +65,7 @@ struct PlacesView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    draftCategory = viewModel.selectedCategory
-                    draftOwnershipFilter = viewModel.selectedOwnershipFilter
+                    draftFilterState = viewModel.filterState
                     isFilterPresented = true
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
@@ -79,15 +74,11 @@ struct PlacesView: View {
         }
         .sheet(isPresented: $isFilterPresented) {
             PlacesFilterSheet(
-                selectedCategory: $draftCategory,
-                selectedOwnershipFilter: $draftOwnershipFilter,
+                filterState: $draftFilterState,
                 categoryOptions: viewModel.availableCategoryOptions
             ) {
                 Task {
-                    await viewModel.applyFilters(
-                        category: draftCategory,
-                        ownershipFilter: draftOwnershipFilter
-                    )
+                    await viewModel.applyFilters(draftFilterState)
                 }
             }
         }
@@ -104,8 +95,7 @@ struct PlacesView: View {
 }
 
 private struct PlacesFilterSheet: View {
-    @Binding var selectedCategory: PlaceCategoryOption
-    @Binding var selectedOwnershipFilter: PlaceOwnershipFilter
+    @Binding var filterState: MapFilterState
     let categoryOptions: [PlaceCategoryOption]
     let onApply: () -> Void
 
@@ -114,19 +104,28 @@ private struct PlacesFilterSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Owner") {
-                    Picker("Show", selection: $selectedOwnershipFilter) {
+                Section("Filters") {
+                    Picker("Added by", selection: $filterState.selectedOwnershipFilter) {
                         ForEach(PlaceOwnershipFilter.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+
+                    Picker("Category", selection: $filterState.selectedCategory) {
+                        ForEach(categoryOptions) { option in
                             Text(option.title).tag(option)
                         }
                     }
                 }
 
-                Section("Category") {
-                    Picker("Show", selection: $selectedCategory) {
-                        ForEach(categoryOptions) { option in
-                            Text(option.title).tag(option)
-                        }
+                Section("Rating Range") {
+                    Stepper("Minimum Rating: \(filterState.minimumRating)", value: $filterState.minimumRating, in: 1...filterState.maximumRating)
+                    Stepper("Maximum Rating: \(filterState.maximumRating)", value: $filterState.maximumRating, in: filterState.minimumRating...5)
+                }
+
+                Section {
+                    Button("Reset Filters", role: .destructive) {
+                        filterState = PlacesViewModel.defaultFilterState
                     }
                 }
             }
