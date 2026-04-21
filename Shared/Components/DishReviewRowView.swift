@@ -3,106 +3,89 @@ import SwiftUI
 struct DishReviewRowView: View {
     let review: DishReview
     let authorName: String
-    let photo: PhotoAsset?
+    let photos: [PhotoAsset]
     var isEditable = false
 
-    @State private var isPresentingPhoto = false
-
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            if let photo {
-                Button {
-                    isPresentingPhoto = true
-                } label: {
-                    RemotePhotoView(
-                        asset: photo,
-                        preferredVariant: .thumbnail,
-                        placeholderSystemImage: "fork.knife",
-                        targetDisplaySize: CGSize(width: 64, height: 64)
-                    )
-                        .frame(width: 64, height: 64)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .fullScreenCover(isPresented: $isPresentingPhoto) {
-                    DishReviewPhotoLightboxView(photo: photo)
-                }
-            } else {
-                placeholder
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(review.dishName)
-                        .font(.headline)
-
-                    Spacer()
-
-                    RatingBadgeView(rating: Double(review.dishRating))
-                }
+        PlaceDetailReviewCard(
+            rating: Double(review.dishRating),
+            showsChevron: isEditable
+        ) {
+            leadingVisual
+        } content: {
+            VStack(alignment: .leading, spacing: PlaceDetailVisualSystem.Metrics.textSpacing) {
+                Text(review.dishName)
+                    .font(PlaceDetailVisualSystem.Typography.cardTitle)
+                    .foregroundStyle(PlaceDetailVisualSystem.Colors.primary)
 
                 Text(authorName)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(PlaceDetailVisualSystem.Typography.secondary)
+                    .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
 
-                if !review.dishReviewText.isEmpty {
-                    Text(review.dishReviewText)
-                        .font(.subheadline)
-                }
-
-                if let price = review.price {
-                    Text(price, format: .currency(code: review.currencyCode ?? Locale.current.currency?.identifier ?? "USD"))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text(review.createdAt.placeDetailTimestampText)
+                    .font(PlaceDetailVisualSystem.Typography.meta)
+                    .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
             }
 
-            if isEditable {
-                VStack {
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                    Spacer(minLength: 0)
-                }
+            if !review.dishReviewText.isEmpty {
+                Text(review.dishReviewText)
+                    .font(PlaceDetailVisualSystem.Typography.body)
+                    .foregroundStyle(PlaceDetailVisualSystem.Colors.primary)
+            }
+
+            if let price = review.price {
+                Text(price, format: .currency(code: review.currencyCode ?? Locale.current.currency?.identifier ?? "USD"))
+                    .font(PlaceDetailVisualSystem.Typography.meta)
+                    .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
+            }
+
+            if !trailingPhotos.isEmpty {
+                PhotoGridView(
+                    assets: trailingPhotos,
+                    allowsFullscreenPresentation: true,
+                    thumbnailSize: PlaceDetailVisualSystem.Metrics.photoThumbnailSize,
+                    cornerRadius: PlaceDetailVisualSystem.Metrics.photoCornerRadius,
+                    spacing: PlaceDetailVisualSystem.Metrics.photoSpacing
+                )
             }
         }
-        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private var leadingVisual: some View {
+        if let primaryPhoto = photos.first {
+            PhotoGridView(
+                assets: [primaryPhoto],
+                allowsFullscreenPresentation: true,
+                thumbnailSize: CGSize(
+                    width: PlaceDetailVisualSystem.Metrics.leadingVisualSize,
+                    height: PlaceDetailVisualSystem.Metrics.leadingVisualSize
+                ),
+                cornerRadius: PlaceDetailVisualSystem.Metrics.photoCornerRadius,
+                spacing: PlaceDetailVisualSystem.Metrics.photoSpacing
+            )
+        } else {
+            placeholder
+        }
+    }
+
+    private var trailingPhotos: [PhotoAsset] {
+        Array(photos.dropFirst())
     }
 
     private var placeholder: some View {
         RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(Color(.secondarySystemBackground))
-            .frame(width: 64, height: 64)
-            .overlay(Image(systemName: "fork.knife").foregroundStyle(.secondary))
-    }
-}
-
-private struct DishReviewPhotoLightboxView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let photo: PhotoAsset
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Color.black.ignoresSafeArea()
-
-            RemotePhotoView(
-                asset: photo,
-                preferredVariant: .medium,
-                contentMode: .fit,
-                targetDisplaySize: UIScreen.main.bounds.size
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding()
-            .background(Color.black)
-
-            Button("Done") {
-                dismiss()
+            .fill(PlaceDetailVisualSystem.Colors.placeholderFill)
+            .overlay {
+                Image(systemName: "fork.knife")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(PlaceDetailVisualSystem.Colors.placeholderAccent)
             }
-            .padding(.top, 16)
-            .padding(.trailing, 16)
-            .foregroundStyle(.white)
-        }
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: PlaceDetailVisualSystem.Metrics.photoCornerRadius,
+                    style: .continuous
+                )
+            )
     }
 }

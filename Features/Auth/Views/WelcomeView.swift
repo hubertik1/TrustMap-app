@@ -131,7 +131,7 @@ private struct WelcomeBrandHeader: View {
             Spacer()
         }
     }
-}
+} 
 
 private struct WelcomePreviewCard: View {
     let theme: WelcomeTheme

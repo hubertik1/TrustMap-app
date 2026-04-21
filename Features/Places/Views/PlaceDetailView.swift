@@ -43,35 +43,49 @@ struct PlaceDetailView: View {
                                 viewModel.beginRenamingCustomPlace()
                             }
                         }
+                    } header: {
+                        EmptyView()
                     }
 
-                    Section("Place Reviews") {
+                    Section {
                         if viewModel.placeReviews.isEmpty {
-                            Text("No visible place reviews yet.")
-                                .foregroundStyle(.secondary)
+                            PlaceDetailEmptyStateCard(
+                                title: "No place reviews yet",
+                                message: "Visible place reviews for this location will appear here.",
+                                systemImage: "text.bubble"
+                            )
+                            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                            .listRowBackground(Color.clear)
                         } else {
                             ForEach(viewModel.placeReviews, id: \.id) { review in
-                                ReviewCardView(
-                                    review: review,
-                                    authorName: viewModel.authorName(for: review.authorUserId),
-                                    photos: review.photos
-                                )
-                                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-                                .listRowBackground(Color.clear)
+                                placeReviewRow(for: review)
+                                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                                    .listRowBackground(Color.clear)
                             }
                         }
+                    } header: {
+                        PlaceDetailSectionHeaderView(title: "Place Reviews")
                     }
 
                     if viewModel.canAddDishReview {
-                        Section("Dish Reviews") {
+                        Section {
                             if viewModel.dishReviews.isEmpty {
-                                Text("No visible dish reviews yet.")
-                                    .foregroundStyle(.secondary)
+                                PlaceDetailEmptyStateCard(
+                                    title: "No dish reviews yet",
+                                    message: "Dish reviews added for this place will appear here.",
+                                    systemImage: "fork.knife"
+                                )
+                                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                                .listRowBackground(Color.clear)
                             } else {
                                 ForEach(viewModel.dishReviews, id: \.id) { review in
                                     dishReviewRow(for: review)
+                                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                                        .listRowBackground(Color.clear)
                                 }
                             }
+                        } header: {
+                            PlaceDetailSectionHeaderView(title: "Dish Reviews")
                         }
                     }
                 }
@@ -162,11 +176,33 @@ struct PlaceDetailView: View {
     }
 
     @ViewBuilder
+    private func placeReviewRow(for review: PlaceReview) -> some View {
+        let row = ReviewCardView(
+                                    review: review,
+                                    authorName: viewModel.authorName(for: review.authorUserId),
+                                    photos: review.photos,
+                                    isEditable: review.authorUserId == viewModel.currentUserID
+                                )
+
+        if review.authorUserId == viewModel.currentUserID {
+            Button {
+                viewModel.isPresentingAddPlaceReview = true
+            } label: {
+                row
+            }
+            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+        } else {
+            row
+        }
+    }
+
+    @ViewBuilder
     private func dishReviewRow(for review: DishReview) -> some View {
         let row = DishReviewRowView(
             review: review,
             authorName: viewModel.authorName(for: review.authorUserId),
-            photo: review.photos.first,
+            photos: review.photos,
             isEditable: viewModel.canEdit(review)
         )
 

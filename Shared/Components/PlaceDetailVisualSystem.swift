@@ -1,0 +1,176 @@
+import SwiftUI
+
+enum PlaceDetailVisualSystem {
+    enum Typography {
+        static let sectionTitle = Font.subheadline.weight(.semibold)
+        static let summaryTitle = Font.title3.weight(.semibold)
+        static let cardTitle = Font.subheadline.weight(.semibold)
+        static let secondary = Font.subheadline
+        static let body = Font.subheadline
+        static let meta = Font.caption
+        static let chip = Font.caption.weight(.medium)
+    }
+
+    enum Colors {
+        static let primary = Color.primary
+        static let secondary = Color(uiColor: .secondaryLabel)
+        static let tertiary = Color(uiColor: .tertiaryLabel)
+        static let cardFill = Color(uiColor: .systemBackground)
+        static let cardStroke = Color(uiColor: .separator).opacity(0.22)
+        static let placeholderFill = Color(uiColor: .secondarySystemBackground)
+        static let placeholderAccent = Color.accentColor
+    }
+
+    enum Metrics {
+        static let cardCornerRadius: CGFloat = 16
+        static let cardPadding: CGFloat = 14
+        static let columnSpacing: CGFloat = 12
+        static let contentSpacing: CGFloat = 6
+        static let textSpacing: CGFloat = 2
+        static let leadingVisualSize: CGFloat = 52
+        static let photoThumbnailSize = CGSize(width: 88, height: 88)
+        static let photoCornerRadius: CGFloat = 14
+        static let photoSpacing: CGFloat = 10
+    }
+}
+
+struct PlaceDetailSectionHeaderView: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(PlaceDetailVisualSystem.Typography.sectionTitle)
+            .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
+            .textCase(nil)
+    }
+}
+
+struct PlaceDetailCard<Content: View>: View {
+    private let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(PlaceDetailVisualSystem.Metrics.cardPadding)
+            .background(
+                RoundedRectangle(
+                    cornerRadius: PlaceDetailVisualSystem.Metrics.cardCornerRadius,
+                    style: .continuous
+                )
+                .fill(PlaceDetailVisualSystem.Colors.cardFill)
+                .overlay {
+                    RoundedRectangle(
+                        cornerRadius: PlaceDetailVisualSystem.Metrics.cardCornerRadius,
+                        style: .continuous
+                    )
+                    .stroke(PlaceDetailVisualSystem.Colors.cardStroke, lineWidth: 1)
+                }
+            )
+    }
+}
+
+struct PlaceDetailEmptyStateCard: View {
+    let title: String
+    let message: String
+    let systemImage: String
+
+    var body: some View {
+        PlaceDetailCard {
+            VStack(spacing: 10) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(Color(uiColor: .tertiarySystemFill))
+                    )
+
+                VStack(spacing: 4) {
+                    Text(title)
+                        .font(PlaceDetailVisualSystem.Typography.cardTitle)
+                        .foregroundStyle(PlaceDetailVisualSystem.Colors.primary)
+
+                    Text(message)
+                        .font(PlaceDetailVisualSystem.Typography.body)
+                        .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+struct PlaceDetailReviewCard<LeadingVisual: View, Content: View>: View {
+    let rating: Double
+    var showsChevron = false
+    private let leadingVisual: LeadingVisual
+    private let content: Content
+
+    init(
+        rating: Double,
+        showsChevron: Bool = false,
+        @ViewBuilder leadingVisual: () -> LeadingVisual,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.rating = rating
+        self.showsChevron = showsChevron
+        self.leadingVisual = leadingVisual()
+        self.content = content()
+    }
+
+    var body: some View {
+        PlaceDetailCard {
+            HStack(alignment: .top, spacing: PlaceDetailVisualSystem.Metrics.columnSpacing) {
+                leadingVisual
+                    .frame(
+                        width: PlaceDetailVisualSystem.Metrics.leadingVisualSize,
+                        height: PlaceDetailVisualSystem.Metrics.leadingVisualSize
+                    )
+
+                VStack(alignment: .leading, spacing: PlaceDetailVisualSystem.Metrics.contentSpacing) {
+                    content
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .trailing, spacing: 10) {
+                    RatingBadgeView(rating: rating)
+
+                    if showsChevron {
+                        Spacer(minLength: 0)
+
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
+
+                        Spacer(minLength: 0)
+                    }
+                }
+                .frame(minWidth: 36, maxHeight: .infinity, alignment: .trailing)
+            }
+        }
+    }
+}
+
+extension Date {
+    var placeDetailTimestampText: String {
+        let elapsedSeconds = max(0, Int(Date.now.timeIntervalSince(self)))
+        let minutes = elapsedSeconds / 60
+
+        if minutes < 60 {
+            return "\(minutes) min"
+        }
+
+        let hours = minutes / 60
+        if hours < 24 {
+            return "\(hours) h"
+        }
+
+        let days = hours / 24
+        return "\(days) d"
+    }
+}

@@ -10,22 +10,26 @@ struct PlaceSummaryHeaderView: View {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(place.displayName)
-                        .font(.title3.weight(.semibold))
+                        .font(PlaceDetailVisualSystem.Typography.summaryTitle)
+                        .foregroundStyle(PlaceDetailVisualSystem.Colors.primary)
 
                     if let secondaryDisplayText = place.secondaryDisplayText {
                         Text(secondaryDisplayText)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .font(PlaceDetailVisualSystem.Typography.secondary)
+                            .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
                     }
 
                     if !categoryNames.isEmpty {
                         HStack(spacing: 6) {
                             ForEach(categoryNames, id: \.self) { name in
                                 Text(name)
-                                    .font(.caption.weight(.medium))
+                                    .font(PlaceDetailVisualSystem.Typography.chip)
                                     .padding(.horizontal, 9)
                                     .padding(.vertical, 4)
-                                    .background(Color(.secondarySystemBackground), in: Capsule())
+                                    .background(
+                                        PlaceDetailVisualSystem.Colors.placeholderFill,
+                                        in: Capsule()
+                                    )
                             }
                         }
                         .fixedSize(horizontal: false, vertical: true)

@@ -37,6 +37,7 @@
 		3F4495E56F5E4B087F83D56C /* AddHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111A960988004279EE0C1E8D /* AddHubView.swift */; };
 		429F98ACFE2EF9806DDBD67B /* PlaceSearchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81090D478C4CF9CD5285DFE /* PlaceSearchResult.swift */; };
 		42B70003DC5D0DEA3E0B3508 /* PlaceSummaryHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CBE65E0E873B5B3EF681A5E /* PlaceSummaryHeaderView.swift */; };
+		4336B1D7223AA80A4E18E1D1 /* PlaceDetailVisualSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4336B1D6223AA80A4E18E1D1 /* PlaceDetailVisualSystem.swift */; };
 		44DD22839EC22DFF39ED6542 /* PlaceListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C7AC2426E7A1B417342655 /* PlaceListItem.swift */; };
 		4BB39B6BDD8B4EC7B158B5D7 /* ReviewCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8006D162A5B7DB9E8E5B11CB /* ReviewCardView.swift */; };
 		4D306DAD84388EF74A9EE33D /* AddDishReviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C41373DF898F245320B0530 /* AddDishReviewViewModel.swift */; };
@@ -127,6 +128,7 @@
 		32DE188FC9E00A7B36EEF267 /* DishReviewDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DishReviewDraft.swift; path = Features/Dishes/Models/DishReviewDraft.swift; sourceTree = "<group>"; };
 		34A09B1684F7C50A8B7E956F /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		3CBE65E0E873B5B3EF681A5E /* PlaceSummaryHeaderView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaceSummaryHeaderView.swift; path = Shared/Components/PlaceSummaryHeaderView.swift; sourceTree = "<group>"; };
+		4336B1D6223AA80A4E18E1D1 /* PlaceDetailVisualSystem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaceDetailVisualSystem.swift; path = Shared/Components/PlaceDetailVisualSystem.swift; sourceTree = "<group>"; };
 		417969CD71EC5C457D5EDAEC /* MyDishReviewsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MyDishReviewsView.swift; path = Features/Profile/Views/MyDishReviewsView.swift; sourceTree = "<group>"; };
 		4469F60E807AE76E9AADB64C /* KeychainTokenStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = KeychainTokenStore.swift; path = Core/Security/KeychainTokenStore.swift; sourceTree = "<group>"; };
 		448E87478C011962A938ABE9 /* PlaceDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaceDetailView.swift; path = Features/Places/Views/PlaceDetailView.swift; sourceTree = "<group>"; };
@@ -570,6 +572,7 @@
 				061CA394D8776E51614AB480 /* ErrorStateView.swift */,
 				F512520B6CA40F6674931725 /* LoadingStateView.swift */,
 				5B1DB86409BD4B41756D4EA7 /* PhotoGridView.swift */,
+				4336B1D6223AA80A4E18E1D1 /* PlaceDetailVisualSystem.swift */,
 				3CBE65E0E873B5B3EF681A5E /* PlaceSummaryHeaderView.swift */,
 				0CC78656AA973544E0280673 /* RatingBadgeView.swift */,
 				743132A19DE4E33879DE32B9 /* RemotePhotoView.swift */,
@@ -988,6 +991,7 @@
 				27268709A29C7D17F242F674 /* ErrorStateView.swift in Sources */,
 				7DD90B0E788165CBBE3C1C7D /* LoadingStateView.swift in Sources */,
 				9C3793ED1D1C6357B3EC4938 /* PhotoGridView.swift in Sources */,
+				4336B1D7223AA80A4E18E1D1 /* PlaceDetailVisualSystem.swift in Sources */,
 				42B70003DC5D0DEA3E0B3508 /* PlaceSummaryHeaderView.swift in Sources */,
 				2609C297E268BFF1DECD66FB /* RatingBadgeView.swift in Sources */,
 				BE813E46BFF8BF3278FD728C /* RemotePhotoView.swift in Sources */,

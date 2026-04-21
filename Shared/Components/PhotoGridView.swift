@@ -9,13 +9,16 @@ private struct PhotoGridSelectedPhoto: Identifiable {
 struct PhotoGridView: View {
     let assets: [PhotoAsset]
     var allowsFullscreenPresentation = false
+    var thumbnailSize = CGSize(width: 96, height: 96)
+    var cornerRadius: CGFloat = 12
+    var spacing: CGFloat = 12
 
     @State private var selectedPhoto: PhotoGridSelectedPhoto?
 
     var body: some View {
         if !assets.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+                HStack(spacing: spacing) {
                     ForEach(assets) { asset in
                         photoThumbnail(for: asset)
                     }
@@ -40,20 +43,20 @@ struct PhotoGridView: View {
                 RemotePhotoView(
                     asset: asset,
                     preferredVariant: .thumbnail,
-                    targetDisplaySize: CGSize(width: 96, height: 96)
+                    targetDisplaySize: thumbnailSize
                 )
-                    .frame(width: 96, height: 96)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .frame(width: thumbnailSize.width, height: thumbnailSize.height)
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             }
             .buttonStyle(.plain)
         } else {
             RemotePhotoView(
                 asset: asset,
                 preferredVariant: .thumbnail,
-                targetDisplaySize: CGSize(width: 96, height: 96)
+                targetDisplaySize: thumbnailSize
             )
-                .frame(width: 96, height: 96)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .frame(width: thumbnailSize.width, height: thumbnailSize.height)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         }
     }
 }
