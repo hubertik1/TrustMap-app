@@ -64,10 +64,6 @@ struct PlaceListRowView: View {
             .font(.footnote.weight(.bold))
             .foregroundStyle(.secondary)
             .frame(width: 28, height: 28)
-            .background(
-                Circle()
-                    .fill(Color(uiColor: .systemBackground).opacity(0.9))
-            )
             .accessibilityHidden(true)
     }
 
