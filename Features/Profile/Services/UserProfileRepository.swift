@@ -2,11 +2,23 @@ import Foundation
 
 @MainActor
 final class UserProfileRepository {
+    enum AvatarUpdate {
+        case keepExisting
+        case remove
+        case replace(imageData: Data)
+    }
+
     private struct UpdateMePayload: Encodable {
         let handle: String
         let displayName: String
         let bio: String?
         let avatarUrl: String?
+    }
+
+    private enum AvatarAction: String {
+        case keep = "Keep"
+        case remove = "Remove"
+        case replace = "Replace"
     }
 
     private let apiClient: APIClient
@@ -28,22 +40,73 @@ final class UserProfileRepository {
         handle: String,
         displayName: String,
         bio: String?,
-        avatarURL: String?
+        existingAvatarURL: String?,
+        avatarUpdate: AvatarUpdate = .keepExisting
     ) async throws -> User {
-        let payload = UpdateMePayload(
-            handle: handle.trimmingCharacters(in: .whitespacesAndNewlines),
-            displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines),
-            bio: bio?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
-            avatarUrl: avatarURL?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-        )
+        let normalizedHandle = handle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedBio = bio?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        let normalizedExistingAvatarURL = existingAvatarURL?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
 
-        return try await apiClient.send(
-            APIRequest<User>(
-                method: .patch,
-                path: "me",
-                body: .json(AnyEncodable(payload))
+        switch avatarUpdate {
+        case .keepExisting:
+            let payload = UpdateMePayload(
+                handle: normalizedHandle,
+                displayName: normalizedDisplayName,
+                bio: normalizedBio,
+                avatarUrl: normalizedExistingAvatarURL
             )
-        )
+
+            return try await apiClient.send(
+                APIRequest<User>(
+                    method: .patch,
+                    path: "me",
+                    body: .json(AnyEncodable(payload))
+                )
+            )
+
+        case .remove:
+            let multipart = MultipartFormData(
+                fields: [
+                    "handle": normalizedHandle,
+                    "displayName": normalizedDisplayName,
+                    "bio": normalizedBio ?? "",
+                    "avatarAction": AvatarAction.remove.rawValue
+                ]
+            )
+
+            return try await apiClient.send(
+                APIRequest<User>(
+                    method: .patch,
+                    path: "me",
+                    body: .multipart(multipart)
+                )
+            )
+
+        case .replace(let imageData):
+            let multipart = MultipartFormData(
+                fields: [
+                    "handle": normalizedHandle,
+                    "displayName": normalizedDisplayName,
+                    "bio": normalizedBio ?? "",
+                    "avatarAction": AvatarAction.replace.rawValue
+                ],
+                file: .init(
+                    fieldName: "avatar",
+                    fileName: "avatar.jpg",
+                    mimeType: "image/jpeg",
+                    data: imageData
+                )
+            )
+
+            return try await apiClient.send(
+                APIRequest<User>(
+                    method: .patch,
+                    path: "me",
+                    body: .multipart(multipart)
+                )
+            )
+        }
     }
 
     func fetchUser(id: UUID) async throws -> User {

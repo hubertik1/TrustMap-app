@@ -39,6 +39,7 @@ struct SettingsView: View {
         Section("Account") {
             AccountSummaryRow(
                 displayName: viewModel.currentUser?.displayName ?? "TrustMap Member",
+                avatarURL: viewModel.currentUser?.avatarURL,
                 handle: "@\(viewModel.currentUser?.handle ?? "account")"
             )
 
@@ -153,11 +154,12 @@ struct SettingsView: View {
 
 private struct AccountSummaryRow: View {
     let displayName: String
+    let avatarURL: URL?
     let handle: String
 
     var body: some View {
         HStack(spacing: 12) {
-            AvatarView(name: displayName, size: 48)
+            AvatarView(name: displayName, avatarURL: avatarURL, size: 48)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(displayName)

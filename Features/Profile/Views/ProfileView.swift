@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct ProfileView: View {
@@ -34,7 +35,7 @@ struct ProfileView: View {
                 List {
                     Section {
                         HStack(spacing: 16) {
-                            AvatarView(name: user.displayName, size: 72)
+                            AvatarView(name: user.displayName, avatarURL: user.avatarURL, size: 72)
 
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(user.displayName)
@@ -166,7 +167,7 @@ private struct ProfileFriendsCard: View {
             if !summary.previewFriends.isEmpty {
                 HStack(spacing: -8) {
                     ForEach(summary.previewFriends) { friend in
-                        AvatarView(name: friend.displayName, size: 28)
+                        AvatarView(name: friend.displayName, avatarURL: friend.avatarURL, size: 28)
                             .overlay(
                                 Circle()
                                     .stroke(Color(uiColor: .systemGroupedBackground), lineWidth: 2)
@@ -188,11 +189,16 @@ private struct ProfileFriendsCard: View {
 private struct ProfileEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: ProfileViewModel
+    @State private var selectedPhotoItem: PhotosPickerItem?
 
     var body: some View {
         Form {
             Section("Profile") {
                 VStack(alignment: .leading, spacing: 16) {
+                    profilePhotoEditor
+
+                    Divider()
+
                     TextField(
                         text: $viewModel.editedDisplayName,
                         prompt: Text("Display name").foregroundStyle(.secondary)
@@ -238,6 +244,9 @@ private struct ProfileEditorSheet: View {
         .disabled(viewModel.isSavingProfile)
         .navigationTitle("Edit Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .task(id: selectedPhotoItem) {
+            await prepareSelectedPhoto(from: selectedPhotoItem)
+        }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
@@ -272,6 +281,75 @@ private struct ProfileEditorSheet: View {
             Button("OK", role: .cancel) {}
         } message: {
              Text(viewModel.errorMessage ?? "")
+        }
+    }
+
+    private var profilePhotoEditor: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 16) {
+                avatarPreview
+
+                VStack(alignment: .leading, spacing: 8) {
+                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                        Label(viewModel.selectedAvatarPhoto == nil && viewModel.editedAvatarURL == nil ? "Choose Photo" : "Change Photo", systemImage: "photo")
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    if viewModel.selectedAvatarPhoto != nil || viewModel.editedAvatarURL != nil {
+                        Button("Remove Photo", role: .destructive) {
+                            selectedPhotoItem = nil
+                            viewModel.removeAvatar()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+
+            Text("Your profile photo appears anywhere TrustMap currently shows your initials.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var avatarPreview: some View {
+        Group {
+            if let image = viewModel.selectedAvatarPhoto?.previewImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                AvatarView(
+                    name: viewModel.editedDisplayName.isEmpty ? "TrustMap Member" : viewModel.editedDisplayName,
+                    avatarURL: viewModel.editedAvatarURL,
+                    size: 84
+                )
+            }
+        }
+        .frame(width: 84, height: 84)
+        .clipShape(Circle())
+        .overlay {
+            Circle()
+                .stroke(Color(uiColor: .separator).opacity(0.3), lineWidth: 1)
+        }
+    }
+
+    private func prepareSelectedPhoto(from item: PhotosPickerItem?) async {
+        guard let item else {
+            return
+        }
+
+        do {
+            guard let rawData = try await item.loadTransferable(type: Data.self) else {
+                throw AppError.validationFailure("Select a supported image before uploading.")
+            }
+
+            let preparedPhoto = try await PhotoUploadPreparation.prepareSelectedPhoto(from: rawData)
+            viewModel.setSelectedAvatarPhoto(preparedPhoto)
+        } catch is CancellationError {
+            return
+        } catch {
+            viewModel.errorMessage = AppError.wrap(error).errorDescription
+            selectedPhotoItem = nil
         }
     }
 }

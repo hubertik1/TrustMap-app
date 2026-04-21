@@ -7,6 +7,7 @@ final class FriendsViewModel: ObservableObject {
         let userID: UUID
         let displayName: String
         let handle: String
+        let avatarURL: URL?
         let bio: String?
         let addedAt: Date
     }
@@ -16,6 +17,7 @@ final class FriendsViewModel: ObservableObject {
         let userID: UUID
         let displayName: String
         let handle: String
+        let avatarURL: URL?
         let bio: String?
         let createdAt: Date
     }
@@ -25,6 +27,7 @@ final class FriendsViewModel: ObservableObject {
         let userID: UUID
         let displayName: String
         let handle: String
+        let avatarURL: URL?
         let relationshipStatus: RelationshipStatus
     }
 
@@ -72,6 +75,7 @@ final class FriendsViewModel: ObservableObject {
                     userID: $0.user.id,
                     displayName: $0.user.displayName,
                     handle: $0.user.handle,
+                    avatarURL: $0.user.avatarURL,
                     bio: nil,
                     addedAt: $0.createdAt
                 )
@@ -83,6 +87,7 @@ final class FriendsViewModel: ObservableObject {
                     userID: $0.sender.id,
                     displayName: $0.sender.displayName,
                     handle: $0.sender.handle,
+                    avatarURL: $0.sender.avatarURL,
                     bio: nil,
                     createdAt: $0.createdAt
                 )
@@ -94,6 +99,7 @@ final class FriendsViewModel: ObservableObject {
                     userID: $0.receiver.id,
                     displayName: $0.receiver.displayName,
                     handle: $0.receiver.handle,
+                    avatarURL: $0.receiver.avatarURL,
                     bio: nil,
                     createdAt: $0.createdAt
                 )
@@ -176,6 +182,7 @@ final class FriendsViewModel: ObservableObject {
                     userID: $0.user.id,
                     displayName: $0.user.displayName,
                     handle: $0.user.handle,
+                    avatarURL: $0.user.avatarURL,
                     relationshipStatus: $0.relationshipStatus
                 )
             }

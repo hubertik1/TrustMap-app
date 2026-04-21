@@ -3,6 +3,7 @@ import SwiftUI
 struct ReviewCardView: View {
     let review: PlaceReview
     let authorName: String
+    let authorAvatarURL: URL?
     let photos: [PhotoAsset]
     var isEditable = false
 
@@ -13,6 +14,7 @@ struct ReviewCardView: View {
         ) {
             AvatarView(
                 name: authorName,
+                avatarURL: authorAvatarURL,
                 size: PlaceDetailVisualSystem.Metrics.leadingVisualSize
             )
         } content: {

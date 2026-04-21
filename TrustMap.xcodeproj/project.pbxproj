@@ -40,6 +40,7 @@
 		4336B1D7223AA80A4E18E1D1 /* PlaceDetailVisualSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4336B1D6223AA80A4E18E1D1 /* PlaceDetailVisualSystem.swift */; };
 		44DD22839EC22DFF39ED6542 /* PlaceListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C7AC2426E7A1B417342655 /* PlaceListItem.swift */; };
 		4BB39B6BDD8B4EC7B158B5D7 /* ReviewCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8006D162A5B7DB9E8E5B11CB /* ReviewCardView.swift */; };
+		4E7FB53A8D3A4B19A1C0F221 /* RemoteImagePipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E7FB53A8D3A4B19A1C0F220 /* RemoteImagePipeline.swift */; };
 		4D306DAD84388EF74A9EE33D /* AddDishReviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C41373DF898F245320B0530 /* AddDishReviewViewModel.swift */; };
 		50BF98FC1ED95EE6CB4E57B5 /* Friendship.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19C4727966C8C6D216A2803 /* Friendship.swift */; };
 		53EB3D4DCFB20A4FAFA025EF /* AppContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98A04D5F93CFF07E091034E /* AppContainer.swift */; };
@@ -137,6 +138,7 @@
 		49676A44EC70BC8271669E3F /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
 		4B4D6060C680721FF528ADA1 /* FeedPlaceActivityItem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FeedPlaceActivityItem.swift; path = Features/Feed/Models/FeedPlaceActivityItem.swift; sourceTree = "<group>"; };
 		4D1F87B1937A13EEBBA6C56A /* MapScreenViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MapScreenViewModel.swift; path = Features/Map/ViewModels/MapScreenViewModel.swift; sourceTree = "<group>"; };
+		4E7FB53A8D3A4B19A1C0F220 /* RemoteImagePipeline.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RemoteImagePipeline.swift; path = Shared/Components/RemoteImagePipeline.swift; sourceTree = "<group>"; };
 		52D89605113A2C78C539E2CF /* UserProfileRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UserProfileRepository.swift; path = Features/Profile/Services/UserProfileRepository.swift; sourceTree = "<group>"; };
 		564900546EB6140BF7BBDCBB /* Prod.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Prod.xcconfig; path = Config/Prod.xcconfig; sourceTree = "<group>"; };
 		5B1DB86409BD4B41756D4EA7 /* PhotoGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PhotoGridView.swift; path = Shared/Components/PhotoGridView.swift; sourceTree = "<group>"; };
@@ -575,6 +577,7 @@
 				4336B1D6223AA80A4E18E1D1 /* PlaceDetailVisualSystem.swift */,
 				3CBE65E0E873B5B3EF681A5E /* PlaceSummaryHeaderView.swift */,
 				0CC78656AA973544E0280673 /* RatingBadgeView.swift */,
+				4E7FB53A8D3A4B19A1C0F220 /* RemoteImagePipeline.swift */,
 				743132A19DE4E33879DE32B9 /* RemotePhotoView.swift */,
 				8006D162A5B7DB9E8E5B11CB /* ReviewCardView.swift */,
 			);
@@ -994,6 +997,7 @@
 				4336B1D7223AA80A4E18E1D1 /* PlaceDetailVisualSystem.swift in Sources */,
 				42B70003DC5D0DEA3E0B3508 /* PlaceSummaryHeaderView.swift in Sources */,
 				2609C297E268BFF1DECD66FB /* RatingBadgeView.swift in Sources */,
+				4E7FB53A8D3A4B19A1C0F221 /* RemoteImagePipeline.swift in Sources */,
 				BE813E46BFF8BF3278FD728C /* RemotePhotoView.swift in Sources */,
 				4BB39B6BDD8B4EC7B158B5D7 /* ReviewCardView.swift in Sources */,
 				D3EF27A0F15CE794BD7DD485 /* MKMapItem+Address.swift in Sources */,

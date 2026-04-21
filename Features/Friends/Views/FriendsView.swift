@@ -47,6 +47,7 @@ struct FriendsView: View {
                         } else {
                             ForEach(viewModel.incomingRequests) { request in
                                 RequestRow(
+                                    avatarURL: request.avatarURL,
                                     title: request.displayName,
                                     subtitle: "@\(request.handle)",
                                     createdAt: request.createdAt,
@@ -69,6 +70,7 @@ struct FriendsView: View {
                         } else {
                             ForEach(viewModel.outgoingRequests) { request in
                                 RequestRow(
+                                    avatarURL: request.avatarURL,
                                     title: request.displayName,
                                     subtitle: "@\(request.handle)",
                                     createdAt: request.createdAt,
@@ -91,7 +93,7 @@ struct FriendsView: View {
                         Section("Friends") {
                             ForEach(viewModel.friends) { friend in
                                 HStack(spacing: 12) {
-                                    AvatarView(name: friend.displayName)
+                                    AvatarView(name: friend.displayName, avatarURL: friend.avatarURL)
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(friend.displayName)
                                         Text("@\(friend.handle)")
@@ -147,7 +149,7 @@ private struct SearchResultRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AvatarView(name: result.displayName)
+            AvatarView(name: result.displayName, avatarURL: result.avatarURL)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("@\(result.handle)")
@@ -190,6 +192,7 @@ private struct SearchResultRow: View {
 }
 
 private struct RequestRow: View {
+    let avatarURL: URL?
     let title: String
     let subtitle: String
     let createdAt: Date
@@ -200,28 +203,32 @@ private struct RequestRow: View {
     let secondaryAction: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.headline)
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text(createdAt, style: .date)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+        HStack(alignment: .top, spacing: 12) {
+            AvatarView(name: title, avatarURL: avatarURL)
 
-            HStack {
-                if isBusy {
-                    ProgressView()
-                } else {
-                    Button(primaryActionTitle, action: primaryAction)
-                        .buttonStyle(.borderedProminent)
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text(createdAt, style: .date)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
-                    if let secondaryActionTitle {
-                        Button(secondaryActionTitle, role: .destructive, action: secondaryAction)
-                            .buttonStyle(.bordered)
+                HStack {
+                    if isBusy {
+                        ProgressView()
+                    } else {
+                        Button(primaryActionTitle, action: primaryAction)
+                            .buttonStyle(.borderedProminent)
+
+                        if let secondaryActionTitle {
+                            Button(secondaryActionTitle, role: .destructive, action: secondaryAction)
+                                .buttonStyle(.bordered)
+                        }
                     }
                 }
             }

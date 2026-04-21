@@ -79,7 +79,11 @@ struct MultipartFormData: Sendable {
     let boundary: String
     let payload: Data
 
-    init(fields: [String: String], file: File) {
+    init(fields: [String: String], file: File? = nil) {
+        self.init(fields: fields, files: file.map { [$0] } ?? [])
+    }
+
+    init(fields: [String: String], files: [File]) {
         let boundary = "Boundary-\(UUID().uuidString)"
         var data = Data()
 
@@ -89,11 +93,14 @@ struct MultipartFormData: Sendable {
             data.append("\(field.value)\r\n")
         }
 
-        data.append("--\(boundary)\r\n")
-        data.append("Content-Disposition: form-data; name=\"\(file.fieldName)\"; filename=\"\(file.fileName)\"\r\n")
-        data.append("Content-Type: \(file.mimeType)\r\n\r\n")
-        data.append(file.data)
-        data.append("\r\n")
+        for file in files {
+            data.append("--\(boundary)\r\n")
+            data.append("Content-Disposition: form-data; name=\"\(file.fieldName)\"; filename=\"\(file.fileName)\"\r\n")
+            data.append("Content-Type: \(file.mimeType)\r\n\r\n")
+            data.append(file.data)
+            data.append("\r\n")
+        }
+
         data.append("--\(boundary)--\r\n")
 
         self.boundary = boundary

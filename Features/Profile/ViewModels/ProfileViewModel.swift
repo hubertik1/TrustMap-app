@@ -43,6 +43,8 @@ final class ProfileViewModel: ObservableObject {
     @Published private(set) var editedHandleSuffix = ""
     @Published var editedDisplayName = ""
     @Published var editedBio = ""
+    @Published private(set) var editedAvatarURL: URL?
+    @Published private(set) var selectedAvatarPhoto: SelectedPhotoUpload?
     @Published var isLoading = false
     @Published var isSavingProfile = false
     @Published var errorMessage: String?
@@ -154,6 +156,17 @@ final class ProfileViewModel: ObservableObject {
         editedHandleSuffix = components.suffix
         editedDisplayName = user.displayName
         editedBio = user.bio ?? ""
+        editedAvatarURL = user.avatarURL
+        selectedAvatarPhoto = nil
+    }
+
+    func setSelectedAvatarPhoto(_ photo: SelectedPhotoUpload?) {
+        selectedAvatarPhoto = photo
+    }
+
+    func removeAvatar() {
+        selectedAvatarPhoto = nil
+        editedAvatarURL = nil
     }
 
     func saveProfileChanges() async -> Bool {
@@ -185,7 +198,8 @@ final class ProfileViewModel: ObservableObject {
                 handle: handle,
                 displayName: normalizedEditedDisplayName,
                 bio: normalizedEditedBio,
-                avatarURL: currentUser.avatarURLString
+                existingAvatarURL: currentUser.avatarURLString,
+                avatarUpdate: avatarUpdate(comparedTo: currentUser)
             )
             let resolvedUser = await refreshedUser(afterSaving: updatedUser)
             applyEditedProfile(resolvedUser)
@@ -217,9 +231,36 @@ final class ProfileViewModel: ObservableObject {
     }
 
     private func hasProfileChanges(comparedTo currentUser: User) -> Bool {
-        normalizedEditedHandle != currentUser.handleComponents.base
+        let hasAvatarChanges: Bool
+        switch avatarUpdate(comparedTo: currentUser) {
+        case .keepExisting:
+            hasAvatarChanges = false
+        case .remove, .replace:
+            hasAvatarChanges = true
+        }
+
+        return normalizedEditedHandle != currentUser.handleComponents.base
             || normalizedEditedDisplayName != currentUser.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
             || normalizedEditedBio != currentUser.bio?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            || hasAvatarChanges
+    }
+
+    private func avatarUpdate(comparedTo currentUser: User) -> UserProfileRepository.AvatarUpdate {
+        if let selectedAvatarPhoto {
+            return .replace(imageData: selectedAvatarPhoto.uploadData)
+        }
+
+        let currentAvatarURL = currentUser.avatarURLString?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        let editedAvatarURLString = editedAvatarURL?
+            .absoluteString
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .nilIfEmpty
+
+        if currentAvatarURL != nil && editedAvatarURLString == nil {
+            return .remove
+        }
+
+        return .keepExisting
     }
 
     private func refreshedUser(afterSaving fallbackUser: User) async -> User {
@@ -238,6 +279,8 @@ final class ProfileViewModel: ObservableObject {
         editedHandleSuffix = components.suffix
         editedDisplayName = updatedUser.displayName
         editedBio = updatedUser.bio ?? ""
+        editedAvatarURL = updatedUser.avatarURL
+        selectedAvatarPhoto = nil
         sessionStore.updateCurrentUser(updatedUser)
         errorMessage = nil
         usernameErrorMessage = nil

@@ -180,6 +180,7 @@ struct PlaceDetailView: View {
         let row = ReviewCardView(
                                     review: review,
                                     authorName: viewModel.authorName(for: review.authorUserId),
+                                    authorAvatarURL: review.author.avatarURL,
                                     photos: review.photos,
                                     isEditable: review.authorUserId == viewModel.currentUserID
                                 )
