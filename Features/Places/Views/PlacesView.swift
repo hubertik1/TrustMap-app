@@ -6,6 +6,7 @@ struct PlacesView: View {
     @StateObject private var viewModel: PlacesViewModel
     @State private var isFilterPresented = false
     @State private var draftFilterState = MapFilterState(selectedCategory: .all)
+    @State private var selectedPlace: Place?
 
     init(container: AppContainer) {
         self.container = container
@@ -46,14 +47,19 @@ struct PlacesView: View {
             } else {
                 List {
                     ForEach(viewModel.placeItems) { item in
-                        NavigationLink {
-                            PlaceDetailView(container: container, place: item.place)
+                        Button {
+                            selectedPlace = item.place
                         } label: {
                             PlaceListRowView(item: item)
                         }
+                        .buttonStyle(.plain)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
                 }
-                .listStyle(.insetGrouped)
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
                 .refreshable {
                     await viewModel.load()
                 }
@@ -84,6 +90,9 @@ struct PlacesView: View {
         }
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
+        }
+        .navigationDestination(item: $selectedPlace) { place in
+            PlaceDetailView(container: container, place: place)
         }
     }
 }
