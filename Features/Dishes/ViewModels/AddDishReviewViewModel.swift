@@ -86,7 +86,10 @@ final class AddDishReviewViewModel: ObservableObject {
     func load() async {
         if availableCategories.isEmpty {
             do {
-                availableCategories = try await categoryRepository.fetchMyCategories()
+                let categories = try await categoryRepository.fetchMyCategories()
+                availableCategories = categories.filter { category in
+                    category.id == TrustMapCategory.restaurantsCategoryID
+                }
                 selectedCategoryId = existingReview?.categoryId ?? defaultCategoryID(in: availableCategories)
             } catch {
                 errorMessage = AppError.wrap(error).errorDescription
