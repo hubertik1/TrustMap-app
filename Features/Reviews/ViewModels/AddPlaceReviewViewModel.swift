@@ -109,12 +109,9 @@ final class AddPlaceReviewViewModel: ObservableObject {
             async let placeDetailsTask = placeRepository.fetchPlaceDetails(id: place.id)
 
             let (resolvedCategories, resolvedPlaceDetails) = try await (categoriesTask, placeDetailsTask)
-            let restaurantsOnlyCategories = resolvedCategories.filter { category in
-                category.id == TrustMapCategory.restaurantsCategoryID
-            }
 
             if availableCategories.isEmpty {
-                availableCategories = restaurantsOnlyCategories
+                availableCategories = resolvedCategories
             }
 
             place = resolvedPlaceDetails.place
