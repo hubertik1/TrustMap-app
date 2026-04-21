@@ -28,13 +28,13 @@ struct PlaceListRowView: View {
                 }
 
                 if !item.categoryNames.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
-                            ForEach(item.categoryNames, id: \.self) { name in
-                                categoryChip(name)
-                            }
+                    HStack(spacing: 6) {
+                        ForEach(item.categoryNames, id: \.self) { name in
+                            categoryChip(name)
                         }
                     }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
 

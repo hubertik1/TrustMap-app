@@ -56,21 +56,9 @@ struct PlaceDetailView: View {
                                     authorName: viewModel.authorName(for: review.authorUserId),
                                     photos: review.photos
                                 )
-                                .listRowInsets(EdgeInsets())
+                                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
                                 .listRowBackground(Color.clear)
                             }
-                        }
-                    }
-
-                    Section("Photos") {
-                        if viewModel.placePhotos.isEmpty {
-                            Text("No photos have been added for this place yet.")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            PhotoGridView(
-                                assets: viewModel.placePhotos,
-                                allowsFullscreenPresentation: true
-                            )
                         }
                     }
 
@@ -98,6 +86,7 @@ struct PlaceDetailView: View {
                     viewModel.isPresentingAddPlaceReview = true
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
                 .frame(maxWidth: .infinity)
 
                 if viewModel.canAddDishReview {
@@ -105,14 +94,15 @@ struct PlaceDetailView: View {
                         viewModel.isPresentingAddDishReview = true
                     }
                     .buttonStyle(.bordered)
+                    .controlSize(.regular)
                     .frame(maxWidth: .infinity)
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 6)
-            .frame(minHeight: 52)
+            .padding(.vertical, 8)
+            .frame(minHeight: 48)
             .frame(maxWidth: .infinity)
-            .background(.regularMaterial)
+            .background(.thinMaterial)
         }
         .sheet(isPresented: $viewModel.isPresentingAddPlaceReview, onDismiss: {
             Task { await viewModel.load() }

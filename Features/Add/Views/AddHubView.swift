@@ -359,7 +359,7 @@ private struct DishReviewPlacePickerSheet: View {
                     .fill(Color.accentColor.opacity(0.14))
                     .frame(width: 64, height: 64)
 
-                Image(systemName: "fork.knife.circle.fill")
+                Image(systemName: "mappin.and.ellipse")
                     .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(Color.accentColor)
             }

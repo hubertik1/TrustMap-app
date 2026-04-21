@@ -120,7 +120,7 @@ struct PlaceSearchSheet: View {
 
     private var helperState: some View {
         VStack(spacing: 14) {
-            Image(systemName: "magnifyingglass.circle.fill")
+            Image(systemName: "magnifyingglass")
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .frame(width: 56, height: 56)

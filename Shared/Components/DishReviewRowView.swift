@@ -6,17 +6,27 @@ struct DishReviewRowView: View {
     let photo: PhotoAsset?
     var isEditable = false
 
+    @State private var isPresentingPhoto = false
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             if let photo {
-                RemotePhotoView(
-                    asset: photo,
-                    preferredVariant: .thumbnail,
-                    placeholderSystemImage: "fork.knife",
-                    targetDisplaySize: CGSize(width: 64, height: 64)
-                )
-                    .frame(width: 64, height: 64)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Button {
+                    isPresentingPhoto = true
+                } label: {
+                    RemotePhotoView(
+                        asset: photo,
+                        preferredVariant: .thumbnail,
+                        placeholderSystemImage: "fork.knife",
+                        targetDisplaySize: CGSize(width: 64, height: 64)
+                    )
+                        .frame(width: 64, height: 64)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .fullScreenCover(isPresented: $isPresentingPhoto) {
+                    DishReviewPhotoLightboxView(photo: photo)
+                }
             } else {
                 placeholder
             }
@@ -65,5 +75,34 @@ struct DishReviewRowView: View {
             .fill(Color(.secondarySystemBackground))
             .frame(width: 64, height: 64)
             .overlay(Image(systemName: "fork.knife").foregroundStyle(.secondary))
+    }
+}
+
+private struct DishReviewPhotoLightboxView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let photo: PhotoAsset
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Color.black.ignoresSafeArea()
+
+            RemotePhotoView(
+                asset: photo,
+                preferredVariant: .medium,
+                contentMode: .fit,
+                targetDisplaySize: UIScreen.main.bounds.size
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding()
+            .background(Color.black)
+
+            Button("Done") {
+                dismiss()
+            }
+            .padding(.top, 16)
+            .padding(.trailing, 16)
+            .foregroundStyle(.white)
+        }
     }
 }

@@ -6,16 +6,31 @@ struct PlaceSummaryHeaderView: View {
     let categoryNames: [String]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(place.displayName)
-                        .font(.title2.weight(.semibold))
+                        .font(.title3.weight(.semibold))
 
                     if let secondaryDisplayText = place.secondaryDisplayText {
                         Text(secondaryDisplayText)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                    }
+
+                    if !categoryNames.isEmpty {
+                        HStack(spacing: 6) {
+                            ForEach(categoryNames, id: \.self) { name in
+                                Text(name)
+                                    .font(.caption.weight(.medium))
+                                    .padding(.horizontal, 9)
+                                    .padding(.vertical, 4)
+                                    .background(Color(.secondarySystemBackground), in: Capsule())
+                            }
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 2)
                     }
                 }
 
@@ -23,23 +38,10 @@ struct PlaceSummaryHeaderView: View {
 
                 if let averageRating {
                     RatingBadgeView(rating: averageRating)
-                }
-            }
-
-            if !categoryNames.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(categoryNames, id: \.self) { name in
-                            Text(name)
-                                .font(.caption)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Color(.secondarySystemBackground), in: Capsule())
-                        }
-                    }
+                        .padding(.top, 2)
                 }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
     }
 }
