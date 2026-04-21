@@ -29,10 +29,23 @@ struct PlacesView: View {
                     Task { await viewModel.load() }
                 }
             } else if viewModel.placeItems.isEmpty {
-                EmptyStateView(
-                    title: "No Places Yet",
-                    message: "Add your first restaurant or dish review, or switch the filter to include more people.",
-                    systemImage: "fork.knife.circle"
+                ProductEmptyStateView(
+                    title: "No places yet",
+                    message: "Add your first review or change the filters to see more places.",
+                    systemImage: "fork.knife.circle.fill",
+                    primaryActionTitle: "Add Review",
+                    onPrimaryAction: {
+                        container.selectedTab = .add
+                    },
+                    secondaryActionTitle: viewModel.selectedCategory != .all || viewModel.selectedOwnershipFilter != .all ? "Reset Filters" : nil,
+                    onSecondaryAction: viewModel.selectedCategory != .all || viewModel.selectedOwnershipFilter != .all ? {
+                        Task {
+                            await viewModel.applyFilters(
+                                category: .all,
+                                ownershipFilter: .all
+                            )
+                        }
+                    } : nil
                 )
             } else {
                 List {
@@ -50,6 +63,7 @@ struct PlacesView: View {
                 }
             }
         }
+        .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("Places")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

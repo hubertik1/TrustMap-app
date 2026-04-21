@@ -24,10 +24,14 @@ struct FeedView: View {
                     Task { await viewModel.load() }
                 }
             } else if viewModel.feedItems.isEmpty {
-                EmptyStateView(
-                    title: "No New Places Yet",
-                    message: "When you or your friends add new restaurant or dish reviews, they will show up here.",
-                    systemImage: "bell.slash"
+                ProductEmptyStateView(
+                    title: "No activity yet",
+                    message: "Reviews from you and your friends will appear here.",
+                    systemImage: "bell.badge",
+                    primaryActionTitle: "Add Review",
+                    onPrimaryAction: {
+                        container.selectedTab = .add
+                    }
                 )
             } else {
                 List(viewModel.feedItems) { item in
@@ -59,6 +63,7 @@ struct FeedView: View {
                 }
             }
         }
+        .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("Feed")
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()

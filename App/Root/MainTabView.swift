@@ -2,14 +2,13 @@ import SwiftUI
 
 struct MainTabView: View {
     @ObservedObject private var container: AppContainer
-    @State private var selectedTab: AppTab = .map
 
     init(container: AppContainer) {
         self.container = container
     }
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: $container.selectedTab) {
             NavigationStack {
                 MapScreen(container: container)
             }

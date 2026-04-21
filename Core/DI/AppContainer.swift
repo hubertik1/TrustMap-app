@@ -2,6 +2,8 @@ import Foundation
 
 @MainActor
 final class AppContainer: ObservableObject {
+    @Published var selectedTab: AppTab = .map
+
     let apiClient: APIClient
     let authService: AppleAuthenticationService
     let authRepository: AuthRepository
