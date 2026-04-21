@@ -458,22 +458,39 @@ private struct DishReviewPlacePickerSheet: View {
                         Button {
                             select(place)
                         } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(place.displayName)
-                                    .font(.headline)
-                                    .foregroundStyle(.primary)
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack(spacing: 8) {
+                                        Text(place.displayName)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(.primary)
+                                            .multilineTextAlignment(.leading)
+                                    }
 
-                                if let secondaryDisplayText = place.secondaryDisplayText {
-                                    Text(secondaryDisplayText)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
+                                    if let secondaryDisplayText = place.secondaryDisplayText {
+                                        Text(secondaryDisplayText)
+                                            .font(.footnote)
+                                            .foregroundStyle(.secondary)
+                                            .multilineTextAlignment(.leading)
+                                    }
                                 }
+
+                                Spacer(minLength: 12)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(16)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
                             .background(
                                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .fill(Color(uiColor: .secondarySystemBackground))
+                                    .fill(Color(uiColor: .secondarySystemBackground).opacity(0.7))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .stroke(Color.primary.opacity(0.04), lineWidth: 1)
                             )
                         }
                         .buttonStyle(.plain)
