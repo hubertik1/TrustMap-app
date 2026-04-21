@@ -7,6 +7,7 @@ struct PlacesView: View {
     @State private var isFilterPresented = false
     @State private var draftFilterState = MapFilterState(selectedCategory: .all)
     @State private var selectedPlace: Place?
+    @FocusState private var isSearchFieldFocused: Bool
 
     init(container: AppContainer) {
         self.container = container
@@ -46,26 +47,45 @@ struct PlacesView: View {
                 )
             } else {
                 List {
-                    ForEach(viewModel.placeItems) { item in
-                        Button {
-                            selectedPlace = item.place
-                        } label: {
-                            PlaceListRowView(item: item)
-                        }
-                        .buttonStyle(.plain)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                    searchBarRow
+                        .listRowInsets(EdgeInsets(top: 10, leading: 20, bottom: 6, trailing: 20))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
+
+                    if viewModel.visiblePlaceItems.isEmpty {
+                        ContentUnavailableView.search(text: viewModel.searchText)
+                            .listRowInsets(EdgeInsets(top: 18, leading: 20, bottom: 12, trailing: 20))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                    } else {
+                        ForEach(viewModel.visiblePlaceItems) { item in
+                            Button {
+                                selectedPlace = item.place
+                            } label: {
+                                PlaceListRowView(item: item)
+                            }
+                            .buttonStyle(.plain)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                        }
                     }
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
+                .scrollDismissesKeyboard(.immediately)
+                .onTapGesture {
+                    isSearchFieldFocused = false
+                }
                 .refreshable {
                     await viewModel.load()
                 }
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
+        .onTapGesture {
+            isSearchFieldFocused = false
+        }
         .navigationTitle("Places")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -93,6 +113,40 @@ struct PlacesView: View {
         }
         .navigationDestination(item: $selectedPlace) { place in
             PlaceDetailView(container: container, place: place)
+        }
+    }
+
+    private var searchBarRow: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+
+            TextField("Search places", text: $viewModel.searchText)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .focused($isSearchFieldFocused)
+
+            if viewModel.hasSearchText {
+                Button {
+                    viewModel.searchText = ""
+                    isSearchFieldFocused = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color(uiColor: .separator).opacity(0.12), lineWidth: 1)
         }
     }
 }

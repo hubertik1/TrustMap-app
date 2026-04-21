@@ -8,6 +8,7 @@ final class PlacesViewModel: ObservableObject {
     @Published private(set) var placeItems: [PlaceListItem] = []
     @Published private(set) var availableCategoryOptions: [PlaceCategoryOption] = [.all]
     @Published private(set) var filterState = defaultFilterState
+    @Published var searchText = ""
     @Published var isLoading = false
     @Published var errorMessage: String?
 
@@ -25,6 +26,21 @@ final class PlacesViewModel: ObservableObject {
         self.mapRepository = mapRepository
         self.categoryRepository = categoryRepository
         self.sessionStore = sessionStore
+    }
+
+    var visiblePlaceItems: [PlaceListItem] {
+        let normalizedQuery = searchText.normalizedSearchText
+        guard !normalizedQuery.isEmpty else {
+            return placeItems
+        }
+
+        return placeItems.filter { item in
+            searchableText(for: item).contains(normalizedQuery)
+        }
+    }
+
+    var hasSearchText: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     func load() async {
@@ -119,5 +135,18 @@ final class PlacesViewModel: ObservableObject {
 
             return filterState.ratingRange.contains(Int(round(item.averageRating)))
         }
+    }
+
+    private func searchableText(for item: PlaceListItem) -> String {
+        [item.place.displayName, item.place.name, item.place.address]
+            .joined(separator: " ")
+            .normalizedSearchText
+    }
+}
+
+private extension String {
+    var normalizedSearchText: String {
+        trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
     }
 }
