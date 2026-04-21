@@ -111,6 +111,7 @@ struct PlaceListRowView: View {
             place: place,
             averageRating: 8.7,
             reviewCount: 3,
+            latestActivityAtUtc: .now,
             categoryNames: [],
             reviewerRatings: [],
             createdByUserId: nil

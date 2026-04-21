@@ -97,7 +97,7 @@ struct AddHubView: View {
         ) {
             PlaceSearchSheet(
                 container: container,
-                title: activeFlow?.title ?? "Choose Place",
+                title: activeFlow?.title ?? "Add Place Review",
                 requiresRestaurantsCategory: false
             ) { place in
                 selectedPlace = place
@@ -281,8 +281,8 @@ private struct RecentPlacesCard: View {
 
 private struct DishReviewPlacePickerSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.isSearching) private var isSearching
     @State private var searchText = ""
+    @FocusState private var isSearchFieldFocused: Bool
 
     let places: [Place]
     let onPlaceSelected: (Place) -> Void
@@ -307,41 +307,32 @@ private struct DishReviewPlacePickerSheet: View {
         searchText.normalizedSearchText
     }
 
-    private var isSearchActive: Bool {
-        isSearching || hasSearchText
-    }
-
     var body: some View {
-        GeometryReader { proxy in
-            NavigationStack {
-                Group {
-                    if !isSearchActive {
-                        defaultInfoView
-                    } else if places.isEmpty {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    guidanceState
+
+                    if places.isEmpty {
                         noRestaurantsView
-                    } else if filteredPlaces.isEmpty {
-                        ContentUnavailableView.search(text: searchText)
                     } else {
-                        Color.clear
+                        selectionSection
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .navigationTitle("Add Dish Review")
-                .navigationBarTitleDisplayMode(.inline)
-                .searchable(text: $searchText, prompt: "Search reviewed restaurants")
-                .safeAreaInset(edge: .top) {
-                    let suggestionPlaces = hasSearchText ? filteredPlaces : places
-                    if isSearchActive, !suggestionPlaces.isEmpty {
-                        searchResultsView(
-                            places: suggestionPlaces,
-                            maxHeight: max(320, proxy.size.height - 180)
-                        )
-                    }
-                }
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Close") { dismiss() }
-                    }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 24)
+            }
+            .background(Color(uiColor: .systemBackground))
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isSearchFieldFocused = false
+            }
+            .navigationTitle("Add Dish Review")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
                 }
             }
         }
@@ -352,30 +343,65 @@ private struct DishReviewPlacePickerSheet: View {
         dismiss()
     }
 
-    private var defaultInfoView: some View {
-        VStack(spacing: 20) {
-            EmptyStateView(
-                title: "Add Dish Review",
-                message: "To add a dish review for a place, you need to rate that place first.",
-                systemImage: "fork.knife.circle"
-            )
-            .frame(maxHeight: .infinity)
+    private var guidanceState: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.14))
+                    .frame(width: 64, height: 64)
+
+                Image(systemName: "fork.knife.circle.fill")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+            }
+
+            VStack(spacing: 6) {
+                Text("Rate a place first")
+                    .font(.title3.weight(.semibold))
+                    .multilineTextAlignment(.center)
+
+                Text("To add a dish review, first choose a place and rate it.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
 
             Button("Add Place Review") {
                 onAddPlaceReview()
                 dismiss()
             }
             .buttonStyle(.borderedProminent)
-            .padding(.bottom, 24)
+            .controlSize(.regular)
         }
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
+        .padding(.vertical, 22)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.55))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+        )
     }
 
     private var noRestaurantsView: some View {
-        ContentUnavailableView(
-            "No Reviewed Restaurants",
-            systemImage: "fork.knife.circle",
-            description: Text("Only places you've already rated in the \(TrustMapCategory.restaurantsName) category can be used for a dish review.")
+        VStack(spacing: 8) {
+            Text("No rated restaurants yet")
+                .font(.headline)
+
+            Text("Only places you've already rated in the \(TrustMapCategory.restaurantsName) category can be used for a dish review.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 28)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemBackground))
         )
     }
 
@@ -385,34 +411,77 @@ private struct DishReviewPlacePickerSheet: View {
             .normalizedSearchText
     }
 
-    private func searchResultsView(places: [Place], maxHeight: CGFloat) -> some View {
-        ScrollView {
-            LazyVStack(spacing: 8) {
-                ForEach(places) { place in
-                    Button {
-                        select(place)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(place.displayName)
-                                .font(.headline)
-                                .foregroundStyle(.primary)
+    private var selectionSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Already rated a place?")
+                    .font(.headline)
 
-                            if let secondaryDisplayText = place.secondaryDisplayText {
-                                Text(secondaryDisplayText)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                Text("Choose one of your rated restaurants to continue with a dish review.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+
+                TextField("Search rated restaurants", text: $searchText)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                    .focused($isSearchFieldFocused)
+
+                if hasSearchText {
+                    Button {
+                        searchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(uiColor: .secondarySystemBackground))
+            )
+
+            if filteredPlaces.isEmpty {
+                ContentUnavailableView.search(text: searchText)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 4)
+            } else {
+                LazyVStack(spacing: 8) {
+                    ForEach(hasSearchText ? filteredPlaces : places) { place in
+                        Button {
+                            select(place)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(place.displayName)
+                                    .font(.headline)
+                                    .foregroundStyle(.primary)
+
+                                if let secondaryDisplayText = place.secondaryDisplayText {
+                                    Text(secondaryDisplayText)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .fill(Color(uiColor: .secondarySystemBackground))
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
-        .frame(height: maxHeight, alignment: .top)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

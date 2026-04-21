@@ -179,6 +179,12 @@ private struct PlacesFilterSheet: View {
                             Text(option.title).tag(option)
                         }
                     }
+
+                    Picker("Sort by", selection: $filterState.selectedSortOption) {
+                        ForEach(PlaceSortOption.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
                 }
 
                 Section("Rating Range") {

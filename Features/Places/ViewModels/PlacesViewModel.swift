@@ -69,17 +69,11 @@ final class PlacesViewModel: ObservableObject {
                     place: $0.place,
                     averageRating: $0.averagePlaceRating ?? 0,
                     reviewCount: $0.visiblePlaceReviewCount + $0.visibleDishReviewCount,
+                    latestActivityAtUtc: $0.latestActivityAtUtc,
                     categoryNames: $0.categoryNames,
                     reviewerRatings: [],
                     createdByUserId: $0.createdByUserId
                 )
-            }
-            .sorted { lhs, rhs in
-                if lhs.averageRating == rhs.averageRating {
-                    return lhs.place.displayName.localizedStandardCompare(rhs.place.displayName) == .orderedAscending
-                }
-
-                return lhs.averageRating > rhs.averageRating
             }
             applyLocalFilters()
             errorMessage = nil
@@ -120,7 +114,7 @@ final class PlacesViewModel: ObservableObject {
     private func applyLocalFilters() {
         let currentUserID = sessionStore.currentUser?.id
 
-        placeItems = allPlaceItems.filter { item in
+        let filteredItems = allPlaceItems.filter { item in
             let matchesOwnership: Bool
             switch filterState.selectedOwnershipFilter {
             case .all:
@@ -135,6 +129,46 @@ final class PlacesViewModel: ObservableObject {
 
             return filterState.ratingRange.contains(Int(round(item.averageRating)))
         }
+
+        placeItems = filteredItems.sorted(by: sortComparator)
+    }
+
+    private func sortComparator(lhs: PlaceListItem, rhs: PlaceListItem) -> Bool {
+        switch filterState.selectedSortOption {
+        case .recentlyUpdated:
+            if lhs.latestActivityAtUtc != rhs.latestActivityAtUtc {
+                return lhs.latestActivityAtUtc > rhs.latestActivityAtUtc
+            }
+        case .highestRated:
+            if lhs.averageRating != rhs.averageRating {
+                return lhs.averageRating > rhs.averageRating
+            }
+        case .lowestRated:
+            if lhs.averageRating != rhs.averageRating {
+                return lhs.averageRating < rhs.averageRating
+            }
+        case .mostReviewed:
+            if lhs.reviewCount != rhs.reviewCount {
+                return lhs.reviewCount > rhs.reviewCount
+            }
+        case .leastReviewed:
+            if lhs.reviewCount != rhs.reviewCount {
+                return lhs.reviewCount < rhs.reviewCount
+            }
+        case .alphabetical:
+            break
+        }
+
+        return fallbackSort(lhs: lhs, rhs: rhs)
+    }
+
+    private func fallbackSort(lhs: PlaceListItem, rhs: PlaceListItem) -> Bool {
+        let nameComparison = lhs.place.displayName.localizedStandardCompare(rhs.place.displayName)
+        if nameComparison != .orderedSame {
+            return nameComparison == .orderedAscending
+        }
+
+        return lhs.id.uuidString < rhs.id.uuidString
     }
 
     private func searchableText(for item: PlaceListItem) -> String {
