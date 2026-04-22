@@ -116,10 +116,11 @@ final class AddPlaceReviewViewModel: ObservableObject {
 
             place = resolvedPlaceDetails.place
             syncEditablePlaceNameInput()
-            selectedCategoryId = existingReview?.categoryId ?? selectedCategoryId ?? defaultCategoryID(in: availableCategories)
 
             if let existingReview {
                 populateForm(with: existingReview)
+            } else {
+                selectedCategoryId = resolvedCategorySelection(for: selectedCategoryId, isEditingReview: false)
             }
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
@@ -162,6 +163,11 @@ final class AddPlaceReviewViewModel: ObservableObject {
     func save() async {
         guard ratingOverall > 0 else {
             errorMessage = AppError.validationFailure("Choose a rating.").errorDescription
+            return
+        }
+
+        guard let selectedCategoryId else {
+            errorMessage = AppError.validationFailure("Choose an active category.").errorDescription
             return
         }
 
@@ -228,7 +234,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
         ratingOverall = review.ratingOverall
         descriptionText = review.descriptionText
         visibility = review.visibility.selectableValue
-        selectedCategoryId = review.categoryId ?? selectedCategoryId ?? defaultCategoryID(in: availableCategories)
+        selectedCategoryId = resolvedCategorySelection(for: review.categoryId, isEditingReview: true)
         existingPhotos = review.photos
         photoIDsMarkedForDeletion = []
         selectedPhotos = []
@@ -237,6 +243,20 @@ final class AddPlaceReviewViewModel: ObservableObject {
 
     private func defaultCategoryID(in categories: [CustomCategory]) -> UUID? {
         categories.first(where: \.isDefault)?.id ?? categories.first?.id
+    }
+
+    private func resolvedCategorySelection(for preferredCategoryId: UUID?, isEditingReview: Bool) -> UUID? {
+        if let preferredCategoryId,
+           availableCategories.contains(where: { $0.id == preferredCategoryId }) {
+            return preferredCategoryId
+        }
+
+        if let selectedCategoryId,
+           availableCategories.contains(where: { $0.id == selectedCategoryId }) {
+            return selectedCategoryId
+        }
+
+        return isEditingReview ? nil : defaultCategoryID(in: availableCategories)
     }
 
     private func saveCustomPlaceDisplayNameIfNeeded() async throws {

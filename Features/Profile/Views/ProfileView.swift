@@ -421,6 +421,8 @@ private struct UniqueUsernameFieldRow: View {
 
 private struct CategoriesView: View {
     @StateObject private var viewModel: CategoriesViewModel
+    @State private var editorPresentation: CategoryEditorPresentation?
+    @State private var categoryPendingDeletion: CustomCategory?
 
     init(categoryRepository: CategoryRepository, refreshCenter: AppRefreshCenter) {
         _viewModel = StateObject(
@@ -433,10 +435,10 @@ private struct CategoriesView: View {
 
     var body: some View {
         Group {
-            if viewModel.isLoading && viewModel.defaultCategories.isEmpty {
+            if viewModel.isLoading && !viewModel.hasLoadedCategories {
                 LoadingStateView(title: "Loading categories")
             } else if let errorMessage = viewModel.errorMessage,
-                      viewModel.defaultCategories.isEmpty {
+                      !viewModel.hasLoadedCategories {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
@@ -450,20 +452,172 @@ private struct CategoriesView: View {
                             ForEach(viewModel.defaultCategories) { category in
                                 CategoryListRow(
                                     category: category,
-                                    subtitle: "Available in TrustMap",
-                                    trailingText: category.id == TrustMapCategory.restaurantsCategoryID ? "Places" : "Catalog"
-                                )
+                                    subtitle: "Available to every TrustMap user",
+                                    badgeText: "Default"
+                                ) {
+                                    if category.canHide {
+                                        Button("Hide") {
+                                            Task { await viewModel.hideCategory(category) }
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .controlSize(.small)
+                                        .disabled(viewModel.isSubmitting)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Section("My Categories") {
+                        if viewModel.myCustomCategories.isEmpty {
+                            Text("Create a custom category or adopt one from a friend.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(viewModel.myCustomCategories) { category in
+                                CategoryListRow(
+                                    category: category,
+                                    subtitle: subtitle(forActiveCategory: category),
+                                    badgeText: category.isOwnedByCurrentUser ? "Mine" : "Added"
+                                ) {
+                                    if category.canEdit || category.canDelete {
+                                        Menu {
+                                            if category.canEdit {
+                                                Button("Edit") {
+                                                    editorPresentation = .edit(category)
+                                                }
+                                            }
+
+                                            if category.canDelete {
+                                                Button("Delete", role: .destructive) {
+                                                    categoryPendingDeletion = category
+                                                }
+                                            }
+                                        } label: {
+                                            Image(systemName: "ellipsis.circle")
+                                                .font(.title3)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                    } else if category.canHide {
+                                        Button("Hide") {
+                                            Task { await viewModel.hideCategory(category) }
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .controlSize(.small)
+                                        .disabled(viewModel.isSubmitting)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Section("Categories from Friends") {
+                        if viewModel.friendCategories.isEmpty {
+                            Text("Friend categories you haven't added yet will show up here.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(viewModel.friendCategories) { category in
+                                CategoryListRow(
+                                    category: category,
+                                    subtitle: subtitle(forFriendCategory: category),
+                                    badgeText: "Friend"
+                                ) {
+                                    if category.canAdopt {
+                                        Button("Add") {
+                                            Task { await viewModel.adoptCategory(category) }
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .controlSize(.small)
+                                        .disabled(viewModel.isSubmitting)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Section("Hidden Categories") {
+                        if viewModel.hiddenCategoryItems.isEmpty {
+                            Text("Categories you hide will appear here so you can restore them later.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(viewModel.hiddenCategoryItems) { category in
+                                CategoryListRow(
+                                    category: category,
+                                    subtitle: subtitle(forHiddenCategory: category),
+                                    badgeText: category.isDefault ? "Default" : "Hidden"
+                                ) {
+                                    if category.canUnhide {
+                                        Button("Restore") {
+                                            Task { await viewModel.unhideCategory(category) }
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .controlSize(.small)
+                                        .disabled(viewModel.isSubmitting)
+                                    }
+                                }
                             }
                         }
                     }
                 }
                 .listStyle(.insetGrouped)
+                .refreshable {
+                    await viewModel.load()
+                }
             }
         }
         .navigationTitle("Categories")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    editorPresentation = .create
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
         .task {
             await viewModel.load()
+        }
+        .sheet(item: $editorPresentation) { presentation in
+            NavigationStack {
+                CategoryEditorSheet(
+                    title: presentation.title,
+                    actionTitle: presentation.actionTitle,
+                    initialName: presentation.initialName,
+                    isSaving: viewModel.isSubmitting
+                ) { name in
+                    switch presentation.kind {
+                    case .create:
+                        return await viewModel.createCategory(named: name)
+                    case .edit(let category):
+                        return await viewModel.updateCategory(category, name: name)
+                    }
+                }
+            }
+        }
+        .confirmationDialog(
+            "Delete category?",
+            isPresented: Binding(
+                get: { categoryPendingDeletion != nil },
+                set: { if !$0 { categoryPendingDeletion = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let categoryPendingDeletion {
+                Button("Delete Category", role: .destructive) {
+                    Task {
+                        await viewModel.deleteCategory(categoryPendingDeletion)
+                        self.categoryPendingDeletion = nil
+                    }
+                }
+            }
+
+            Button("Cancel", role: .cancel) {
+                categoryPendingDeletion = nil
+            }
+        } message: {
+            Text("The category will stop being available to everyone, but existing place and review history will stay intact.")
         }
         .alert(
             "Categories",
@@ -477,12 +631,42 @@ private struct CategoriesView: View {
             Text(viewModel.errorMessage ?? "")
         }
     }
+
+    private func subtitle(forActiveCategory category: CustomCategory) -> String {
+        if category.isOwnedByCurrentUser {
+            return "Created by you"
+        }
+
+        let ownerName = category.ownerDisplayName ?? "A friend"
+        return "Added from \(ownerName)"
+    }
+
+    private func subtitle(forFriendCategory category: CustomCategory) -> String {
+        let ownerName = category.ownerDisplayName ?? "A friend"
+        return "Created by \(ownerName)"
+    }
+
+    private func subtitle(forHiddenCategory category: CustomCategory) -> String {
+        if category.isDefault {
+            return "Hidden only for you. Restore it to make it active and selectable again."
+        }
+
+        if category.isOwnedByCurrentUser {
+            return "Created by you. Restore it to make it active again."
+        }
+
+        let ownerName = category.ownerDisplayName ?? "A friend"
+        return "Created by \(ownerName). Restore it to make it active again."
+    }
 }
 
 @MainActor
 private final class CategoriesViewModel: ObservableObject {
     @Published private(set) var myCategories: [CustomCategory] = []
+    @Published private(set) var friendCategories: [CustomCategory] = []
+    @Published private(set) var hiddenCategories: [CustomCategory] = []
     @Published var isLoading = false
+    @Published var isSubmitting = false
     @Published var errorMessage: String?
 
     private let categoryRepository: CategoryRepository
@@ -493,63 +677,328 @@ private final class CategoriesViewModel: ObservableObject {
         self.refreshCenter = refreshCenter
     }
 
+    var hasLoadedCategories: Bool {
+        !myCategories.isEmpty || !friendCategories.isEmpty || !hiddenCategories.isEmpty
+    }
+
     var defaultCategories: [CustomCategory] {
         myCategories
             .filter(\.isDefault)
-            .sorted { lhs, rhs in
-                if lhs.id == TrustMapCategory.restaurantsCategoryID {
-                    return true
-                }
+            .sorted(by: defaultCategorySort)
+    }
 
-                if rhs.id == TrustMapCategory.restaurantsCategoryID {
-                    return false
-                }
+    var myCustomCategories: [CustomCategory] {
+        myCategories
+            .filter { !$0.isDefault }
+            .sorted(by: myCategorySort)
+    }
 
-                return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
-            }
+    var hiddenCategoryItems: [CustomCategory] {
+        hiddenCategories.sorted(by: hiddenCategorySort)
     }
 
     func load() async {
         errorMessage = nil
         isLoading = true
+        defer { isLoading = false }
 
+        await fetchCategories()
+    }
+
+    func createCategory(named name: String) async -> Bool {
+        await performMutation {
+            _ = try await self.categoryRepository.createCategory(name: name)
+        }
+    }
+
+    func updateCategory(_ category: CustomCategory, name: String) async -> Bool {
+        await performMutation {
+            _ = try await self.categoryRepository.updateCategory(id: category.id, name: name)
+        }
+    }
+
+    func adoptCategory(_ category: CustomCategory) async {
+        _ = await performMutation {
+            _ = try await self.categoryRepository.adoptCategory(id: category.id)
+        }
+    }
+
+    func hideCategory(_ category: CustomCategory) async {
+        _ = await performMutation {
+            _ = try await self.categoryRepository.hideCategory(id: category.id)
+        }
+    }
+
+    func deleteCategory(_ category: CustomCategory) async {
+        _ = await performMutation {
+            try await self.categoryRepository.deleteCategory(id: category.id)
+        }
+    }
+
+    func unhideCategory(_ category: CustomCategory) async {
+        _ = await performMutation {
+            _ = try await self.categoryRepository.unhideCategory(id: category.id)
+        }
+    }
+
+    private func fetchCategories() async {
         do {
-            myCategories = try await categoryRepository.fetchMyCategories()
+            async let myCategoriesTask = categoryRepository.fetchMyCategories()
+            async let friendCategoriesTask = categoryRepository.fetchFriendCategories()
+            async let hiddenCategoriesTask = categoryRepository.fetchHiddenCategories()
+            let (myCategories, friendCategories, hiddenCategories) = try await (myCategoriesTask, friendCategoriesTask, hiddenCategoriesTask)
+            self.myCategories = myCategories
+            self.friendCategories = friendCategories.sorted(by: friendCategorySort)
+            self.hiddenCategories = hiddenCategories
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
+    }
 
-        isLoading = false
+    private func performMutation(_ action: @escaping () async throws -> Void) async -> Bool {
+        guard !isSubmitting else {
+            return false
+        }
+
+        isSubmitting = true
+        errorMessage = nil
+        defer { isSubmitting = false }
+
+        do {
+            try await action()
+            refreshCenter.invalidateAll()
+            await fetchCategories()
+            return true
+        } catch {
+            errorMessage = AppError.wrap(error).errorDescription
+            return false
+        }
+    }
+
+    private func defaultCategorySort(lhs: CustomCategory, rhs: CustomCategory) -> Bool {
+        if lhs.id == TrustMapCategory.restaurantsCategoryID {
+            return true
+        }
+
+        if rhs.id == TrustMapCategory.restaurantsCategoryID {
+            return false
+        }
+
+        return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+    }
+
+    private func myCategorySort(lhs: CustomCategory, rhs: CustomCategory) -> Bool {
+        if lhs.isOwnedByCurrentUser != rhs.isOwnedByCurrentUser {
+            return lhs.isOwnedByCurrentUser && !rhs.isOwnedByCurrentUser
+        }
+
+        let nameComparison = lhs.name.localizedStandardCompare(rhs.name)
+        if nameComparison != .orderedSame {
+            return nameComparison == .orderedAscending
+        }
+
+        return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    private func friendCategorySort(lhs: CustomCategory, rhs: CustomCategory) -> Bool {
+        let nameComparison = lhs.name.localizedStandardCompare(rhs.name)
+        if nameComparison != .orderedSame {
+            return nameComparison == .orderedAscending
+        }
+
+        return (lhs.ownerDisplayName ?? "").localizedStandardCompare(rhs.ownerDisplayName ?? "") == .orderedAscending
+    }
+
+    private func hiddenCategorySort(lhs: CustomCategory, rhs: CustomCategory) -> Bool {
+        if lhs.isDefault != rhs.isDefault {
+            return lhs.isDefault && !rhs.isDefault
+        }
+
+        if lhs.id == TrustMapCategory.restaurantsCategoryID {
+            return true
+        }
+
+        if rhs.id == TrustMapCategory.restaurantsCategoryID {
+            return false
+        }
+
+        let nameComparison = lhs.name.localizedStandardCompare(rhs.name)
+        if nameComparison != .orderedSame {
+            return nameComparison == .orderedAscending
+        }
+
+        return lhs.id.uuidString < rhs.id.uuidString
     }
 }
 
-private struct CategoryListRow: View {
+private struct CategoryEditorPresentation: Identifiable {
+    enum Kind {
+        case create
+        case edit(CustomCategory)
+    }
+
+    let kind: Kind
+
+    var id: String {
+        switch kind {
+        case .create:
+            return "create"
+        case .edit(let category):
+            return category.id.uuidString
+        }
+    }
+
+    var title: String {
+        switch kind {
+        case .create:
+            return "New Category"
+        case .edit:
+            return "Edit Category"
+        }
+    }
+
+    var actionTitle: String {
+        switch kind {
+        case .create:
+            return "Create"
+        case .edit:
+            return "Save"
+        }
+    }
+
+    var initialName: String {
+        switch kind {
+        case .create:
+            return ""
+        case .edit(let category):
+            return category.name
+        }
+    }
+
+    static var create: Self {
+        Self(kind: .create)
+    }
+
+    static func edit(_ category: CustomCategory) -> Self {
+        Self(kind: .edit(category))
+    }
+}
+
+private struct CategoryEditorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+
+    let title: String
+    let actionTitle: String
+    let isSaving: Bool
+    let onSave: @MainActor (String) async -> Bool
+
+    init(
+        title: String,
+        actionTitle: String,
+        initialName: String,
+        isSaving: Bool,
+        onSave: @escaping @MainActor (String) async -> Bool
+    ) {
+        self.title = title
+        self.actionTitle = actionTitle
+        self.isSaving = isSaving
+        self.onSave = onSave
+        _name = State(initialValue: initialName)
+    }
+
+    var body: some View {
+        Form {
+            Section("Category") {
+                TextField("Name", text: $name)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+            }
+
+            Section {
+                Text("Custom categories are shared objects. Friends can discover and adopt them without creating copies.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+                    .disabled(isSaving)
+            }
+
+            ToolbarItem(placement: .confirmationAction) {
+                if isSaving {
+                    ProgressView()
+                } else {
+                    Button(actionTitle) {
+                        Task {
+                            if await onSave(name) {
+                                dismiss()
+                            }
+                        }
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+private struct CategoryListRow<TrailingContent: View>: View {
     let category: CustomCategory
     let subtitle: String
-    let trailingText: String?
+    let badgeText: String?
+    @ViewBuilder let trailingContent: () -> TrailingContent
+
+    init(
+        category: CustomCategory,
+        subtitle: String,
+        badgeText: String? = nil,
+        @ViewBuilder trailingContent: @escaping () -> TrailingContent = { EmptyView() }
+    ) {
+        self.category = category
+        self.subtitle = subtitle
+        self.badgeText = badgeText
+        self.trailingContent = trailingContent
+    }
 
     var body: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(category.name)
-                    .font(.body.weight(.semibold))
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Text(category.name)
+                        .font(.body.weight(.semibold))
+
+                    if let badgeText {
+                        CategoryBadge(text: badgeText)
+                    }
+                }
 
                 Text(subtitle)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
 
-            Spacer()
+            Spacer(minLength: 12)
 
-            if let trailingText {
-                Text(trailingText)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color(.secondarySystemBackground), in: Capsule())
-            }
+            trailingContent()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct CategoryBadge: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Color(.secondarySystemBackground), in: Capsule())
     }
 }

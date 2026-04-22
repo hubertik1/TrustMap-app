@@ -49,7 +49,7 @@ struct MapFilterState: Equatable, Sendable {
 
     var minimumRating: Int = 1
     var maximumRating: Int = 5
-    var selectedCategory = PlaceCategoryOption.restaurants
+    var selectedCategory = PlaceCategoryOption.all
     var selectedOwnershipFilter: PlaceOwnershipFilter = .all
     var selectedSortOption: PlaceSortOption = .recentlyUpdated
 

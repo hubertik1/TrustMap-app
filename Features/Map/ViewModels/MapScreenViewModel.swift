@@ -245,9 +245,7 @@ final class MapScreenViewModel: ObservableObject {
             availableCategoryOptions = options
 
             if !options.contains(filterState.selectedCategory) {
-                filterState.selectedCategory = options.first(where: {
-                    $0.categoryID == TrustMapCategory.restaurantsCategoryID
-                }) ?? .all
+                filterState.selectedCategory = .all
             }
         } catch {
             logger.error("Unable to load map categories: \(error.localizedDescription, privacy: .public)")

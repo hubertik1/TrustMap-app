@@ -164,6 +164,15 @@ final class CategoryRepository {
         )
     }
 
+    func fetchHiddenCategories() async throws -> [CustomCategory] {
+        try await apiClient.send(
+            APIRequest<[CustomCategory]>(
+                method: .get,
+                path: "categories/hidden"
+            )
+        )
+    }
+
     func createCategory(name: String, iconName: String? = nil) async throws -> CustomCategory {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
@@ -185,6 +194,26 @@ final class CategoryRepository {
             APIRequest<CustomCategory>(
                 method: .post,
                 path: "categories/\(id.uuidString)/adopt",
+                acceptedStatusCodes: [200]
+            )
+        )
+    }
+
+    func hideCategory(id: UUID) async throws -> CustomCategory {
+        try await apiClient.send(
+            APIRequest<CustomCategory>(
+                method: .post,
+                path: "categories/\(id.uuidString)/hide",
+                acceptedStatusCodes: [200]
+            )
+        )
+    }
+
+    func unhideCategory(id: UUID) async throws -> CustomCategory {
+        try await apiClient.send(
+            APIRequest<CustomCategory>(
+                method: .post,
+                path: "categories/\(id.uuidString)/unhide",
                 acceptedStatusCodes: [200]
             )
         )

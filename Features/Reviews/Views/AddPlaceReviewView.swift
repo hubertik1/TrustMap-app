@@ -130,12 +130,18 @@ struct AddPlaceReviewView: View {
 
             Picker("Category", selection: $viewModel.selectedCategoryId) {
                 if viewModel.availableCategories.isEmpty {
-                    Text("Loading categories...").tag(UUID?.none)
+                    Text("No active categories").tag(UUID?.none)
                 } else {
                     ForEach(viewModel.availableCategories) { category in
                         Text(category.name).tag(Optional(category.id))
                     }
                 }
+            }
+
+            if viewModel.selectedCategoryId == nil {
+                Text("Choose an active category before saving.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
 
             Picker("Visibility", selection: $viewModel.visibility) {

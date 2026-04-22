@@ -62,12 +62,18 @@ struct AddDishReviewView: View {
 
                 Picker("Category", selection: $viewModel.selectedCategoryId) {
                     if viewModel.availableCategories.isEmpty {
-                        Text("Loading categories...").tag(UUID?.none)
+                        Text("No active categories").tag(UUID?.none)
                     } else {
                         ForEach(viewModel.availableCategories) { category in
                             Text(category.name).tag(Optional(category.id))
                         }
                     }
+                }
+
+                if viewModel.selectedCategoryId == nil {
+                    Text("Add the Restaurants category back to your active categories before saving.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
                 Picker("Visibility", selection: $viewModel.visibility) {

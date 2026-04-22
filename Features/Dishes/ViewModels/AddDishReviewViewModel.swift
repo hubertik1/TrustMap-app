@@ -90,7 +90,11 @@ final class AddDishReviewViewModel: ObservableObject {
                 availableCategories = categories.filter { category in
                     category.id == TrustMapCategory.restaurantsCategoryID
                 }
-                selectedCategoryId = existingReview?.categoryId ?? defaultCategoryID(in: availableCategories)
+                if let existingReview {
+                    selectedCategoryId = resolvedCategorySelection(for: existingReview.categoryId, isEditingReview: true)
+                } else {
+                    selectedCategoryId = resolvedCategorySelection(for: selectedCategoryId, isEditingReview: false)
+                }
             } catch {
                 errorMessage = AppError.wrap(error).errorDescription
             }
@@ -135,6 +139,11 @@ final class AddDishReviewViewModel: ObservableObject {
 
         guard dishRating > 0 else {
             errorMessage = AppError.validationFailure("Choose a rating.").errorDescription
+            return
+        }
+
+        guard let selectedCategoryId else {
+            errorMessage = AppError.validationFailure("Choose an active category.").errorDescription
             return
         }
 
@@ -207,7 +216,7 @@ final class AddDishReviewViewModel: ObservableObject {
         dishRating = review.dishRating
         dishReviewText = review.dishReviewText
         visibility = review.visibility.selectableValue
-        selectedCategoryId = review.categoryId ?? selectedCategoryId ?? defaultCategoryID(in: availableCategories)
+        selectedCategoryId = resolvedCategorySelection(for: review.categoryId, isEditingReview: true)
         existingPhotos = review.photos
         photoIDsMarkedForDeletion = []
         selectedPhoto = nil
@@ -220,5 +229,19 @@ final class AddDishReviewViewModel: ObservableObject {
 
     private func defaultCategoryID(in categories: [CustomCategory]) -> UUID? {
         categories.first(where: \.isDefault)?.id ?? categories.first?.id
+    }
+
+    private func resolvedCategorySelection(for preferredCategoryId: UUID?, isEditingReview: Bool) -> UUID? {
+        if let preferredCategoryId,
+           availableCategories.contains(where: { $0.id == preferredCategoryId }) {
+            return preferredCategoryId
+        }
+
+        if let selectedCategoryId,
+           availableCategories.contains(where: { $0.id == selectedCategoryId }) {
+            return selectedCategoryId
+        }
+
+        return isEditingReview ? nil : defaultCategoryID(in: availableCategories)
     }
 }
