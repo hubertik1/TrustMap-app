@@ -31,6 +31,9 @@ enum PlaceDetailVisualSystem {
         static let photoThumbnailSize = CGSize(width: 88, height: 88)
         static let photoCornerRadius: CGFloat = 14
         static let photoSpacing: CGFloat = 10
+        static let ratingAccessorySpacing: CGFloat = 8
+        static let chevronWidth: CGFloat = 12
+        static let trailingAccessoryMinWidth: CGFloat = 52
     }
 }
 
@@ -137,17 +140,22 @@ struct PlaceDetailReviewCard<LeadingVisual: View, Content: View>: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                ZStack(alignment: .topTrailing) {
+                HStack(alignment: .top, spacing: PlaceDetailVisualSystem.Metrics.ratingAccessorySpacing) {
                     RatingBadgeView(rating: rating)
 
                     if showsChevron {
                         Image(systemName: "chevron.right")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
+                            .frame(width: PlaceDetailVisualSystem.Metrics.chevronWidth)
                             .frame(maxHeight: .infinity, alignment: .center)
                     }
                 }
-                .frame(minWidth: 36, maxHeight: .infinity, alignment: .trailing)
+                .frame(
+                    minWidth: PlaceDetailVisualSystem.Metrics.trailingAccessoryMinWidth,
+                    maxHeight: .infinity,
+                    alignment: .trailing
+                )
             }
         }
     }
