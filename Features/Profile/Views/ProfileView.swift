@@ -285,17 +285,20 @@ private struct ProfileEditorSheet: View {
     }
 
     private var profilePhotoEditor: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let hasEditedPhoto = viewModel.selectedAvatarPhoto != nil || viewModel.editedAvatarURL != nil
+        let photoButtonTitle = hasEditedPhoto ? "Change Photo" : "Choose Photo"
+
+        return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 16) {
                 avatarPreview
 
                 VStack(alignment: .leading, spacing: 8) {
                     PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                        Label(viewModel.selectedAvatarPhoto == nil && viewModel.editedAvatarURL == nil ? "Choose Photo" : "Change Photo", systemImage: "photo")
+                        Label(photoButtonTitle, systemImage: "photo")
                     }
                     .buttonStyle(.borderedProminent)
 
-                    if viewModel.selectedAvatarPhoto != nil || viewModel.editedAvatarURL != nil {
+                    if hasEditedPhoto {
                         Button("Remove Photo", role: .destructive) {
                             selectedPhotoItem = nil
                             viewModel.removeAvatar()
