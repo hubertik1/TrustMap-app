@@ -3,8 +3,12 @@ import SwiftUI
 struct PlaceListRowView: View {
     let item: PlaceListItem
 
+    private enum Metrics {
+        static let trailingAccessorySpacing: CGFloat = 8
+    }
+
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Metrics.trailingAccessorySpacing) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 3) {
