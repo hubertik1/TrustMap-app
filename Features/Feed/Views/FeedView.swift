@@ -40,7 +40,7 @@ struct FeedView: View {
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Feed")
+        .navigationTitle("Activity Feed")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
