@@ -56,7 +56,7 @@ struct ProfileView: View {
 
     private func profileContent(for user: User) -> some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 22) {
+            LazyVStack(alignment: .leading, spacing: 18) {
                 ProfileHeroCard(
                     user: user,
                     friendCount: viewModel.friendsSummary.friendCount,
@@ -167,7 +167,7 @@ struct ProfileView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.top, 12)
+            .padding(.top, 4)
             .padding(.bottom, 132)
         }
     }
@@ -182,8 +182,8 @@ private struct ProfileSectionHeader: View {
     let title: String
 
     var body: some View {
-        Text(title)
-            .font(.footnote.weight(.semibold))
+        Text(title.uppercased())
+            .font(.caption.weight(.semibold))
             .foregroundStyle(.secondary)
             .padding(.horizontal, 4)
     }
@@ -219,9 +219,9 @@ private struct ProfileCardRow: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(iconColor)
+                .foregroundStyle(iconColor.opacity(0.86))
                 .frame(width: 34, height: 34)
-                .background(iconColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(iconColor.opacity(0.075), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .accessibilityHidden(true)
 
             Text(title)
@@ -276,8 +276,8 @@ private struct ProfileHeroCard<FriendsDestination: View, PlacesDestination: View
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 15) {
                 AvatarView(name: user.displayName, avatarURL: user.avatarURL, size: 86)
                     .overlay {
                         Circle()
@@ -303,22 +303,34 @@ private struct ProfileHeroCard<FriendsDestination: View, PlacesDestination: View
                         Text("Edit Profile")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(Color.accentColor)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(Color.accentColor.opacity(0.12), in: Capsule())
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 6)
+                            .background(Color.accentColor.opacity(0.07), in: Capsule())
+                            .overlay {
+                                Capsule()
+                                    .stroke(Color.accentColor.opacity(0.18), lineWidth: 1)
+                            }
                     }
                     .buttonStyle(.plain)
-                    .padding(.top, 4)
+                    .padding(.top, 3)
                     .accessibilityLabel("Edit Profile")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Text(bioText ?? "Add a short bio to help friends recognize you.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .lineLimit(3)
-                .fixedSize(horizontal: false, vertical: true)
+            if let bioText {
+                Text(bioText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Add a short bio to help friends recognize you.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color(uiColor: .tertiaryLabel))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             Divider()
 
@@ -335,7 +347,8 @@ private struct ProfileHeroCard<FriendsDestination: View, PlacesDestination: View
                 dishesDestination()
             }
         }
-        .padding(20)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 17)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -370,7 +383,7 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
                     accessibilityLabel: friendsAccessibilityLabel
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(ProfileStatNavigationButtonStyle())
 
             ProfileStatDivider()
 
@@ -383,7 +396,7 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
                     accessibilityLabel: "\(ratedPlacesCount) rated places"
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(ProfileStatNavigationButtonStyle())
 
             ProfileStatDivider()
 
@@ -396,16 +409,25 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
                     accessibilityLabel: "\(reviewedDishesCount) reviewed dishes"
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(ProfileStatNavigationButtonStyle())
         }
     }
 
     private var friendsAccessibilityLabel: String {
-        if pendingRequestCount > 0 {
-            return "\(friendCount) friends, \(pendingRequestCount) pending requests"
-        }
+        "\(friendCount) friends"
+    }
+}
 
-        return "\(friendCount) friends"
+private struct ProfileStatNavigationButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.primary.opacity(configuration.isPressed ? 0.045 : 0))
+            }
+            .opacity(configuration.isPressed ? 0.82 : 1)
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
@@ -444,6 +466,7 @@ private struct ProfileStatColumn: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint("Opens \(label.lowercased())")
+        .accessibilityAddTraits(.isButton)
     }
 }
 
@@ -493,10 +516,13 @@ private struct ProfileEditorSheet: View {
         }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
+                Button {
                     cancelEditing()
+                } label: {
+                    ProfileEditorToolbarButtonLabel(title: "Cancel")
                 }
                 .buttonStyle(.plain)
+                .fixedSize(horizontal: true, vertical: false)
                 .disabled(viewModel.isSavingProfile)
             }
 
@@ -504,10 +530,13 @@ private struct ProfileEditorSheet: View {
                 if viewModel.isSavingProfile {
                     ProgressView()
                 } else {
-                    Button("Save") {
+                    Button {
                         save()
+                    } label: {
+                        ProfileEditorToolbarButtonLabel(title: "Save")
                     }
                     .buttonStyle(.plain)
+                    .fixedSize(horizontal: true, vertical: false)
                     .foregroundStyle(viewModel.canSaveProfile ? Color.accentColor : Color.secondary)
                     .disabled(!viewModel.canSaveProfile)
                 }
@@ -699,6 +728,17 @@ private struct ProfileEditorSheet: View {
             viewModel.errorMessage = AppError.wrap(error).errorDescription
             selectedPhotoItem = nil
         }
+    }
+}
+
+private struct ProfileEditorToolbarButtonLabel: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 8)
     }
 }
 
