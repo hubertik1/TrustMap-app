@@ -5,6 +5,7 @@ struct AvatarView: View {
     let name: String
     var avatarURL: URL? = nil
     var size: CGFloat = 40
+    var allowsFullscreen = true
 
     @State private var loadedImage: UIImage?
     @State private var isLoading = false
@@ -41,7 +42,7 @@ struct AvatarView: View {
         }
         .highPriorityGesture(
             TapGesture().onEnded {
-                guard avatarURL != nil else {
+                guard allowsFullscreen, avatarURL != nil else {
                     return
                 }
 

@@ -291,7 +291,9 @@ final class MapScreenViewModel: ObservableObject {
                 id: $0.placeId,
                 place: $0.place,
                 averageRating: $0.averagePlaceRating ?? 0,
-                reviewCount: $0.visiblePlaceReviewCount + $0.visibleDishReviewCount
+                reviewCount: $0.visiblePlaceReviewCount + $0.visibleDishReviewCount,
+                contributorCount: $0.contributorCount,
+                recentContributors: $0.recentContributors
             )
         }
     }

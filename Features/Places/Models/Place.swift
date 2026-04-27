@@ -269,6 +269,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
     let averagePlaceRating: Double?
     let contributorCount: Int
     let latestActivityAtUtc: Date
+    let recentContributors: [UserSummary]
 
     enum CodingKeys: String, CodingKey {
         case placeId
@@ -289,6 +290,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
         case averagePlaceRating
         case contributorCount
         case latestActivityAtUtc
+        case recentContributors
     }
 
     init(from decoder: Decoder) throws {
@@ -310,6 +312,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
         averagePlaceRating = try container.decodeIfPresent(Double.self, forKey: .averagePlaceRating)
         contributorCount = try container.decode(Int.self, forKey: .contributorCount)
         latestActivityAtUtc = try container.decode(Date.self, forKey: .latestActivityAtUtc)
+        recentContributors = try container.decodeIfPresent([UserSummary].self, forKey: .recentContributors) ?? []
         displayName = try container.decodeIfPresent(String.self, forKey: .displayName)
             ?? Place(
                 id: placeId,

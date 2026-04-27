@@ -335,7 +335,7 @@ struct MapScreen: View {
     }
 
     private func selectionPromptView(for place: Place, annotation: MapPlaceAnnotation?) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(place.displayName)
@@ -359,25 +359,51 @@ struct MapScreen: View {
                 Spacer(minLength: 12)
 
                 if let annotation {
-                    VStack(alignment: .trailing, spacing: 8) {
-                        RatingBadgeView(rating: annotation.averageRating)
-
-                        Text(reviewCountText(annotation.reviewCount))
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(.secondary)
-                    }
+                    RatingBadgeView(rating: annotation.averageRating)
                 }
             }
 
-            Button {
-                viewModel.openPromptedPlaceDetails()
-            } label: {
-                Label("View Place", systemImage: "arrow.right")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
+            if let annotation {
+                let totalContributorCount = max(annotation.contributorCount, annotation.recentContributors.count)
+
+                if !annotation.recentContributors.isEmpty,
+                   let summaryText = contributorSummaryText(
+                       contributors: annotation.recentContributors,
+                       totalContributorCount: totalContributorCount,
+                       currentUserID: container.sessionStore.currentUser?.id
+                   ) {
+                    MapContributorSummaryRow(
+                        contributors: annotation.recentContributors,
+                        summaryText: summaryText,
+                        accessibilityLabel: contributorSummaryAccessibilityLabel(
+                            contributors: annotation.recentContributors,
+                            totalContributorCount: totalContributorCount,
+                            currentUserID: container.sessionStore.currentUser?.id
+                        ) ?? summaryText
+                    )
+                } else {
+                    Text(reviewCountText(annotation.reviewCount))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    if isValidCoordinate(place.coordinate) {
+                        directionsButton(for: place)
+                    }
+                    viewPlaceButton
+                }
+
+                VStack(spacing: 10) {
+                    if isValidCoordinate(place.coordinate) {
+                        directionsButton(for: place)
+                    }
+                    viewPlaceButton
+                }
+            }
         }
         .padding(18)
         .background(
@@ -391,8 +417,209 @@ struct MapScreen: View {
         .shadow(color: .black.opacity(0.10), radius: 18, y: 10)
     }
 
+    private func directionsButton(for place: Place) -> some View {
+        Button {
+            openDirections(to: place)
+        } label: {
+            Label("Directions", systemImage: "arrow.triangle.turn.up.right.diamond")
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .accessibilityHint("Opens Apple Maps")
+    }
+
+    private var viewPlaceButton: some View {
+        Button {
+            viewModel.openPromptedPlaceDetails()
+        } label: {
+            Label("View Place", systemImage: "arrow.right")
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+    }
+
+    private func openDirections(to place: Place) {
+        let coordinate = place.coordinate
+        guard isValidCoordinate(coordinate) else {
+            return
+        }
+
+        let destination = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
+        destination.name = place.displayName
+        MKMapItem.openMaps(
+            with: [
+                MKMapItem.forCurrentLocation(),
+                destination
+            ],
+            launchOptions: [
+                MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
+            ]
+        )
+    }
+
+    private func isValidCoordinate(_ coordinate: CLLocationCoordinate2D) -> Bool {
+        coordinate.latitude.isFinite
+            && coordinate.longitude.isFinite
+            && CLLocationCoordinate2DIsValid(coordinate)
+    }
+
+    private func contributorSummaryText(
+        contributors: [UserSummary],
+        totalContributorCount: Int,
+        currentUserID: UUID?
+    ) -> String? {
+        let totalCount = max(totalContributorCount, contributors.count)
+        guard totalCount > 0 || !contributors.isEmpty else {
+            return nil
+        }
+
+        guard let firstContributor = contributors.first else {
+            return reviewCountText(totalCount)
+        }
+
+        let identity = contributorIdentity(for: firstContributor, currentUserID: currentUserID)
+        guard totalCount > 1 else {
+            return identity.isCurrentUser ? "Reviewed by you" : "Reviewed by \(identity.name)"
+        }
+
+        if identity.isFallback {
+            return "\(totalCount) people reviewed"
+        }
+
+        let leadingName = identity.isCurrentUser ? "You" : identity.name
+        return "\(leadingName) + \(totalCount - 1) reviewed"
+    }
+
+    private func contributorSummaryAccessibilityLabel(
+        contributors: [UserSummary],
+        totalContributorCount: Int,
+        currentUserID: UUID?
+    ) -> String? {
+        let totalCount = max(totalContributorCount, contributors.count)
+        guard totalCount > 0 || !contributors.isEmpty else {
+            return nil
+        }
+
+        guard let firstContributor = contributors.first else {
+            return reviewCountText(totalCount)
+        }
+
+        let identity = contributorIdentity(for: firstContributor, currentUserID: currentUserID)
+        guard totalCount > 1 else {
+            return identity.isCurrentUser ? "Reviewed by you" : "Reviewed by \(identity.name)"
+        }
+
+        if identity.isFallback {
+            return "\(totalCount) people reviewed"
+        }
+
+        let leadingName = identity.isCurrentUser ? "You" : identity.name
+        let others = totalCount - 1
+        return "\(leadingName) and \(others) \(others == 1 ? "other" : "others") reviewed"
+    }
+
+    private func contributorIdentity(
+        for contributor: UserSummary,
+        currentUserID: UUID?
+    ) -> (name: String, isCurrentUser: Bool, isFallback: Bool) {
+        if contributor.id == currentUserID {
+            return ("you", true, false)
+        }
+
+        if let displayName = contributor.mapContributorDisplayName {
+            return (displayName, false, false)
+        }
+
+        return ("Someone", false, true)
+    }
+
     private func reviewCountText(_ count: Int) -> String {
         count == 1 ? "1 review" : "\(count) reviews"
+    }
+}
+
+private struct MapContributorSummaryRow: View {
+    let contributors: [UserSummary]
+    let summaryText: String
+    let accessibilityLabel: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            MiniContributorAvatarStack(contributors: contributors)
+
+            Text(summaryText)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+private struct MiniContributorAvatarStack: View {
+    let contributors: [UserSummary]
+
+    private let avatarSize: CGFloat = 28
+    private let overlap: CGFloat = 9
+
+    private var visibleContributors: [UserSummary] {
+        Array(contributors.prefix(3))
+    }
+
+    private var stackWidth: CGFloat {
+        guard !visibleContributors.isEmpty else {
+            return 0
+        }
+
+        return avatarSize + CGFloat(visibleContributors.count - 1) * (avatarSize - overlap)
+    }
+
+    var body: some View {
+        HStack(spacing: -overlap) {
+            ForEach(Array(visibleContributors.enumerated()), id: \.element.id) { index, contributor in
+                AvatarView(
+                    name: contributor.mapContributorDisplayName ?? "Someone",
+                    avatarURL: contributor.avatarURL,
+                    size: avatarSize,
+                    allowsFullscreen: false
+                )
+                .overlay {
+                    Circle()
+                        .stroke(Color(uiColor: .systemBackground), lineWidth: 2)
+                }
+                .zIndex(Double(visibleContributors.count - index))
+                .accessibilityHidden(true)
+            }
+        }
+        .frame(width: stackWidth, height: avatarSize, alignment: .leading)
+    }
+}
+
+private extension UserSummary {
+    var mapContributorDisplayName: String? {
+        let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedDisplayName.isEmpty {
+            return trimmedDisplayName
+        }
+
+        let trimmedHandleBase = handleComponents.base.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedHandleBase.isEmpty {
+            return trimmedHandleBase
+        }
+
+        let trimmedHandle = handle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedHandle.isEmpty {
+            return trimmedHandle
+        }
+
+        return nil
     }
 }
 
