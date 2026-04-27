@@ -34,7 +34,7 @@ struct PlaceListRowView: View {
                 if !item.categoryNames.isEmpty {
                     HStack(spacing: 6) {
                         ForEach(item.categoryNames, id: \.self) { name in
-                            categoryChip(name)
+                            PlaceCategoryChipView(name: name)
                         }
                     }
                     .fixedSize(horizontal: false, vertical: true)
@@ -80,21 +80,6 @@ struct PlaceListRowView: View {
             }
     }
 
-    private func categoryChip(_ name: String) -> some View {
-        Text(name)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(Color(uiColor: .systemBackground).opacity(0.72))
-                    .overlay {
-                        Capsule(style: .continuous)
-                            .stroke(Color(uiColor: .separator), lineWidth: 1)
-                    }
-            )
-    }
 }
 
 #Preview {

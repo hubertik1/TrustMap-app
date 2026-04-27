@@ -22,14 +22,7 @@ struct PlaceSummaryHeaderView: View {
                     if !categoryNames.isEmpty {
                         HStack(spacing: 6) {
                             ForEach(categoryNames, id: \.self) { name in
-                                Text(name)
-                                    .font(PlaceDetailVisualSystem.Typography.chip)
-                                    .padding(.horizontal, 9)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        PlaceDetailVisualSystem.Colors.placeholderFill,
-                                        in: Capsule()
-                                    )
+                                PlaceCategoryChipView(name: name)
                             }
                         }
                         .fixedSize(horizontal: false, vertical: true)
@@ -47,5 +40,21 @@ struct PlaceSummaryHeaderView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+struct PlaceCategoryChipView: View {
+    let name: String
+
+    var body: some View {
+        Text(name)
+            .font(PlaceDetailVisualSystem.Typography.chip)
+            .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .overlay {
+                Capsule()
+                    .strokeBorder(PlaceDetailVisualSystem.Colors.secondary, lineWidth: 1)
+            }
     }
 }
