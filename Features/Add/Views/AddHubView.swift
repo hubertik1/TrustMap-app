@@ -86,6 +86,7 @@ struct AddHubView: View {
         .contentMargins(.top, 8, for: .scrollContent)
         .contentMargins(.horizontal, 16, for: .scrollContent)
         .navigationTitle("Add Review")
+        .navigationBarTitleDisplayMode(.inline)
         .sheet(
             isPresented: $isPlaceSearchPresented,
             onDismiss: {
