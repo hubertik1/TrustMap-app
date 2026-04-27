@@ -25,8 +25,16 @@ struct MapFilterSheet: View {
                 }
 
                 Section("Rating Range") {
-                    Stepper("Minimum Rating: \(filterState.minimumRating)", value: $filterState.minimumRating, in: 1...filterState.maximumRating)
-                    Stepper("Maximum Rating: \(filterState.maximumRating)", value: $filterState.maximumRating, in: filterState.minimumRating...5)
+                    Stepper(
+                        "Minimum Rating: \(RatingDisplayFormatter.rating(filterState.minimumRating))",
+                        value: $filterState.minimumRating,
+                        in: 1...filterState.maximumRating
+                    )
+                    Stepper(
+                        "Maximum Rating: \(RatingDisplayFormatter.rating(filterState.maximumRating))",
+                        value: $filterState.maximumRating,
+                        in: filterState.minimumRating...5
+                    )
                 }
 
                 Section {

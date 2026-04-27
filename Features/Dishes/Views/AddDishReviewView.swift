@@ -47,7 +47,7 @@ struct AddDishReviewView: View {
 
                         Spacer()
 
-                        Text("\(viewModel.dishRating)/5")
+                        Text("\(RatingDisplayFormatter.rating(viewModel.dishRating))/5")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

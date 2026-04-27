@@ -1,10 +1,22 @@
+import Foundation
 import SwiftUI
+
+enum RatingDisplayFormatter {
+    static func rating(_ value: Double) -> String {
+        guard value.isFinite else { return "0.0" }
+        return String(format: "%.1f", locale: Locale(identifier: "en_US_POSIX"), value)
+    }
+
+    static func rating(_ value: Int) -> String {
+        rating(Double(value))
+    }
+}
 
 struct RatingBadgeView: View {
     let rating: Double
 
     var body: some View {
-        Text(String(format: "%.1f", rating))
+        Text(RatingDisplayFormatter.rating(rating))
             .font(.caption.weight(.semibold))
             .foregroundStyle(.white)
             .padding(.horizontal, 10)
@@ -14,7 +26,7 @@ struct RatingBadgeView: View {
                 Capsule()
                     .strokeBorder(rating.badgeBorderColor, lineWidth: 1.5)
             }
-            .accessibilityLabel("Rating \(rating, specifier: "%.1f") out of 5")
+            .accessibilityLabel("Rating \(RatingDisplayFormatter.rating(rating)) out of 5")
     }
 }
 
@@ -41,7 +53,11 @@ struct StarRatingInputView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Rating")
-        .accessibilityValue(rating == 0 ? "No rating selected" : "\(rating) out of \(maximumRating)")
+        .accessibilityValue(
+            rating == 0
+            ? "No rating selected"
+            : "\(RatingDisplayFormatter.rating(rating)) out of \(maximumRating)"
+        )
     }
 }
 

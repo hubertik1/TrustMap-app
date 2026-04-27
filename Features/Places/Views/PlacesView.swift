@@ -48,13 +48,13 @@ struct PlacesView: View {
             } else {
                 List {
                     searchBarRow
-                        .listRowInsets(EdgeInsets(top: 10, leading: 20, bottom: 6, trailing: 20))
+                        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 6, trailing: 16))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
 
                     if viewModel.visiblePlaceItems.isEmpty {
                         ContentUnavailableView.search(text: viewModel.searchText)
-                            .listRowInsets(EdgeInsets(top: 18, leading: 20, bottom: 12, trailing: 20))
+                            .listRowInsets(EdgeInsets(top: 18, leading: 16, bottom: 12, trailing: 16))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
                     } else {
@@ -65,7 +65,7 @@ struct PlacesView: View {
                                 PlaceListRowView(item: item)
                             }
                             .buttonStyle(.plain)
-                            .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
                         }
@@ -188,8 +188,16 @@ private struct PlacesFilterSheet: View {
                 }
 
                 Section("Rating Range") {
-                    Stepper("Minimum Rating: \(filterState.minimumRating)", value: $filterState.minimumRating, in: 1...filterState.maximumRating)
-                    Stepper("Maximum Rating: \(filterState.maximumRating)", value: $filterState.maximumRating, in: filterState.minimumRating...5)
+                    Stepper(
+                        "Minimum Rating: \(RatingDisplayFormatter.rating(filterState.minimumRating))",
+                        value: $filterState.minimumRating,
+                        in: 1...filterState.maximumRating
+                    )
+                    Stepper(
+                        "Maximum Rating: \(RatingDisplayFormatter.rating(filterState.maximumRating))",
+                        value: $filterState.maximumRating,
+                        in: filterState.minimumRating...5
+                    )
                 }
 
                 Section {

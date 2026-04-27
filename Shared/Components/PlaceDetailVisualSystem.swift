@@ -22,7 +22,7 @@ enum PlaceDetailVisualSystem {
     }
 
     enum Metrics {
-        static let cardCornerRadius: CGFloat = 16
+        static let cardCornerRadius: CGFloat = 24
         static let cardPadding: CGFloat = 14
         static let columnSpacing: CGFloat = 12
         static let contentSpacing: CGFloat = 6

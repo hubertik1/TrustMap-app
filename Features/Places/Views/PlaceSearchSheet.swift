@@ -73,7 +73,7 @@ struct PlaceSearchSheet: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
 
-            TextField("Search Apple Maps", text: $viewModel.query)
+            TextField("Search places", text: $viewModel.query)
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
@@ -130,7 +130,7 @@ struct PlaceSearchSheet: View {
                 )
 
             VStack(spacing: 6) {
-                Text("Search Apple Maps")
+                Text("Search places")
                     .font(.headline)
 
                 Text("Find the place you want to review.")
@@ -148,7 +148,7 @@ struct PlaceSearchSheet: View {
         if viewModel.isSearching {
             VStack(spacing: 12) {
                 ProgressView()
-                Text("Searching Apple Maps…")
+                Text("Searching places...")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

@@ -115,7 +115,7 @@ struct MapScreen: View {
         }
         .navigationTitle("Map")
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $viewModel.searchText, prompt: "Search Apple Maps")
+        .searchable(text: $viewModel.searchText, prompt: "Search places")
         .onChange(of: viewModel.searchText) { _, _ in
             viewModel.handleSearchTextChange()
         }
@@ -303,7 +303,7 @@ struct MapScreen: View {
                         HStack(spacing: 6) {
                             Image(systemName: "fork.knife")
                                 .font(.caption.weight(.semibold))
-                            Text(annotation.averageRating, format: .number.precision(.fractionLength(1)))
+                            Text(RatingDisplayFormatter.rating(annotation.averageRating))
                                 .font(.caption.weight(.semibold))
                         }
                         .padding(.horizontal, isSelected ? 12 : 10)
@@ -381,10 +381,10 @@ struct MapScreen: View {
         }
         .padding(18)
         .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(.regularMaterial)
                 .overlay {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .strokeBorder(.white.opacity(0.55), lineWidth: 1)
                 }
         )

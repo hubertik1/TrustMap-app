@@ -117,7 +117,7 @@ struct AddPlaceReviewView: View {
 
                     Spacer()
 
-                    Text("\(viewModel.ratingOverall)/5")
+                    Text("\(RatingDisplayFormatter.rating(viewModel.ratingOverall))/5")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

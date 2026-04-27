@@ -47,7 +47,7 @@ struct PlaceListRowView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .background(rowBackground)
-        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private var reviewMeta: some View {
@@ -72,10 +72,10 @@ struct PlaceListRowView: View {
     }
 
     private var rowBackground: some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
+        RoundedRectangle(cornerRadius: 24, style: .continuous)
             .fill(Color(uiColor: .secondarySystemGroupedBackground))
             .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .stroke(Color(uiColor: .separator).opacity(0.12), lineWidth: 1)
             }
     }
