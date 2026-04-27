@@ -20,6 +20,10 @@ final class FeedRepository {
         let title: String?
         let dishName: String?
         let photos: [PhotoAsset]
+
+        var activityKind: FeedActivityKind {
+            activityType == "DishReview" ? .dishReview : .placeReview
+        }
     }
 
     private let apiClient: APIClient
@@ -43,24 +47,16 @@ final class FeedRepository {
         )
 
         return response.items.map { item in
-            let title: String
-            let subtitle: String?
-
-            if item.activityType == "DishReview" {
-                let dishName = item.dishName ?? "dish"
-                title = "\(item.author.displayName) added \(dishName) at \(item.place.displayName)"
-                subtitle = nil
-            } else {
-                title = "\(item.author.displayName) added \(item.place.displayName)"
-                subtitle = item.title?.nilIfEmpty
-            }
-
-            return FeedPlaceActivityItem(
+            FeedPlaceActivityItem(
                 id: item.itemId,
+                activityKind: item.activityKind,
+                author: item.author,
                 place: item.place,
-                title: title,
-                subtitle: subtitle,
                 rating: item.rating,
+                title: item.title?.nilIfEmpty,
+                body: item.body,
+                dishName: item.dishName?.nilIfEmpty,
+                photos: item.photos,
                 createdAt: item.updatedAtUtc
             )
         }

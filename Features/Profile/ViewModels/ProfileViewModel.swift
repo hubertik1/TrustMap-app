@@ -88,6 +88,14 @@ final class ProfileViewModel: ObservableObject {
             && hasProfileChanges(comparedTo: currentUser)
     }
 
+    var hasUnsavedProfileChanges: Bool {
+        guard let currentUser = user ?? sessionStore.currentUser else {
+            return false
+        }
+
+        return hasProfileChanges(comparedTo: currentUser)
+    }
+
     func load() async {
         guard let currentUser = sessionStore.currentUser else {
             errorMessage = AppError.missingCurrentUser.errorDescription

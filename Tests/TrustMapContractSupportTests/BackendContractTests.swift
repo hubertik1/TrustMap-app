@@ -179,10 +179,18 @@ final class BackendContractTests: XCTestCase {
         let items = try await repository.fetchFeed()
 
         XCTAssertEqual(items.count, 2)
-        XCTAssertEqual(items[0].title, "Friend One added Ramen at Meme Bistro")
-        XCTAssertNil(items[0].subtitle)
-        XCTAssertEqual(items[1].title, "Friend Two added Cafe Uno")
-        XCTAssertEqual(items[1].subtitle, "Solid coffee")
+        XCTAssertEqual(items[0].activityKind, .dishReview)
+        XCTAssertEqual(items[0].author.displayName, "Friend One")
+        XCTAssertEqual(items[0].place.displayName, "Meme Bistro")
+        XCTAssertEqual(items[0].dishName, "Ramen")
+        XCTAssertEqual(items[0].body, "Great")
+        XCTAssertNil(items[0].title)
+        XCTAssertTrue(items[0].photos.isEmpty)
+        XCTAssertEqual(items[1].activityKind, .placeReview)
+        XCTAssertEqual(items[1].author.displayName, "Friend Two")
+        XCTAssertEqual(items[1].place.displayName, "Cafe Uno")
+        XCTAssertEqual(items[1].title, "Solid coffee")
+        XCTAssertEqual(items[1].body, "Nice")
         XCTAssertEqual(items[1].createdAt, iso8601("2026-04-07T13:05:00Z"))
     }
 

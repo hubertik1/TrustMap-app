@@ -32,47 +32,64 @@ struct ProfileView: View {
                     Task { await viewModel.load() }
                 }
             } else if let user = viewModel.user ?? container.sessionStore.currentUser {
-                List {
-                    Section {
-                        HStack(spacing: 16) {
-                            AvatarView(name: user.displayName, avatarURL: user.avatarURL, size: 72)
+                profileContent(for: user)
+            } else {
+                EmptyStateView(
+                    title: "Profile Unavailable",
+                    message: "TrustMap could not load your account data yet. Pull to retry or reopen the app.",
+                    systemImage: "person.crop.circle.badge.exclamationmark"
+                )
+            }
+        }
+        .background(Color(uiColor: .systemGroupedBackground))
+        .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .task(id: refreshCenter.globalRevision) {
+            await viewModel.load()
+        }
+        .sheet(isPresented: $isPresentingEditProfile) {
+            NavigationStack {
+                ProfileEditorSheet(viewModel: viewModel)
+            }
+        }
+    }
 
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(user.displayName)
-                                    .font(.title3.weight(.semibold))
-
-                                Text("@\(user.handle)")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-
-                                if let bio = user.bio?.trimmingCharacters(in: .whitespacesAndNewlines),
-                                   !bio.isEmpty {
-                                    Text(bio)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Button("Edit Profile") {
-                                    viewModel.prepareProfileEditor()
-                                    isPresentingEditProfile = true
-                                }
-                                .buttonStyle(.bordered)
-                                .padding(.top, 6)
-                            }
+    private func profileContent(for user: User) -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 22) {
+                ProfileHeroCard(
+                    user: user,
+                    friendCount: viewModel.friendsSummary.friendCount,
+                    pendingRequestCount: viewModel.friendsSummary.pendingRequestCount,
+                    ratedPlacesCount: viewModel.stats.ratedPlacesCount,
+                    reviewedDishesCount: viewModel.stats.reviewedDishesCount,
+                    onEditProfile: presentProfileEditor
+                ) {
+                    FriendsView(container: container)
+                } placesDestination: {
+                    MyPlaceReviewsView(
+                        container: container,
+                        reviews: viewModel.placeReviews,
+                        placeNames: viewModel.placeNames,
+                        onDelete: { review in
+                            try await viewModel.deletePlaceReview(review)
                         }
-                    }
-
-                    Section {
-                        NavigationLink {
-                            FriendsView(container: container)
-                        } label: {
-                            ProfileFriendsCard(summary: viewModel.friendsSummary)
+                    )
+                } dishesDestination: {
+                    MyDishReviewsView(
+                        container: container,
+                        reviews: viewModel.dishReviews,
+                        placeNames: viewModel.placeNames,
+                        onDelete: { review in
+                            try await viewModel.deleteDishReview(review)
                         }
-                        .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
-                        .listRowBackground(Color.clear)
-                    }
+                    )
+                }
 
-                    Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    ProfileSectionHeader(title: "Your activity")
+
+                    ProfileCardGroup {
                         NavigationLink {
                             MyPlaceReviewsView(
                                 container: container,
@@ -83,8 +100,16 @@ struct ProfileView: View {
                                 }
                             )
                         } label: {
-                            LabeledContent("Rated Places", value: "\(viewModel.stats.ratedPlacesCount)")
+                            ProfileCardRow(
+                                icon: "mappin.and.ellipse",
+                                iconColor: .red,
+                                title: "Rated Places",
+                                value: viewModel.stats.ratedPlacesCount.formatted()
+                            )
                         }
+                        .buttonStyle(.plain)
+
+                        ProfileCardDivider()
 
                         NavigationLink {
                             MyDishReviewsView(
@@ -96,93 +121,338 @@ struct ProfileView: View {
                                 }
                             )
                         } label: {
-                            LabeledContent("Reviewed Dishes", value: "\(viewModel.stats.reviewedDishesCount)")
+                            ProfileCardRow(
+                                icon: "fork.knife",
+                                iconColor: .orange,
+                                title: "Reviewed Dishes",
+                                value: viewModel.stats.reviewedDishesCount.formatted()
+                            )
                         }
+                        .buttonStyle(.plain)
+                    }
+                }
 
+                VStack(alignment: .leading, spacing: 8) {
+                    ProfileSectionHeader(title: "Manage")
+
+                    ProfileCardGroup {
                         NavigationLink {
                             CategoriesView(
                                 categoryRepository: container.categoryRepository,
                                 refreshCenter: container.refreshCenter
                             )
                         } label: {
-                            LabeledContent("Categories", value: "\(viewModel.categoryCount)")
+                            ProfileCardRow(
+                                icon: "tag.fill",
+                                iconColor: .blue,
+                                title: "Categories",
+                                value: viewModel.categoryCount.formatted()
+                            )
                         }
-                    }
+                        .buttonStyle(.plain)
 
-                    Section {
-                        NavigationLink("Settings") {
+                        ProfileCardDivider()
+
+                        NavigationLink {
                             SettingsView(container: container)
+                        } label: {
+                            ProfileCardRow(
+                                icon: "gearshape.fill",
+                                iconColor: .secondary,
+                                title: "Settings"
+                            )
                         }
+                        .buttonStyle(.plain)
                     }
                 }
-                .listStyle(.insetGrouped)
-            } else {
-                EmptyStateView(
-                    title: "Profile Unavailable",
-                    message: "TrustMap could not load your account data yet. Pull to retry or reopen the app.",
-                    systemImage: "person.crop.circle.badge.exclamationmark"
-                )
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 132)
         }
-        .navigationTitle("Profile")
-        .task(id: refreshCenter.globalRevision) {
-            await viewModel.load()
-        }
-        .sheet(isPresented: $isPresentingEditProfile) {
-            NavigationStack {
-                ProfileEditorSheet(viewModel: viewModel)
-            }
-        }
+    }
+
+    private func presentProfileEditor() {
+        viewModel.prepareProfileEditor()
+        isPresentingEditProfile = true
     }
 }
 
-private struct ProfileFriendsCard: View {
-    let summary: ProfileViewModel.FriendsSummary
+private struct ProfileSectionHeader: View {
+    let title: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Label("Friends", systemImage: "person.2.fill")
-                    .font(.headline)
+        Text(title)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
+    }
+}
 
-                Spacer()
+private struct ProfileCardGroup<Content: View>: View {
+    @ViewBuilder let content: () -> Content
 
-                Text(summary.friendCount.formatted())
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
+    var body: some View {
+        VStack(spacing: 0) {
+            content()
+        }
+        .padding(.vertical, 4)
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.025), radius: 8, x: 0, y: 3)
+    }
+}
 
-            HStack(spacing: 8) {
-                if summary.pendingRequestCount > 0 {
-                    Circle()
-                        .fill(.red)
-                        .frame(width: 8, height: 8)
-                }
+private struct ProfileCardRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    var value: String?
 
-                Text(summary.secondaryText)
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(iconColor)
+                .frame(width: 34, height: 34)
+                .background(iconColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .accessibilityHidden(true)
+
+            Text(title)
+                .font(.body.weight(.medium))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+
+            Spacer(minLength: 10)
+
+            if let value {
+                Text(value)
                     .font(.subheadline)
-                    .foregroundStyle(summary.pendingRequestCount > 0 ? .primary : .secondary)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
             }
 
-            if !summary.previewFriends.isEmpty {
-                HStack(spacing: -8) {
-                    ForEach(summary.previewFriends) { friend in
-                        AvatarView(name: friend.displayName, avatarURL: friend.avatarURL, size: 28)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color(uiColor: .systemGroupedBackground), lineWidth: 2)
-                            )
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color(uiColor: .tertiaryLabel))
+                .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+}
+
+private struct ProfileCardDivider: View {
+    var body: some View {
+        Divider()
+            .padding(.leading, 62)
+            .accessibilityHidden(true)
+    }
+}
+
+private struct ProfileHeroCard<FriendsDestination: View, PlacesDestination: View, DishesDestination: View>: View {
+    let user: User
+    let friendCount: Int
+    let pendingRequestCount: Int
+    let ratedPlacesCount: Int
+    let reviewedDishesCount: Int
+    let onEditProfile: () -> Void
+    @ViewBuilder let friendsDestination: () -> FriendsDestination
+    @ViewBuilder let placesDestination: () -> PlacesDestination
+    @ViewBuilder let dishesDestination: () -> DishesDestination
+
+    private var bioText: String? {
+        let trimmedBio = user.bio?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmedBio.isEmpty ? nil : trimmedBio
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 16) {
+                AvatarView(name: user.displayName, avatarURL: user.avatarURL, size: 86)
+                    .overlay {
+                        Circle()
+                            .stroke(Color.primary.opacity(0.06), lineWidth: 1)
                     }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Profile photo")
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(user.displayName)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+
+                    Text("@\(user.handle)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+
+                    Button(action: onEditProfile) {
+                        Text("Edit Profile")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color.accentColor)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(Color.accentColor.opacity(0.12), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
+                    .accessibilityLabel("Edit Profile")
                 }
-                .padding(.top, 2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Text(bioText ?? "Add a short bio to help friends recognize you.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            ProfileStatsRow(
+                friendCount: friendCount,
+                pendingRequestCount: pendingRequestCount,
+                ratedPlacesCount: ratedPlacesCount,
+                reviewedDishesCount: reviewedDishesCount
+            ) {
+                friendsDestination()
+            } placesDestination: {
+                placesDestination()
+            } dishesDestination: {
+                dishesDestination()
             }
         }
-        .padding(16)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.035), radius: 10, x: 0, y: 4)
+    }
+}
+
+private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View, DishesDestination: View>: View {
+    let friendCount: Int
+    let pendingRequestCount: Int
+    let ratedPlacesCount: Int
+    let reviewedDishesCount: Int
+    @ViewBuilder let friendsDestination: () -> FriendsDestination
+    @ViewBuilder let placesDestination: () -> PlacesDestination
+    @ViewBuilder let dishesDestination: () -> DishesDestination
+
+    var body: some View {
+        HStack(spacing: 0) {
+            NavigationLink {
+                friendsDestination()
+            } label: {
+                ProfileStatColumn(
+                    count: friendCount,
+                    label: "Friends",
+                    pendingRequestCount: pendingRequestCount,
+                    accessibilityLabel: friendsAccessibilityLabel
+                )
+            }
+            .buttonStyle(.plain)
+
+            ProfileStatDivider()
+
+            NavigationLink {
+                placesDestination()
+            } label: {
+                ProfileStatColumn(
+                    count: ratedPlacesCount,
+                    label: "Places",
+                    accessibilityLabel: "\(ratedPlacesCount) rated places"
+                )
+            }
+            .buttonStyle(.plain)
+
+            ProfileStatDivider()
+
+            NavigationLink {
+                dishesDestination()
+            } label: {
+                ProfileStatColumn(
+                    count: reviewedDishesCount,
+                    label: "Dishes",
+                    accessibilityLabel: "\(reviewedDishesCount) reviewed dishes"
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var friendsAccessibilityLabel: String {
+        if pendingRequestCount > 0 {
+            return "\(friendCount) friends, \(pendingRequestCount) pending requests"
+        }
+
+        return "\(friendCount) friends"
+    }
+}
+
+private struct ProfileStatColumn: View {
+    let count: Int
+    let label: String
+    var pendingRequestCount = 0
+    let accessibilityLabel: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(count.formatted())
+                .font(.headline.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+
+            HStack(spacing: 5) {
+                Text(label)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                if pendingRequestCount > 0 {
+                    Circle()
+                        .fill(.red)
+                        .frame(width: 6, height: 6)
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 52)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint("Opens \(label.lowercased())")
+    }
+}
+
+private struct ProfileStatDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color.primary.opacity(0.06))
+            .frame(width: 1, height: 36)
+            .accessibilityHidden(true)
     }
 }
 
@@ -190,57 +460,31 @@ private struct ProfileEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: ProfileViewModel
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var isShowingDiscardConfirmation = false
 
     var body: some View {
-        Form {
-            Section("Profile") {
-                VStack(alignment: .leading, spacing: 16) {
-                    profilePhotoEditor
-
-                    Divider()
-
-                    TextField(
-                        text: $viewModel.editedDisplayName,
-                        prompt: Text("Display name").foregroundStyle(.secondary)
-                    ) {
-                        EmptyView()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 8) {
+                    ProfileEditorSectionHeader(title: "Profile photo")
+                    ProfileEditorCard {
+                        profilePhotoEditor
                     }
-                    .textFieldStyle(.plain)
-                    .font(.body)
-                    .textInputAutocapitalization(.words)
-
-                    Divider()
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Unique username")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        UniqueUsernameFieldRow(
-                            usernameBase: $viewModel.editedHandle,
-                            suffix: viewModel.editedHandleSuffix,
-                            isInvalid: viewModel.usernameErrorMessage != nil
-                        )
-
-                        Text("Only the left part can be changed. The 4-digit suffix is assigned automatically.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-
-                        if let usernameErrorMessage = viewModel.usernameErrorMessage {
-                            Text(usernameErrorMessage)
-                                .font(.footnote)
-                                .foregroundStyle(.red)
-                        }
-                    }
-
-                    Divider()
-
-                    TextField("Bio", text: $viewModel.editedBio, axis: .vertical)
-                        .lineLimit(3...5)
                 }
-                .listRowSeparator(.hidden)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    ProfileEditorSectionHeader(title: "Public profile")
+                    ProfileEditorCard {
+                        publicProfileForm
+                    }
+                }
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 40)
         }
+        .background(Color(uiColor: .systemGroupedBackground))
+        .scrollDismissesKeyboard(.interactively)
         .disabled(viewModel.isSavingProfile)
         .navigationTitle("Edit Profile")
         .navigationBarTitleDisplayMode(.inline)
@@ -250,8 +494,9 @@ private struct ProfileEditorSheet: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
-                    dismiss()
+                    cancelEditing()
                 }
+                .buttonStyle(.plain)
                 .disabled(viewModel.isSavingProfile)
             }
 
@@ -260,16 +505,26 @@ private struct ProfileEditorSheet: View {
                     ProgressView()
                 } else {
                     Button("Save") {
-                        Task {
-                            let didSave = await viewModel.saveProfileChanges()
-                            if didSave {
-                                dismiss()
-                            }
-                        }
+                        save()
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(viewModel.canSaveProfile ? Color.accentColor : Color.secondary)
                     .disabled(!viewModel.canSaveProfile)
                 }
             }
+        }
+        .confirmationDialog(
+            "Discard changes?",
+            isPresented: $isShowingDiscardConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Discard Changes", role: .destructive) {
+                dismiss()
+            }
+
+            Button("Keep Editing", role: .cancel) {}
+        } message: {
+            Text("Your profile edits won't be saved.")
         }
         .alert(
             "Unable to Save Profile",
@@ -280,38 +535,101 @@ private struct ProfileEditorSheet: View {
         ) {
             Button("OK", role: .cancel) {}
         } message: {
-             Text(viewModel.errorMessage ?? "")
+            Text(viewModel.errorMessage ?? "")
+        }
+    }
+
+    private var publicProfileForm: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 8) {
+                ProfileEditorFieldLabel("Display name")
+
+                ProfileEditorInputContainer {
+                    TextField(
+                        text: $viewModel.editedDisplayName,
+                        prompt: Text("Display name").foregroundStyle(.secondary)
+                    ) {
+                        EmptyView()
+                    }
+                    .textFieldStyle(.plain)
+                    .font(.body)
+                    .lineLimit(1)
+                    .textInputAutocapitalization(.words)
+                }
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                ProfileEditorFieldLabel("Username")
+
+                UniqueUsernameFieldRow(
+                    usernameBase: $viewModel.editedHandle,
+                    suffix: viewModel.editedHandleSuffix,
+                    isInvalid: viewModel.usernameErrorMessage != nil
+                )
+
+                Text("Only the name before the suffix can be changed.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let usernameErrorMessage = viewModel.usernameErrorMessage {
+                    Text(usernameErrorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                ProfileEditorFieldLabel("Bio")
+
+                BioEditorField(text: $viewModel.editedBio)
+            }
         }
     }
 
     private var profilePhotoEditor: some View {
         let hasEditedPhoto = viewModel.selectedAvatarPhoto != nil || viewModel.editedAvatarURL != nil
-        let photoButtonTitle = hasEditedPhoto ? "Change Photo" : "Choose Photo"
+        let photoButtonTitle = hasEditedPhoto ? "Change Photo" : "Add Photo"
 
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 16) {
-                avatarPreview
+        return VStack(alignment: .center, spacing: 14) {
+            avatarPreview
 
-                VStack(alignment: .leading, spacing: 8) {
-                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                        Label(photoButtonTitle, systemImage: "photo")
+            VStack(spacing: 8) {
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    Label(photoButtonTitle, systemImage: "photo")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.accentColor)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.accentColor.opacity(0.12), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(photoButtonTitle)
+
+                if hasEditedPhoto {
+                    Button("Remove Photo", role: .destructive) {
+                        selectedPhotoItem = nil
+                        viewModel.removeAvatar()
                     }
-                    .buttonStyle(.borderedProminent)
-
-                    if hasEditedPhoto {
-                        Button("Remove Photo", role: .destructive) {
-                            selectedPhotoItem = nil
-                            viewModel.removeAvatar()
-                        }
-                        .buttonStyle(.bordered)
-                    }
+                    .font(.subheadline.weight(.semibold))
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Removes your profile photo.")
                 }
             }
 
-            Text("Your profile photo appears anywhere TrustMap currently shows your initials.")
+            Text("Your photo appears next to your reviews and activity.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var avatarPreview: some View {
@@ -324,15 +642,42 @@ private struct ProfileEditorSheet: View {
                 AvatarView(
                     name: viewModel.editedDisplayName.isEmpty ? "TrustMap Member" : viewModel.editedDisplayName,
                     avatarURL: viewModel.editedAvatarURL,
-                    size: 84
+                    size: 112
                 )
             }
         }
-        .frame(width: 84, height: 84)
+        .frame(width: 112, height: 112)
         .clipShape(Circle())
         .overlay {
             Circle()
-                .stroke(Color(uiColor: .separator).opacity(0.3), lineWidth: 1)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Profile photo")
+    }
+
+    private func cancelEditing() {
+        guard !viewModel.isSavingProfile else {
+            return
+        }
+
+        if viewModel.hasUnsavedProfileChanges {
+            isShowingDiscardConfirmation = true
+        } else {
+            dismiss()
+        }
+    }
+
+    private func save() {
+        guard viewModel.canSaveProfile else {
+            return
+        }
+
+        Task {
+            let didSave = await viewModel.saveProfileChanges()
+            if didSave {
+                dismiss()
+            }
         }
     }
 
@@ -357,57 +702,151 @@ private struct ProfileEditorSheet: View {
     }
 }
 
+private struct ProfileEditorSectionHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
+    }
+}
+
+private struct ProfileEditorCard<Content: View>: View {
+    let content: () -> Content
+
+    init(@ViewBuilder content: @escaping () -> Content) {
+        self.content = content
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content()
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        }
+    }
+}
+
+private struct ProfileEditorFieldLabel: View {
+    let title: String
+
+    init(_ title: String) {
+        self.title = title
+    }
+
+    var body: some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+    }
+}
+
+private struct ProfileEditorInputContainer<Content: View>: View {
+    let isInvalid: Bool
+    let content: () -> Content
+
+    init(isInvalid: Bool = false, @ViewBuilder content: @escaping () -> Content) {
+        self.isInvalid = isInvalid
+        self.content = content
+    }
+
+    var body: some View {
+        content()
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(uiColor: .tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(isInvalid ? Color.red.opacity(0.82) : Color.primary.opacity(0.06), lineWidth: 1)
+            }
+    }
+}
+
+private struct BioEditorField: View {
+    @Binding var text: String
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            if text.isEmpty {
+                Text("Tell friends what kind of places you like...")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 8)
+                    .allowsHitTesting(false)
+            }
+
+            TextEditor(text: $text)
+                .font(.body)
+                .frame(minHeight: 112)
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        }
+    }
+}
+
 private struct UniqueUsernameFieldRow: View {
     @Binding var usernameBase: String
     let suffix: String
     let isInvalid: Bool
 
     private var displayedSuffix: String {
-        suffix.isEmpty ? "Assigned automatically" : suffix
+        suffix.isEmpty ? "auto" : suffix
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            TextField(
-                text: $usernameBase,
-                prompt: Text("username").foregroundStyle(.secondary)
-            ) {
-                EmptyView()
-            }
-            .textFieldStyle(.plain)
-            .font(.body)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .textContentType(.username)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .accessibilityLabel("Username base")
-            .accessibilityHint("Editable part of your unique username.")
-
-            Rectangle()
-                .fill(Color(uiColor: .separator).opacity(0.35))
-                .frame(width: 1)
-                .padding(.vertical, 10)
-
-            Text(displayedSuffix)
-                .font(.body.monospacedDigit())
-                .foregroundStyle(.secondary)
+        ProfileEditorInputContainer(isInvalid: isInvalid) {
+            HStack(spacing: 8) {
+                TextField(
+                    text: $usernameBase,
+                    prompt: Text("username").foregroundStyle(.secondary)
+                ) {
+                    EmptyView()
+                }
+                .textFieldStyle(.plain)
+                .font(.body)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .frame(minWidth: 84, alignment: .center)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                .accessibilityElement()
-                .accessibilityLabel("Automatic suffix")
-                .accessibilityValue(suffix.isEmpty ? "Assigned automatically" : suffix)
-                .accessibilityHint("System managed and read only.")
-        }
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(isInvalid ? Color.red.opacity(0.8) : Color(uiColor: .separator).opacity(0.18))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .textContentType(.username)
+                .layoutPriority(1)
+                .accessibilityLabel("Username")
+                .accessibilityHint("Editable part of your unique username.")
+
+                Text(displayedSuffix)
+                    .font(suffix.isEmpty ? .caption.weight(.semibold) : .body.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(.horizontal, suffix.isEmpty ? 9 : 10)
+                    .padding(.vertical, 5)
+                    .background(Color(uiColor: .tertiarySystemFill), in: Capsule())
+                    .fixedSize(horizontal: true, vertical: false)
+                    .accessibilityElement()
+                    .accessibilityLabel("Read-only automatic suffix")
+                    .accessibilityValue(suffix.isEmpty ? "Assigned automatically" : suffix)
+            }
         }
         .accessibilityElement(children: .contain)
     }
