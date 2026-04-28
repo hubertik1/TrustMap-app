@@ -4,6 +4,9 @@ struct PlaceSummaryHeaderView: View {
     let place: Place
     let averageRating: Double?
     let categoryNames: [String]
+    var contributors: [UserSummary] = []
+    var contributorCount = 0
+    var currentUserID: UUID? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -27,6 +30,15 @@ struct PlaceSummaryHeaderView: View {
                         }
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 2)
+                    }
+
+                    if !contributors.isEmpty {
+                        ContributorSummaryRow(
+                            contributors: contributors,
+                            totalContributorCount: contributorCount,
+                            currentUserID: currentUserID
+                        )
                         .padding(.top, 2)
                     }
                 }

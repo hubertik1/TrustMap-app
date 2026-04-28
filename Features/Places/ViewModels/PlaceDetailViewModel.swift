@@ -89,6 +89,14 @@ final class PlaceDetailViewModel: ObservableObject {
         }
     }
 
+    var recentContributors: [UserSummary] {
+        Array(sortedContributorActivities.prefix(3).map { $0.author })
+    }
+
+    var contributorCount: Int {
+        sortedContributorActivities.count
+    }
+
     func canEdit(_ review: DishReview) -> Bool {
         review.authorUserId == currentUserID
     }
@@ -150,5 +158,32 @@ final class PlaceDetailViewModel: ObservableObject {
         }
 
         return "TrustMap User"
+    }
+
+    private var sortedContributorActivities: [(author: UserSummary, date: Date)] {
+        let activities = placeReviews.map { review in
+            (author: review.author, date: review.updatedAt)
+        } + dishReviews.map { review in
+            (author: review.author, date: review.updatedAt)
+        }
+
+        var latestByAuthorID: [UUID: (author: UserSummary, date: Date)] = [:]
+
+        for activity in activities {
+            if let existing = latestByAuthorID[activity.author.id],
+               existing.date >= activity.date {
+                continue
+            }
+
+            latestByAuthorID[activity.author.id] = activity
+        }
+
+        return latestByAuthorID.values.sorted { lhs, rhs in
+            if lhs.date != rhs.date {
+                return lhs.date > rhs.date
+            }
+
+            return lhs.author.id.uuidString < rhs.author.id.uuidString
+        }
     }
 }

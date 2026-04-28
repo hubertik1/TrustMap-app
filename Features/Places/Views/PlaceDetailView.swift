@@ -35,7 +35,10 @@ struct PlaceDetailView: View {
                         PlaceSummaryHeaderView(
                             place: viewModel.place,
                             averageRating: viewModel.averageRating,
-                            categoryNames: viewModel.categoryNames
+                            categoryNames: viewModel.categoryNames,
+                            contributors: viewModel.recentContributors,
+                            contributorCount: viewModel.contributorCount,
+                            currentUserID: viewModel.currentUserID
                         )
 
                         if viewModel.canRenameCustomPlace {
@@ -64,7 +67,10 @@ struct PlaceDetailView: View {
                             }
                         }
                     } header: {
-                        PlaceDetailSectionHeaderView(title: "Place Reviews")
+                        PlaceDetailSectionHeaderView(
+                            title: "Place Reviews",
+                            count: viewModel.placeReviews.isEmpty ? nil : viewModel.placeReviews.count
+                        )
                     }
 
                     if viewModel.canAddDishReview {
@@ -85,7 +91,10 @@ struct PlaceDetailView: View {
                                 }
                             }
                         } header: {
-                            PlaceDetailSectionHeaderView(title: "Dish Reviews")
+                            PlaceDetailSectionHeaderView(
+                                title: "Dish Reviews",
+                                count: viewModel.dishReviews.isEmpty ? nil : viewModel.dishReviews.count
+                            )
                         }
                     }
                 }

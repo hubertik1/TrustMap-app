@@ -39,12 +39,25 @@ enum PlaceDetailVisualSystem {
 
 struct PlaceDetailSectionHeaderView: View {
     let title: String
+    var count: Int? = nil
 
     var body: some View {
-        Text(title)
-            .font(PlaceDetailVisualSystem.Typography.sectionTitle)
-            .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
-            .textCase(nil)
+        HStack {
+            Text(title)
+                .font(PlaceDetailVisualSystem.Typography.sectionTitle)
+                .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
+
+            Spacer()
+
+            if let count {
+                Text("\(count)")
+                    .font(PlaceDetailVisualSystem.Typography.sectionTitle)
+                    .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
+                    .monospacedDigit()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .textCase(nil)
     }
 }
 

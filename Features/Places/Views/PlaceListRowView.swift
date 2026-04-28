@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PlaceListRowView: View {
     let item: PlaceListItem
+    var currentUserID: UUID? = nil
 
     private enum Metrics {
         static let trailingAccessorySpacing: CGFloat = 8
@@ -40,6 +41,15 @@ struct PlaceListRowView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
+
+                if hasContributorSummary {
+                    ContributorSummaryRow(
+                        contributors: item.recentContributors,
+                        totalContributorCount: item.contributorCount,
+                        currentUserID: currentUserID
+                    )
+                    .allowsHitTesting(false)
+                }
             }
 
             tapAffordance
@@ -54,13 +64,19 @@ struct PlaceListRowView: View {
         VStack(alignment: .trailing, spacing: 4) {
             RatingBadgeView(rating: item.averageRating)
 
-            Text("\(item.reviewCount) review\(item.reviewCount == 1 ? "" : "s")")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+            if !hasContributorSummary {
+                Text("\(item.reviewCount) review\(item.reviewCount == 1 ? "" : "s")")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
         .frame(minWidth: 72, alignment: .trailing)
         .padding(.top, 1)
+    }
+
+    private var hasContributorSummary: Bool {
+        !item.recentContributors.isEmpty
     }
 
     private var tapAffordance: some View {
@@ -92,6 +108,8 @@ struct PlaceListRowView: View {
             place: place,
             averageRating: 8.7,
             reviewCount: 3,
+            contributorCount: 0,
+            recentContributors: [],
             latestActivityAtUtc: .now,
             categoryNames: [],
             reviewerRatings: [],

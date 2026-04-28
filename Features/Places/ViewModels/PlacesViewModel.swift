@@ -186,6 +186,8 @@ final class PlacesViewModel: ObservableObject {
                     place: $0.place,
                     averageRating: $0.averagePlaceRating ?? 0,
                     reviewCount: $0.visiblePlaceReviewCount + $0.visibleDishReviewCount,
+                    contributorCount: $0.contributorCount,
+                    recentContributors: $0.recentContributors,
                     latestActivityAtUtc: $0.latestActivityAtUtc,
                     categoryNames: $0.categoryNames,
                     reviewerRatings: [],

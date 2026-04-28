@@ -364,22 +364,11 @@ struct MapScreen: View {
             }
 
             if let annotation {
-                let totalContributorCount = max(annotation.contributorCount, annotation.recentContributors.count)
-
-                if !annotation.recentContributors.isEmpty,
-                   let summaryText = contributorSummaryText(
-                       contributors: annotation.recentContributors,
-                       totalContributorCount: totalContributorCount,
-                       currentUserID: container.sessionStore.currentUser?.id
-                   ) {
-                    MapContributorSummaryRow(
+                if !annotation.recentContributors.isEmpty {
+                    ContributorSummaryRow(
                         contributors: annotation.recentContributors,
-                        summaryText: summaryText,
-                        accessibilityLabel: contributorSummaryAccessibilityLabel(
-                            contributors: annotation.recentContributors,
-                            totalContributorCount: totalContributorCount,
-                            currentUserID: container.sessionStore.currentUser?.id
-                        ) ?? summaryText
+                        totalContributorCount: annotation.contributorCount,
+                        currentUserID: container.sessionStore.currentUser?.id
                     )
                 } else {
                     Text(reviewCountText(annotation.reviewCount))
@@ -467,159 +456,8 @@ struct MapScreen: View {
             && CLLocationCoordinate2DIsValid(coordinate)
     }
 
-    private func contributorSummaryText(
-        contributors: [UserSummary],
-        totalContributorCount: Int,
-        currentUserID: UUID?
-    ) -> String? {
-        let totalCount = max(totalContributorCount, contributors.count)
-        guard totalCount > 0 || !contributors.isEmpty else {
-            return nil
-        }
-
-        guard let firstContributor = contributors.first else {
-            return reviewCountText(totalCount)
-        }
-
-        let identity = contributorIdentity(for: firstContributor, currentUserID: currentUserID)
-        guard totalCount > 1 else {
-            return identity.isCurrentUser ? "Reviewed by you" : "Reviewed by \(identity.name)"
-        }
-
-        if identity.isFallback {
-            return "\(totalCount) people reviewed"
-        }
-
-        let leadingName = identity.isCurrentUser ? "You" : identity.name
-        return "\(leadingName) + \(totalCount - 1) reviewed"
-    }
-
-    private func contributorSummaryAccessibilityLabel(
-        contributors: [UserSummary],
-        totalContributorCount: Int,
-        currentUserID: UUID?
-    ) -> String? {
-        let totalCount = max(totalContributorCount, contributors.count)
-        guard totalCount > 0 || !contributors.isEmpty else {
-            return nil
-        }
-
-        guard let firstContributor = contributors.first else {
-            return reviewCountText(totalCount)
-        }
-
-        let identity = contributorIdentity(for: firstContributor, currentUserID: currentUserID)
-        guard totalCount > 1 else {
-            return identity.isCurrentUser ? "Reviewed by you" : "Reviewed by \(identity.name)"
-        }
-
-        if identity.isFallback {
-            return "\(totalCount) people reviewed"
-        }
-
-        let leadingName = identity.isCurrentUser ? "You" : identity.name
-        let others = totalCount - 1
-        return "\(leadingName) and \(others) \(others == 1 ? "other" : "others") reviewed"
-    }
-
-    private func contributorIdentity(
-        for contributor: UserSummary,
-        currentUserID: UUID?
-    ) -> (name: String, isCurrentUser: Bool, isFallback: Bool) {
-        if contributor.id == currentUserID {
-            return ("you", true, false)
-        }
-
-        if let displayName = contributor.mapContributorDisplayName {
-            return (displayName, false, false)
-        }
-
-        return ("Someone", false, true)
-    }
-
     private func reviewCountText(_ count: Int) -> String {
         count == 1 ? "1 review" : "\(count) reviews"
-    }
-}
-
-private struct MapContributorSummaryRow: View {
-    let contributors: [UserSummary]
-    let summaryText: String
-    let accessibilityLabel: String
-
-    var body: some View {
-        HStack(spacing: 10) {
-            MiniContributorAvatarStack(contributors: contributors)
-
-            Text(summaryText)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
-        .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-    }
-}
-
-private struct MiniContributorAvatarStack: View {
-    let contributors: [UserSummary]
-
-    private let avatarSize: CGFloat = 28
-    private let overlap: CGFloat = 9
-
-    private var visibleContributors: [UserSummary] {
-        Array(contributors.prefix(3))
-    }
-
-    private var stackWidth: CGFloat {
-        guard !visibleContributors.isEmpty else {
-            return 0
-        }
-
-        return avatarSize + CGFloat(visibleContributors.count - 1) * (avatarSize - overlap)
-    }
-
-    var body: some View {
-        HStack(spacing: -overlap) {
-            ForEach(Array(visibleContributors.enumerated()), id: \.element.id) { index, contributor in
-                AvatarView(
-                    name: contributor.mapContributorDisplayName ?? "Someone",
-                    avatarURL: contributor.avatarURL,
-                    size: avatarSize,
-                    allowsFullscreen: false
-                )
-                .overlay {
-                    Circle()
-                        .stroke(Color(uiColor: .systemBackground), lineWidth: 2)
-                }
-                .zIndex(Double(visibleContributors.count - index))
-                .accessibilityHidden(true)
-            }
-        }
-        .frame(width: stackWidth, height: avatarSize, alignment: .leading)
-    }
-}
-
-private extension UserSummary {
-    var mapContributorDisplayName: String? {
-        let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedDisplayName.isEmpty {
-            return trimmedDisplayName
-        }
-
-        let trimmedHandleBase = handleComponents.base.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedHandleBase.isEmpty {
-            return trimmedHandleBase
-        }
-
-        let trimmedHandle = handle.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedHandle.isEmpty {
-            return trimmedHandle
-        }
-
-        return nil
     }
 }
 

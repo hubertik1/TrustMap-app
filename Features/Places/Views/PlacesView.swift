@@ -106,7 +106,10 @@ struct PlacesView: View {
                     Button {
                         selectedPlace = item.place
                     } label: {
-                        PlaceListRowView(item: item)
+                        PlaceListRowView(
+                            item: item,
+                            currentUserID: container.sessionStore.currentUser?.id
+                        )
                     }
                     .buttonStyle(.plain)
                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
