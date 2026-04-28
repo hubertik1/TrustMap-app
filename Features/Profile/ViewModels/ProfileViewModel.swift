@@ -50,6 +50,11 @@ final class ProfileViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var usernameErrorMessage: String?
 
+    private static let displayNameLimit = 100
+    private static let usernameMinLength = 3
+    private static let usernameMaxLength = 32
+    private static let bioLimit = 500
+
     private let logger = Logger(subsystem: "TrustMap", category: "ProfileViewModel")
     private let refreshCenter: AppRefreshCenter
     private let sessionStore: SessionStore
@@ -84,7 +89,7 @@ final class ProfileViewModel: ObservableObject {
         }
 
         return !isSavingProfile
-            && !normalizedEditedHandle.isEmpty
+            && !hasLocalProfileValidationErrors
             && hasProfileChanges(comparedTo: currentUser)
     }
 
@@ -94,6 +99,60 @@ final class ProfileViewModel: ObservableObject {
         }
 
         return hasProfileChanges(comparedTo: currentUser)
+    }
+
+    var displayNameValidationMessage: String? {
+        let displayName = normalizedEditedDisplayName
+
+        if displayName.isEmpty {
+            return "Display name is required."
+        }
+
+        if displayName.count > Self.displayNameLimit {
+            return "Display name must be 100 characters or fewer."
+        }
+
+        return nil
+    }
+
+    var localUsernameValidationMessage: String? {
+        let handle = normalizedEditedHandle
+
+        if handle.isEmpty {
+            return "Enter a username."
+        }
+
+        if handle.count < Self.usernameMinLength {
+            return "Username must be at least 3 characters."
+        }
+
+        if handle.count > Self.usernameMaxLength {
+            return "Username must be 32 characters or fewer."
+        }
+
+        return nil
+    }
+
+    var bioValidationMessage: String? {
+        if normalizedEditedBioText.count > Self.bioLimit {
+            return "Bio must be 500 characters or fewer."
+        }
+
+        return nil
+    }
+
+    var bioCharacterCount: Int {
+        normalizedEditedBioText.count
+    }
+
+    var bioCharacterLimit: Int {
+        Self.bioLimit
+    }
+
+    var hasLocalProfileValidationErrors: Bool {
+        displayNameValidationMessage != nil
+            || localUsernameValidationMessage != nil
+            || bioValidationMessage != nil
     }
 
     func load() async {
@@ -183,13 +242,12 @@ final class ProfileViewModel: ObservableObject {
             return false
         }
 
-        let handle = normalizedEditedHandle
-        guard !handle.isEmpty else {
-            usernameErrorMessage = "Enter a username."
+        guard !hasLocalProfileValidationErrors else {
             errorMessage = nil
             return false
         }
 
+        let handle = normalizedEditedHandle
         guard hasProfileChanges(comparedTo: currentUser) else {
             usernameErrorMessage = nil
             errorMessage = nil
@@ -234,8 +292,12 @@ final class ProfileViewModel: ObservableObject {
         editedDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var normalizedEditedBioText: String {
+        editedBio.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var normalizedEditedBio: String? {
-        editedBio.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        normalizedEditedBioText.nilIfEmpty
     }
 
     private func hasProfileChanges(comparedTo currentUser: User) -> Bool {

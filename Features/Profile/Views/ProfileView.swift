@@ -170,6 +170,9 @@ struct ProfileView: View {
             .padding(.top, 4)
             .padding(.bottom, 132)
         }
+        .refreshable {
+            await viewModel.load()
+        }
     }
 
     private func presentProfileEditor() {
@@ -414,7 +417,15 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
     }
 
     private var friendsAccessibilityLabel: String {
-        "\(friendCount) friends"
+        if pendingRequestCount == 1 {
+            return "\(friendCount) friends, 1 pending request"
+        }
+
+        if pendingRequestCount > 1 {
+            return "\(friendCount) friends, \(pendingRequestCount) pending requests"
+        }
+
+        return "\(friendCount) friends"
     }
 }
 
@@ -437,6 +448,10 @@ private struct ProfileStatColumn: View {
     var pendingRequestCount = 0
     let accessibilityLabel: String
 
+    private var pendingRequestBadgeText: String {
+        pendingRequestCount > 9 ? "9+" : pendingRequestCount.formatted()
+    }
+
     var body: some View {
         VStack(spacing: 4) {
             Text(count.formatted())
@@ -454,9 +469,16 @@ private struct ProfileStatColumn: View {
                     .minimumScaleFactor(0.82)
 
                 if pendingRequestCount > 0 {
-                    Circle()
-                        .fill(.red)
-                        .frame(width: 6, height: 6)
+                    Text(pendingRequestBadgeText)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .padding(.horizontal, 5)
+                        .frame(minWidth: 16, minHeight: 16)
+                        .background(.red, in: Capsule())
+                        .fixedSize(horizontal: true, vertical: false)
                         .accessibilityHidden(true)
                 }
             }
@@ -569,11 +591,13 @@ private struct ProfileEditorSheet: View {
     }
 
     private var publicProfileForm: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        let usernameMessage = viewModel.localUsernameValidationMessage ?? viewModel.usernameErrorMessage
+
+        return VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 8) {
                 ProfileEditorFieldLabel("Display name")
 
-                ProfileEditorInputContainer {
+                ProfileEditorInputContainer(isInvalid: viewModel.displayNameValidationMessage != nil) {
                     TextField(
                         text: $viewModel.editedDisplayName,
                         prompt: Text("Display name").foregroundStyle(.secondary)
@@ -585,6 +609,13 @@ private struct ProfileEditorSheet: View {
                     .lineLimit(1)
                     .textInputAutocapitalization(.words)
                 }
+
+                if let displayNameValidationMessage = viewModel.displayNameValidationMessage {
+                    Text(displayNameValidationMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             Divider()
@@ -595,7 +626,7 @@ private struct ProfileEditorSheet: View {
                 UniqueUsernameFieldRow(
                     usernameBase: $viewModel.editedHandle,
                     suffix: viewModel.editedHandleSuffix,
-                    isInvalid: viewModel.usernameErrorMessage != nil
+                    isInvalid: usernameMessage != nil
                 )
 
                 Text("Only the name before the suffix can be changed.")
@@ -603,8 +634,8 @@ private struct ProfileEditorSheet: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if let usernameErrorMessage = viewModel.usernameErrorMessage {
-                    Text(usernameErrorMessage)
+                if let usernameMessage {
+                    Text(usernameMessage)
                         .font(.footnote)
                         .foregroundStyle(.red)
                         .fixedSize(horizontal: false, vertical: true)
@@ -616,7 +647,19 @@ private struct ProfileEditorSheet: View {
             VStack(alignment: .leading, spacing: 8) {
                 ProfileEditorFieldLabel("Bio")
 
-                BioEditorField(text: $viewModel.editedBio)
+                BioEditorField(
+                    text: $viewModel.editedBio,
+                    isInvalid: viewModel.bioValidationMessage != nil,
+                    characterCount: viewModel.bioCharacterCount,
+                    characterLimit: viewModel.bioCharacterLimit
+                )
+
+                if let bioValidationMessage = viewModel.bioValidationMessage {
+                    Text(bioValidationMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
     }
@@ -816,23 +859,44 @@ private struct ProfileEditorInputContainer<Content: View>: View {
 
 private struct BioEditorField: View {
     @Binding var text: String
+    let isInvalid: Bool
+    let characterCount: Int
+    let characterLimit: Int
+
+    private var isOverLimit: Bool {
+        characterCount > characterLimit
+    }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            if text.isEmpty {
-                Text("Tell friends what kind of places you like...")
+        VStack(alignment: .leading, spacing: 6) {
+            ZStack(alignment: .topLeading) {
+                if text.isEmpty {
+                    Text("Tell friends what kind of places you like...")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 8)
+                        .allowsHitTesting(false)
+                }
+
+                TextEditor(text: $text)
                     .font(.body)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 8)
-                    .allowsHitTesting(false)
+                    .frame(minHeight: 112)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
             }
 
-            TextEditor(text: $text)
-                .font(.body)
-                .frame(minHeight: 112)
-                .scrollContentBackground(.hidden)
-                .background(Color.clear)
+            HStack {
+                Spacer(minLength: 12)
+
+                Text("\(characterCount.formatted())/\(characterLimit.formatted())")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(isOverLimit ? .red : .secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .accessibilityLabel("Bio character count")
+                    .accessibilityValue("\(characterCount) of \(characterLimit)")
+            }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
@@ -841,7 +905,7 @@ private struct BioEditorField: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                .strokeBorder(isInvalid ? Color.red.opacity(0.82) : Color.primary.opacity(0.06), lineWidth: 1)
         }
     }
 }
