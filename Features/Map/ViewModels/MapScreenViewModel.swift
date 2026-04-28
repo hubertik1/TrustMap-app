@@ -307,11 +307,8 @@ final class MapScreenViewModel: ObservableObject {
         self.selectedAnnotationID = selectedAnnotationID
         promptContext = nil
 
-        let targetRegion = MKCoordinateRegion(
-            center: coordinate,
-            span: region?.span ?? Self.defaultSpan
-        )
-        if let region, isRegion(region, focusedOn: coordinate) {
+        let targetRegion = promptCameraRegion(focusedOn: coordinate)
+        if let region, isRegion(region, centeredOn: targetRegion.center) {
             requestedCameraRegion = nil
             schedulePromptPresentation(for: context, delayMilliseconds: 180)
             return
@@ -397,8 +394,19 @@ final class MapScreenViewModel: ObservableObject {
     }
 
     private static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)
+    private static let promptVerticalFocusOffsetRatio = 0.16
 
-    private func isRegion(_ region: MKCoordinateRegion, focusedOn coordinate: CLLocationCoordinate2D) -> Bool {
+    private func promptCameraRegion(focusedOn coordinate: CLLocationCoordinate2D) -> MKCoordinateRegion {
+        let span = region?.span ?? Self.defaultSpan
+        let shiftedCenter = CLLocationCoordinate2D(
+            latitude: coordinate.latitude - span.latitudeDelta * Self.promptVerticalFocusOffsetRatio,
+            longitude: coordinate.longitude
+        )
+
+        return MKCoordinateRegion(center: shiftedCenter, span: span)
+    }
+
+    private func isRegion(_ region: MKCoordinateRegion, centeredOn coordinate: CLLocationCoordinate2D) -> Bool {
         region.center.isClose(to: coordinate)
     }
 }
