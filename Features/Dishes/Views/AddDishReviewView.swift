@@ -6,13 +6,16 @@ struct AddDishReviewView: View {
     @StateObject private var viewModel: AddDishReviewViewModel
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var isDeleteConfirmationPresented = false
+    private let showsCancelButton: Bool
 
     init(
         container: AppContainer,
         place: Place,
         placeReviewID: UUID? = nil,
-        existingReview: DishReview? = nil
+        existingReview: DishReview? = nil,
+        showsCancelButton: Bool = true
     ) {
+        self.showsCancelButton = showsCancelButton
         _viewModel = StateObject(
             wrappedValue: AddDishReviewViewModel(
                 place: place,
@@ -153,10 +156,12 @@ struct AddDishReviewView: View {
         }
         .navigationTitle(viewModel.navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
+        .navigationBarBackButtonHidden(showsCancelButton)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+            if showsCancelButton {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
             }
 
             ToolbarItem(placement: .confirmationAction) {

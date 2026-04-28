@@ -6,8 +6,15 @@ struct AddPlaceReviewView: View {
     @StateObject private var viewModel: AddPlaceReviewViewModel
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var isDeleteConfirmationPresented = false
+    private let showsCancelButton: Bool
 
-    init(container: AppContainer, place: Place, existingReview: PlaceReview? = nil) {
+    init(
+        container: AppContainer,
+        place: Place,
+        existingReview: PlaceReview? = nil,
+        showsCancelButton: Bool = true
+    ) {
+        self.showsCancelButton = showsCancelButton
         _viewModel = StateObject(
             wrappedValue: AddPlaceReviewViewModel(
                 place: place,
@@ -31,10 +38,12 @@ struct AddPlaceReviewView: View {
         }
         .navigationTitle(viewModel.navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
+        .navigationBarBackButtonHidden(showsCancelButton)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+            if showsCancelButton {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
             }
 
             ToolbarItem(placement: .confirmationAction) {
