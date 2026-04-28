@@ -5,7 +5,7 @@ struct PlacesView: View {
     @ObservedObject private var refreshCenter: AppRefreshCenter
     @StateObject private var viewModel: PlacesViewModel
     @State private var isFilterPresented = false
-    @State private var draftFilterState = MapFilterState(selectedCategory: .all)
+    @State private var draftFilterState = PlacesFilterState.defaultState
     @State private var selectedPlace: Place?
     @FocusState private var isSearchFieldFocused: Bool
 
@@ -16,70 +16,32 @@ struct PlacesView: View {
             wrappedValue: PlacesViewModel(
                 mapRepository: container.mapRepository,
                 categoryRepository: container.categoryRepository,
-                sessionStore: container.sessionStore
+                sessionStore: container.sessionStore,
+                userLocationService: container.userLocationService
             )
         )
     }
 
     var body: some View {
         Group {
-            if viewModel.isLoading && viewModel.placeItems.isEmpty {
+            if viewModel.isLoading && !viewModel.shouldShowLibraryContent {
                 LoadingStateView(title: "Loading places")
-            } else if let errorMessage = viewModel.errorMessage, viewModel.placeItems.isEmpty {
+            } else if let errorMessage = viewModel.errorMessage, !viewModel.shouldShowLibraryContent {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
-            } else if viewModel.placeItems.isEmpty {
+            } else if !viewModel.shouldShowLibraryContent {
                 ProductEmptyStateView(
                     title: "No places yet",
-                    message: "Add your first review or change the filters to see more places.",
+                    message: "Add your first review to start building your trusted places.",
                     systemImage: "fork.knife.circle.fill",
                     primaryActionTitle: "Add Review",
                     onPrimaryAction: {
                         container.selectedTab = .add
-                    },
-                    secondaryActionTitle: viewModel.filterState != PlacesViewModel.defaultFilterState ? "Reset Filters" : nil,
-                    onSecondaryAction: viewModel.filterState != PlacesViewModel.defaultFilterState ? {
-                        Task {
-                            await viewModel.applyFilters(PlacesViewModel.defaultFilterState)
-                        }
-                    } : nil
+                    }
                 )
             } else {
-                List {
-                    searchBarRow
-                        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 6, trailing: 16))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-
-                    if viewModel.visiblePlaceItems.isEmpty {
-                        ContentUnavailableView.search(text: viewModel.searchText)
-                            .listRowInsets(EdgeInsets(top: 18, leading: 16, bottom: 12, trailing: 16))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                    } else {
-                        ForEach(viewModel.visiblePlaceItems) { item in
-                            Button {
-                                selectedPlace = item.place
-                            } label: {
-                                PlaceListRowView(item: item)
-                            }
-                            .buttonStyle(.plain)
-                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                        }
-                    }
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .scrollDismissesKeyboard(.immediately)
-                .onTapGesture {
-                    isSearchFieldFocused = false
-                }
-                .refreshable {
-                    await viewModel.load()
-                }
+                placesList
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
@@ -91,17 +53,20 @@ struct PlacesView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    draftFilterState = viewModel.filterState
+                    viewModel.refreshLocationAvailability()
+                    draftFilterState = viewModel.draftFilterStateForEditing()
                     isFilterPresented = true
                 } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
+                    PlacesFilterToolbarIcon(activeFilterCount: viewModel.activeFilterCount)
                 }
+                .accessibilityLabel(viewModel.filterAccessibilityLabel)
             }
         }
         .sheet(isPresented: $isFilterPresented) {
             PlacesFilterSheet(
                 filterState: $draftFilterState,
-                categoryOptions: viewModel.availableCategoryOptions
+                categoryOptions: viewModel.availableCategoryOptions,
+                sortOptions: viewModel.availableSortOptions
             ) {
                 Task {
                     await viewModel.applyFilters(draftFilterState)
@@ -111,8 +76,53 @@ struct PlacesView: View {
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
         }
+        .onAppear {
+            viewModel.refreshLocationAvailability()
+        }
         .navigationDestination(item: $selectedPlace) { place in
             PlaceDetailView(container: container, place: place)
+        }
+    }
+
+    private var placesList: some View {
+        List {
+            searchBarRow
+                .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 6, trailing: 16))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+
+            quickFiltersRow
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+
+            if viewModel.visiblePlaceItems.isEmpty {
+                emptyResultsRow
+                    .listRowInsets(EdgeInsets(top: 18, leading: 16, bottom: 12, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            } else {
+                ForEach(viewModel.visiblePlaceItems) { item in
+                    Button {
+                        selectedPlace = item.place
+                    } label: {
+                        PlaceListRowView(item: item)
+                    }
+                    .buttonStyle(.plain)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                }
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.immediately)
+        .onTapGesture {
+            isSearchFieldFocused = false
+        }
+        .refreshable {
+            await viewModel.load()
         }
     }
 
@@ -149,6 +159,54 @@ struct PlacesView: View {
                 .stroke(Color(uiColor: .separator).opacity(0.12), lineWidth: 1)
         }
     }
+
+    private var quickFiltersRow: some View {
+        PlacesQuickFilterBar(
+            filterState: viewModel.filterState,
+            isNearestAvailable: viewModel.isNearestSortAvailable,
+            onReset: {
+                Task { await viewModel.resetFilters() }
+            },
+            onToggleMinimumRating: {
+                Task { await viewModel.toggleMinimumRating(4.0) }
+            },
+            onSelectNearby: {
+                Task { await viewModel.selectNearestSort() }
+            },
+            onToggleMostReviewed: {
+                Task { await viewModel.toggleMostReviewed() }
+            },
+            onToggleMine: {
+                Task { await viewModel.toggleMine() }
+            }
+        )
+    }
+
+    private var emptyResultsRow: some View {
+        PlacesEmptyResultsView(
+            title: emptyResultsTitle,
+            message: emptyResultsMessage,
+            showsResetFilters: viewModel.hasActiveFilters,
+            onResetFilters: {
+                Task { await viewModel.resetFilters() }
+            }
+        )
+    }
+
+    private var emptyResultsTitle: String {
+        if viewModel.hasSearchText {
+            let query = viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            return "No results for \"\(query)\""
+        }
+
+        return "No matching places"
+    }
+
+    private var emptyResultsMessage: String {
+        viewModel.hasSearchText
+            ? "Try a different search or adjust your filters."
+            : "Try adjusting your filters."
+    }
 }
 
 #Preview {
@@ -157,9 +215,189 @@ struct PlacesView: View {
     }
 }
 
+private struct PlacesFilterToolbarIcon: View {
+    let activeFilterCount: Int
+
+    var body: some View {
+        Image(systemName: "line.3.horizontal.decrease.circle")
+            .overlay(alignment: .topTrailing) {
+                if activeFilterCount > 0 {
+                    Text("\(activeFilterCount)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .monospacedDigit()
+                        .frame(minWidth: 17, minHeight: 17)
+                        .padding(.horizontal, activeFilterCount > 9 ? 3 : 0)
+                        .background(Capsule().fill(Color.accentColor))
+                        .offset(x: 3, y: -3)
+                        .zIndex(1)
+                        .accessibilityHidden(true)
+                }
+            }
+    }
+}
+
+private struct PlacesQuickFilterBar: View {
+    let filterState: PlacesFilterState
+    let isNearestAvailable: Bool
+    let onReset: () -> Void
+    let onToggleMinimumRating: () -> Void
+    let onSelectNearby: () -> Void
+    let onToggleMostReviewed: () -> Void
+    let onToggleMine: () -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                PlacesFilterChip(
+                    title: "All",
+                    isSelected: filterState.isDefault,
+                    action: onReset
+                )
+
+                PlacesFilterChip(
+                    title: "4.0+",
+                    isSelected: filterState.minimumRating == 4.0,
+                    action: onToggleMinimumRating
+                )
+
+                PlacesFilterChip(
+                    title: "Nearby",
+                    isSelected: filterState.selectedSortOption == .nearest,
+                    isDisabled: !isNearestAvailable,
+                    disabledHint: "Current location is unavailable.",
+                    action: onSelectNearby
+                )
+
+                PlacesFilterChip(
+                    title: "Most Reviewed",
+                    isSelected: filterState.selectedSortOption == .mostReviewed,
+                    action: onToggleMostReviewed
+                )
+
+                PlacesFilterChip(
+                    title: "Mine",
+                    isSelected: filterState.addedBy == .mine,
+                    action: onToggleMine
+                )
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 4)
+        }
+    }
+}
+
+private struct PlacesFilterChip: View {
+    let title: String
+    let isSelected: Bool
+    var isDisabled = false
+    var disabledHint: String?
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .foregroundStyle(foregroundStyle)
+                .padding(.horizontal, 13)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(backgroundColor)
+                )
+                .overlay {
+                    Capsule()
+                        .stroke(borderColor, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.58 : 1)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityHint(disabledHint ?? "")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var foregroundStyle: Color {
+        if isDisabled {
+            return .secondary
+        }
+
+        return isSelected ? .accentColor : .primary
+    }
+
+    private var backgroundColor: Color {
+        if isSelected {
+            return Color.accentColor.opacity(0.14)
+        }
+
+        return Color(uiColor: .secondarySystemGroupedBackground)
+    }
+
+    private var borderColor: Color {
+        if isSelected {
+            return Color.accentColor.opacity(0.35)
+        }
+
+        return Color.primary.opacity(0.06)
+    }
+}
+
+private struct PlacesEmptyResultsView: View {
+    let title: String
+    let message: String
+    let showsResetFilters: Bool
+    let onResetFilters: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .background(
+                    Circle()
+                        .fill(Color(uiColor: .tertiarySystemFill))
+                )
+
+            VStack(spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
+
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            if showsResetFilters {
+                Button("Reset Filters", role: .destructive, action: onResetFilters)
+                    .font(.subheadline.weight(.semibold))
+                    .buttonStyle(.bordered)
+                    .padding(.top, 2)
+                    .accessibilityLabel("Reset Filters")
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        }
+    }
+}
+
 private struct PlacesFilterSheet: View {
-    @Binding var filterState: MapFilterState
+    @Binding var filterState: PlacesFilterState
     let categoryOptions: [PlaceCategoryOption]
+    let sortOptions: [PlacesSortOption]
     let onApply: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -168,7 +406,7 @@ private struct PlacesFilterSheet: View {
         NavigationStack {
             Form {
                 Section("Filters") {
-                    Picker("Added by", selection: $filterState.selectedOwnershipFilter) {
+                    Picker("Added by", selection: $filterState.addedBy) {
                         ForEach(PlaceOwnershipFilter.allCases) { option in
                             Text(option.title).tag(option)
                         }
@@ -181,22 +419,15 @@ private struct PlacesFilterSheet: View {
                     }
 
                     Picker("Sort by", selection: $filterState.selectedSortOption) {
-                        ForEach(PlaceSortOption.allCases) { option in
+                        ForEach(sortOptions) { option in
                             Text(option.title).tag(option)
                         }
                     }
                 }
 
-                Section("Rating Range") {
-                    Stepper(
-                        "Minimum Rating: \(RatingDisplayFormatter.rating(filterState.minimumRating))",
-                        value: $filterState.minimumRating,
-                        in: 1...filterState.maximumRating
-                    )
-                    Stepper(
-                        "Maximum Rating: \(RatingDisplayFormatter.rating(filterState.maximumRating))",
-                        value: $filterState.maximumRating,
-                        in: filterState.minimumRating...5
+                Section("Minimum rating") {
+                    MinimumRatingChipGrid(
+                        selectedMinimumRating: $filterState.minimumRating
                     )
                 }
 
@@ -206,11 +437,11 @@ private struct PlacesFilterSheet: View {
                     }
                 }
             }
-            .navigationTitle("Places Filter")
+            .navigationTitle("Filters")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button("Cancel") { dismiss() }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -221,5 +452,62 @@ private struct PlacesFilterSheet: View {
                 }
             }
         }
+    }
+}
+
+private enum MinimumRatingFilterOption: String, CaseIterable, Identifiable {
+    case any
+    case three
+    case four
+    case fourPointFive
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .any:
+            return "Any"
+        case .three:
+            return "3.0+"
+        case .four:
+            return "4.0+"
+        case .fourPointFive:
+            return "4.5+"
+        }
+    }
+
+    var minimumRating: Double? {
+        switch self {
+        case .any:
+            return nil
+        case .three:
+            return 3.0
+        case .four:
+            return 4.0
+        case .fourPointFive:
+            return 4.5
+        }
+    }
+}
+
+private struct MinimumRatingChipGrid: View {
+    @Binding var selectedMinimumRating: Double?
+
+    private let columns = [
+        GridItem(.adaptive(minimum: 72), spacing: 8, alignment: .leading)
+    ]
+
+    var body: some View {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+            ForEach(MinimumRatingFilterOption.allCases) { option in
+                PlacesFilterChip(
+                    title: option.title,
+                    isSelected: selectedMinimumRating == option.minimumRating
+                ) {
+                    selectedMinimumRating = option.minimumRating
+                }
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
