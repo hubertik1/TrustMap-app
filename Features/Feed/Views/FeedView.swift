@@ -70,7 +70,7 @@ struct FeedView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
-            .padding(.bottom, 36)
+            .padding(.bottom, 132)
         }
         .refreshable {
             await viewModel.load()
@@ -194,9 +194,9 @@ private struct FeedActivityCard: View {
                 }
             }
 
-            if !item.photos.isEmpty {
+            if !previewPhotos.isEmpty {
                 PhotoGridView(
-                    assets: item.photos,
+                    assets: previewPhotos,
                     thumbnailSize: CGSize(width: 86, height: 86),
                     cornerRadius: 16,
                     spacing: 8
@@ -204,7 +204,8 @@ private struct FeedActivityCard: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, verticalPadding)
         .background {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
@@ -239,15 +240,32 @@ private struct FeedActivityCard: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
 
-                Text("\(item.activityText) - \(item.createdAt.feedTimestampText)")
+                Text(item.activityMetadataText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .accessibilityLabel(item.activityMetadataAccessibilityText)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             RatingBadgeView(rating: Double(item.rating))
         }
+    }
+
+    private var hasReviewContent: Bool {
+        item.feedTitleText != nil || item.feedBodyText != nil
+    }
+
+    private var isCompactActivity: Bool {
+        !hasReviewContent && item.photos.isEmpty
+    }
+
+    private var verticalPadding: CGFloat {
+        isCompactActivity ? 12 : 14
+    }
+
+    private var previewPhotos: [PhotoAsset] {
+        Array(item.photos.prefix(2))
     }
 }
 
@@ -268,7 +286,7 @@ private struct FeedFilteredEmptyStateView: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
 
-                Text("Try a different filter.")
+                Text("Try another filter.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -288,12 +306,20 @@ private struct FeedFilteredEmptyStateView: View {
 }
 
 private extension FeedPlaceActivityItem {
-    var activityText: String {
+    var activityMetadataText: String {
+        "\(activityLabelText) · \(createdAt.feedTimestampText)"
+    }
+
+    var activityMetadataAccessibilityText: String {
+        "\(activityLabelText), \(createdAt.feedTimestampAccessibilityText)"
+    }
+
+    private var activityLabelText: String {
         switch activityKind {
         case .placeReview:
-            return "Reviewed a place"
+            return "Place review"
         case .dishReview:
-            return "Reviewed a dish"
+            return "Dish review"
         }
     }
 
@@ -329,6 +355,10 @@ private extension String {
 private extension Date {
     var feedTimestampText: String {
         let elapsedSeconds = max(0, Int(Date.now.timeIntervalSince(self)))
+        if elapsedSeconds < 60 {
+            return "Just now"
+        }
+
         let minutes = elapsedSeconds / 60
 
         if minutes < 60 {
@@ -342,6 +372,26 @@ private extension Date {
 
         let days = hours / 24
         return "\(days) d"
+    }
+
+    var feedTimestampAccessibilityText: String {
+        let elapsedSeconds = max(0, Int(Date.now.timeIntervalSince(self)))
+        if elapsedSeconds < 60 {
+            return "Just now"
+        }
+
+        let minutes = elapsedSeconds / 60
+        if minutes < 60 {
+            return "\(minutes) \(minutes == 1 ? "minute" : "minutes") ago"
+        }
+
+        let hours = minutes / 60
+        if hours < 24 {
+            return "\(hours) \(hours == 1 ? "hour" : "hours") ago"
+        }
+
+        let days = hours / 24
+        return "\(days) \(days == 1 ? "day" : "days") ago"
     }
 }
 
