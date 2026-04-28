@@ -83,6 +83,14 @@ final class AddDishReviewViewModel: ObservableObject {
         selectedPhoto?.previewImage
     }
 
+    var canSave: Bool {
+        !isSaving
+            && !isDeleting
+            && !dishName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && dishRating > 0
+            && selectedCategoryId != nil
+    }
+
     func load() async {
         if availableCategories.isEmpty {
             do {

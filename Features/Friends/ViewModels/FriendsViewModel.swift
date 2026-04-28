@@ -37,8 +37,10 @@ final class FriendsViewModel: ObservableObject {
     @Published private(set) var searchResults: [SearchResultItem] = []
     @Published var searchText = ""
     @Published var isLoading = false
+    @Published private(set) var isSearching = false
     @Published var errorMessage: String?
     @Published private(set) var activeUserID: UUID?
+    @Published private(set) var hasLoadedRelationships = false
 
     private let refreshCenter: AppRefreshCenter
     private let userRepository: UserProfileRepository
@@ -104,6 +106,7 @@ final class FriendsViewModel: ObservableObject {
                     createdAt: $0.createdAt
                 )
             }
+            hasLoadedRelationships = true
             errorMessage = nil
         } catch {
             guard !Self.isCancellation(error) else { return }
@@ -117,6 +120,8 @@ final class FriendsViewModel: ObservableObject {
         let normalized = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard normalized.count >= 2 else {
             searchResults = []
+            isSearching = false
+            errorMessage = nil
             return
         }
 
@@ -171,8 +176,12 @@ final class FriendsViewModel: ObservableObject {
         let normalized = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard normalized.count >= 2 else {
             searchResults = []
+            isSearching = false
             return
         }
+
+        isSearching = true
+        defer { isSearching = false }
 
         do {
             let results = try await userRepository.searchUsers(query: normalized)

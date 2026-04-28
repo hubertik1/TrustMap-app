@@ -15,6 +15,7 @@ final class FeedViewModel: ObservableObject {
     }
 
     func load() async {
+        let hadExistingContent = !feedItems.isEmpty
         errorMessage = nil
         isLoading = true
         defer { isLoading = false }
@@ -26,7 +27,9 @@ final class FeedViewModel: ObservableObject {
             guard !Self.isCancellation(error) else { return }
             logger.error("Unable to load feed: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
-            feedItems = []
+            if !hadExistingContent {
+                feedItems = []
+            }
         }
     }
 

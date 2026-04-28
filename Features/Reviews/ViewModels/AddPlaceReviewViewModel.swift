@@ -91,6 +91,13 @@ final class AddPlaceReviewViewModel: ObservableObject {
         place.canRenameCustomDisplayName(as: currentUserID) || provisionalCanEditCustomPlaceDisplayName
     }
 
+    var canSave: Bool {
+        !isSaving
+            && !isDeleting
+            && ratingOverall > 0
+            && selectedCategoryId != nil
+    }
+
     var placeAddressLine: String? {
         let trimmedAddress = place.address.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedAddress.isEmpty else {

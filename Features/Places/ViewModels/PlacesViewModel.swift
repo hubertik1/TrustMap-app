@@ -161,6 +161,7 @@ final class PlacesViewModel: ObservableObject {
     }
 
     func load() async {
+        let hadExistingContent = !allPlaceItems.isEmpty
         errorMessage = nil
         isLoading = true
         defer { isLoading = false }
@@ -200,8 +201,10 @@ final class PlacesViewModel: ObservableObject {
             guard !Self.isCancellation(error) else { return }
             logger.error("Unable to load places: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
-            allPlaceItems = []
-            placeItems = []
+            if !hadExistingContent {
+                allPlaceItems = []
+                placeItems = []
+            }
         }
     }
 

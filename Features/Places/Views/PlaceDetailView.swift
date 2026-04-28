@@ -25,14 +25,22 @@ struct PlaceDetailView: View {
 
     var body: some View {
         Group {
-            if viewModel.isLoading {
+            if viewModel.isLoading && !viewModel.hasLoadedContent {
                 LoadingStateView(title: "Loading place details")
-            } else if let errorMessage = viewModel.errorMessage {
+            } else if let errorMessage = viewModel.errorMessage, !viewModel.hasLoadedContent {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
             } else {
                 List {
+                    if let errorMessage = viewModel.errorMessage {
+                        InlineErrorBanner(title: "Couldn't refresh place details", message: errorMessage) {
+                            Task { await viewModel.load() }
+                        }
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+                        .listRowBackground(Color.clear)
+                    }
+
                     Section {
                         PlaceSummaryHeaderView(
                             place: viewModel.place,
@@ -108,6 +116,9 @@ struct PlaceDetailView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .refreshable {
+                    await viewModel.load()
+                }
             }
         }
         .navigationTitle(viewModel.place.displayName)

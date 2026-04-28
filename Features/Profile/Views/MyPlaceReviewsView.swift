@@ -36,6 +36,8 @@ struct MyPlaceReviewsView: View {
             } else {
                 List {
                     ForEach(reviews, id: \.id) { review in
+                        let isDeleting = deletingReviewIDs.contains(review.id)
+
                         NavigationLink {
                             AddPlaceReviewView(
                                 container: container,
@@ -64,15 +66,16 @@ struct MyPlaceReviewsView: View {
                                 RatingBadgeView(rating: Double(review.ratingOverall))
                             }
                             .padding(.vertical, 4)
-                            .opacity(deletingReviewIDs.contains(review.id) ? 0.5 : 1)
+                            .opacity(isDeleting ? 0.5 : 1)
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        .disabled(isDeleting)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: !isDeleting) {
                                 Button(role: .destructive) {
                                     delete(review)
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
-                                .disabled(deletingReviewIDs.contains(review.id))
+                                .disabled(isDeleting)
                         }
                     }
                 }

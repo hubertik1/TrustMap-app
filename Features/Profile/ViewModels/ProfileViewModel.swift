@@ -156,9 +156,8 @@ final class ProfileViewModel: ObservableObject {
     }
 
     func load() async {
-        guard let currentUser = sessionStore.currentUser else {
+        guard let currentUser = sessionStore.currentUser ?? user else {
             errorMessage = AppError.missingCurrentUser.errorDescription
-            user = nil
             return
         }
 

@@ -96,6 +96,15 @@ struct PlacesView: View {
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
 
+            if let errorMessage = viewModel.errorMessage {
+                InlineErrorBanner(title: "Couldn't refresh places", message: errorMessage) {
+                    Task { await viewModel.load() }
+                }
+                .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 10, trailing: 16))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+            }
+
             if viewModel.visiblePlaceItems.isEmpty {
                 emptyResultsRow
                     .listRowInsets(EdgeInsets(top: 18, leading: 16, bottom: 12, trailing: 16))

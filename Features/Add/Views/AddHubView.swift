@@ -26,13 +26,6 @@ struct AddHubView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                if let errorMessage = viewModel.errorMessage,
-                   viewModel.recentPlaces.isEmpty {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-
                 VStack(spacing: 10) {
                     Button(action: presentPlaceReviewSearch) {
                         AddHubActionCard(
@@ -51,6 +44,12 @@ struct AddHubView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                }
+
+                if let errorMessage = viewModel.errorMessage {
+                    InlineErrorBanner(title: "Couldn't load recent places", message: errorMessage) {
+                        Task { await viewModel.load() }
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
@@ -85,6 +84,7 @@ struct AddHubView: View {
         .background(Color(uiColor: .systemGroupedBackground))
         .contentMargins(.top, 8, for: .scrollContent)
         .contentMargins(.horizontal, 16, for: .scrollContent)
+        .contentMargins(.bottom, 132, for: .scrollContent)
         .navigationTitle("Add Review")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(

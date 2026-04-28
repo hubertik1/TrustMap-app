@@ -15,6 +15,7 @@ final class PlaceDetailViewModel: ObservableObject {
     @Published var customDisplayNameDraft = ""
     @Published var errorMessage: String?
     @Published var isLoading = false
+    @Published private(set) var hasLoadedContent = false
     @Published var isPresentingAddPlaceReview = false
     @Published var isPresentingAddDishReview = false
     @Published var isPresentingCustomNameEditor = false
@@ -70,6 +71,7 @@ final class PlaceDetailViewModel: ObservableObject {
             self.currentUserPlaceReview = resolvedPlaceReviews.first(where: { $0.authorUserId == currentUser.id })
             self.placePhotos = (resolvedPlaceReviews.flatMap(\.photos) + resolvedDishReviews.flatMap(\.photos))
                 .sorted { $0.createdAt > $1.createdAt }
+            self.hasLoadedContent = true
         } catch {
             logger.error("Unable to load place details: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription

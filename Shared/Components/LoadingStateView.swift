@@ -11,6 +11,7 @@ struct LoadingStateView: View {
             VStack(spacing: 14) {
                 ProgressView()
                     .controlSize(.large)
+                    .accessibilityHidden(true)
 
                 Text(title)
                     .font(.subheadline.weight(.medium))
@@ -23,6 +24,8 @@ struct LoadingStateView: View {
             .shadow(color: .black.opacity(0.04), radius: 18, y: 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
     }
 }
 

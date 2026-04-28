@@ -25,20 +25,20 @@ struct ProfileView: View {
 
     var body: some View {
         Group {
-            if viewModel.isLoading {
+            if viewModel.isLoading && displayUser == nil {
                 LoadingStateView(title: "Loading profile")
-            } else if let errorMessage = viewModel.errorMessage {
-                ErrorStateView(message: errorMessage) {
-                    Task { await viewModel.load() }
-                }
-            } else if let user = viewModel.user ?? container.sessionStore.currentUser {
-                profileContent(for: user)
-            } else {
-                EmptyStateView(
-                    title: "Profile Unavailable",
-                    message: "TrustMap could not load your account data yet. Pull to retry or reopen the app.",
-                    systemImage: "person.crop.circle.badge.exclamationmark"
+            } else if displayUser == nil {
+                ProductEmptyStateView(
+                    title: "Profile unavailable",
+                    message: "We couldn't load your account data.",
+                    systemImage: "person.crop.circle.badge.exclamationmark",
+                    primaryActionTitle: "Try Again",
+                    onPrimaryAction: {
+                        Task { await viewModel.load() }
+                    }
                 )
+            } else if let user = displayUser {
+                profileContent(for: user)
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
@@ -54,9 +54,25 @@ struct ProfileView: View {
         }
     }
 
+    private var displayUser: User? {
+        viewModel.user ?? container.sessionStore.currentUser
+    }
+
+    private var refreshErrorBanner: some View {
+        Group {
+            if let errorMessage = viewModel.errorMessage {
+                InlineErrorBanner(title: "Couldn't refresh profile", message: errorMessage) {
+                    Task { await viewModel.load() }
+                }
+            }
+        }
+    }
+
     private func profileContent(for user: User) -> some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 18) {
+                refreshErrorBanner
+
                 ProfileHeroCard(
                     user: user,
                     friendCount: viewModel.friendsSummary.friendCount,

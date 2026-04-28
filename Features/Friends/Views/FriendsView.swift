@@ -17,19 +17,34 @@ struct FriendsView: View {
 
     var body: some View {
         Group {
-            if viewModel.isLoading && !viewModel.hasAnyEntries {
+            if viewModel.isLoading && !viewModel.hasLoadedRelationships {
                 LoadingStateView(title: "Loading friends")
-            } else if let errorMessage = viewModel.errorMessage, !viewModel.hasAnyEntries {
+            } else if let errorMessage = viewModel.errorMessage, !viewModel.hasLoadedRelationships {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
             } else {
                 List {
-                    if viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2,
-                       viewModel.searchResults.isEmpty {
+                    if let errorMessage = viewModel.errorMessage {
+                        InlineErrorBanner(title: "Couldn't refresh friends", message: errorMessage) {
+                            Task { await viewModel.load() }
+                        }
+                    }
+
+                    if normalizedSearchQuery.count < 2 {
+                        Text("Search by username to add friends.")
+                            .foregroundStyle(.secondary)
+                    } else if viewModel.isSearching && viewModel.searchResults.isEmpty {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Searching users...")
+                                .foregroundStyle(.secondary)
+                        }
+                    } else if viewModel.searchResults.isEmpty {
                         Text("No matching users.")
                             .foregroundStyle(.secondary)
-                    } else if viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 {
+                    } else {
                         ForEach(viewModel.searchResults) { result in
                             SearchResultRow(
                                 result: result,
@@ -143,6 +158,10 @@ struct FriendsView: View {
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
         }
+    }
+
+    private var normalizedSearchQuery: String {
+        viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

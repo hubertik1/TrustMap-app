@@ -29,9 +29,14 @@ final class MapScreenViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var isFilterPresented = false
+    @Published private(set) var hasLoadedMapPlaces = false
     @Published private(set) var locationAccessState: UserLocationAccessState = .idle
 
     var requestedCameraRegionToken = UUID()
+
+    var hasActiveFilters: Bool {
+        filterState != .defaultState
+    }
 
     private let logger = Logger(subsystem: "TrustMap", category: "MapScreenViewModel")
     private let mapRepository: MapRepository
@@ -228,6 +233,7 @@ final class MapScreenViewModel: ObservableObject {
             }
 
             annotations = makeAnnotations(from: places)
+            hasLoadedMapPlaces = true
             errorMessage = nil
         } catch {
             guard latestMapReloadRequestID == requestID else {

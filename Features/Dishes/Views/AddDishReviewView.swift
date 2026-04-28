@@ -165,6 +165,7 @@ struct AddDishReviewView: View {
                     Button("Save") {
                         Task { await viewModel.save() }
                     }
+                    .disabled(!viewModel.canSave)
                 }
             }
         }

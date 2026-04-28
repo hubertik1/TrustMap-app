@@ -90,6 +90,18 @@ struct MapScreen: View {
                     .background(.thinMaterial)
                 }
 
+                if shouldShowMapStatusOverlay {
+                    VStack {
+                        mapStatusOverlay
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
+
+                        Spacer()
+                    }
+                    .transition(.opacity)
+                    .accessibilitySortPriority(1)
+                }
+
                 if let promptContext = viewModel.promptContext {
                     Color.clear
                         .contentShape(Rectangle())
@@ -175,6 +187,7 @@ struct MapScreen: View {
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
                 }
+                .accessibilityLabel(viewModel.hasActiveFilters ? "Filters, active" : "Filters")
             }
         }
         .sheet(isPresented: $viewModel.isFilterPresented) {
@@ -250,6 +263,50 @@ struct MapScreen: View {
             pointsOfInterest: .all,
             showsTraffic: false
         )
+    }
+
+    private var shouldShowMapStatusOverlay: Bool {
+        if viewModel.promptContext != nil || viewModel.droppedPinPlace != nil {
+            return false
+        }
+
+        if !viewModel.searchResults.isEmpty {
+            return false
+        }
+
+        if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return false
+        }
+
+        if let errorMessage = viewModel.errorMessage {
+            return !errorMessage.isEmpty && !viewModel.annotations.isEmpty
+        }
+
+        return viewModel.hasLoadedMapPlaces
+            && !viewModel.isLoading
+            && viewModel.annotations.isEmpty
+    }
+
+    @ViewBuilder
+    private var mapStatusOverlay: some View {
+        if let errorMessage = viewModel.errorMessage, !viewModel.annotations.isEmpty {
+            InlineErrorBanner(title: "Couldn't refresh map", message: errorMessage) {
+                Task { await viewModel.load() }
+            }
+        } else if viewModel.hasActiveFilters {
+            MapStatusCard(
+                title: "No places match your filters",
+                message: "Try changing filters or moving the map.",
+                actionTitle: "Filters"
+            ) {
+                viewModel.isFilterPresented = true
+            }
+        } else {
+            MapStatusCard(
+                title: "No reviewed places in this area yet",
+                message: "Move the map or add a review."
+            )
+        }
     }
 
     private func clearMapSelection() {
@@ -433,6 +490,56 @@ struct MapScreen: View {
 
     private func reviewCountText(_ count: Int) -> String {
         count == 1 ? "1 review" : "\(count) reviews"
+    }
+}
+
+private struct MapStatusCard: View {
+    let title: String
+    let message: String
+    var actionTitle: String?
+    var action: (() -> Void)?
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "mappin.slash")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 30, height: 30)
+                .background(Color(uiColor: .tertiarySystemFill), in: Circle())
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let actionTitle, let action {
+                    Button(actionTitle, action: action)
+                        .font(.footnote.weight(.semibold))
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.accentColor)
+                        .padding(.top, 2)
+                        .accessibilityLabel(actionTitle)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(.white.opacity(0.45), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title). \(message)")
     }
 }
 

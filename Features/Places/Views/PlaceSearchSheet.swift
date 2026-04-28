@@ -119,16 +119,18 @@ struct PlaceSearchSheet: View {
 
     @ViewBuilder
     private var content: some View {
-        if let errorMessage = viewModel.errorMessage,
-           viewModel.results.isEmpty,
-           !hasSearchQuery {
-            inlineErrorView(message: errorMessage)
-        } else if !hasSearchQuery {
+        if !hasSearchQuery {
             if eligibleSuggestedPlaces.isEmpty {
-                helperState
+                if let errorMessage = viewModel.errorMessage, viewModel.results.isEmpty {
+                    inlineErrorView(message: errorMessage)
+                } else {
+                    helperState
+                }
             } else {
                 suggestedPlacesView
             }
+        } else if let errorMessage = viewModel.errorMessage, viewModel.results.isEmpty {
+            inlineErrorView(message: errorMessage)
         } else if viewModel.results.isEmpty {
             searchStatusState
         } else {
@@ -237,6 +239,13 @@ struct PlaceSearchSheet: View {
     private var searchResultsView: some View {
         ScrollView {
             LazyVStack(spacing: 8) {
+                if let errorMessage = viewModel.errorMessage {
+                    InlineErrorBanner(title: "Couldn't search places", message: errorMessage) {
+                        Task { await viewModel.search() }
+                    }
+                    .padding(.bottom, 4)
+                }
+
                 ForEach(viewModel.results) { result in
                     Button {
                         selectResult(result)

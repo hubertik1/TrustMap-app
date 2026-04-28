@@ -19,9 +19,9 @@ struct FeedView: View {
 
     var body: some View {
         Group {
-            if viewModel.isLoading {
+            if viewModel.isLoading && viewModel.feedItems.isEmpty {
                 LoadingStateView(title: "Loading activity")
-            } else if let errorMessage = viewModel.errorMessage {
+            } else if let errorMessage = viewModel.errorMessage, viewModel.feedItems.isEmpty {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
@@ -57,8 +57,16 @@ struct FeedView: View {
     private var feedContent: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
+                if let errorMessage = viewModel.errorMessage {
+                    InlineErrorBanner(title: "Couldn't refresh activity", message: errorMessage) {
+                        Task { await viewModel.load() }
+                    }
+                }
+
                 if filteredFeedItems.isEmpty {
-                    FeedFilteredEmptyStateView()
+                    FeedFilteredEmptyStateView {
+                        selectedFilter = .all
+                    }
                         .padding(.top, 24)
                 } else {
                     ForEach(filteredFeedItems) { item in
@@ -270,8 +278,10 @@ private struct FeedActivityCard: View {
 }
 
 private struct FeedFilteredEmptyStateView: View {
+    let onShowAll: () -> Void
+
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             Image(systemName: "line.3.horizontal.decrease.circle")
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(.secondary)
@@ -291,6 +301,11 @@ private struct FeedFilteredEmptyStateView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
+
+            Button("Show All", action: onShowAll)
+                .font(.subheadline.weight(.semibold))
+                .buttonStyle(.bordered)
+                .accessibilityLabel("Show All")
         }
         .frame(maxWidth: .infinity)
         .padding(24)

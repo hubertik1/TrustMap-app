@@ -29,6 +29,7 @@
 		2609C297E268BFF1DECD66FB /* RatingBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC78656AA973544E0280673 /* RatingBadgeView.swift */; };
 		26485FEB233A6912FD0F6A12 /* FriendRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 674863DB46517F27FFAF2143 /* FriendRepository.swift */; };
 		27268709A29C7D17F242F674 /* ErrorStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 061CA394D8776E51614AB480 /* ErrorStateView.swift */; };
+		27C1A4B2948700E60F16B60A /* InlineErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27C1A4B1948700E60F16B60A /* InlineErrorBanner.swift */; };
 		2E862FBB1A319D894220BAE1 /* AddHubViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAFECF6BA297F0D17F184E4D /* AddHubViewModel.swift */; };
 		333B14D29C150A8BD98B2886 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2035AE2E1F42F7B09D23D29F /* User.swift */; };
 		3736AC584C0DBF5D6F85CEEF /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 34A09B1684F7C50A8B7E956F /* Foundation.framework */; };
@@ -113,6 +114,7 @@
 		048EF525166F452900693E1B /* AppRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppRootView.swift; path = App/Root/AppRootView.swift; sourceTree = "<group>"; };
 		04D9F0772E96CE60594B0057 /* UserLocationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UserLocationService.swift; path = Features/Map/Services/UserLocationService.swift; sourceTree = "<group>"; };
 		061CA394D8776E51614AB480 /* ErrorStateView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ErrorStateView.swift; path = Shared/Components/ErrorStateView.swift; sourceTree = "<group>"; };
+		27C1A4B1948700E60F16B60A /* InlineErrorBanner.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = InlineErrorBanner.swift; path = Shared/Components/InlineErrorBanner.swift; sourceTree = "<group>"; };
 		097591267115934D3926D534 /* AppError.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppError.swift; path = Core/State/AppError.swift; sourceTree = "<group>"; };
 		0CC78656AA973544E0280673 /* RatingBadgeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RatingBadgeView.swift; path = Shared/Components/RatingBadgeView.swift; sourceTree = "<group>"; };
 		10ED4816C3E5F3EB5AC8F569 /* Info-Local.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "Info-Local.plist"; path = "Resources/Info-Local.plist"; sourceTree = "<group>"; };
@@ -577,6 +579,7 @@
 				F847E2FFE39F93D7459825D3 /* DishReviewRowView.swift */,
 				C18977393BDDCDAD8E426D76 /* EmptyStateView.swift */,
 				061CA394D8776E51614AB480 /* ErrorStateView.swift */,
+				27C1A4B1948700E60F16B60A /* InlineErrorBanner.swift */,
 				F512520B6CA40F6674931725 /* LoadingStateView.swift */,
 				5B1DB86409BD4B41756D4EA7 /* PhotoGridView.swift */,
 				4336B1D6223AA80A4E18E1D1 /* PlaceDetailVisualSystem.swift */,
@@ -1007,6 +1010,7 @@
 				B91604B4FBCCD0F964FA4E5D /* DishReviewRowView.swift in Sources */,
 				C519383D5E175FB3D83293CE /* EmptyStateView.swift in Sources */,
 				27268709A29C7D17F242F674 /* ErrorStateView.swift in Sources */,
+				27C1A4B2948700E60F16B60A /* InlineErrorBanner.swift in Sources */,
 				7DD90B0E788165CBBE3C1C7D /* LoadingStateView.swift in Sources */,
 				9C3793ED1D1C6357B3EC4938 /* PhotoGridView.swift in Sources */,
 				4336B1D7223AA80A4E18E1D1 /* PlaceDetailVisualSystem.swift in Sources */,

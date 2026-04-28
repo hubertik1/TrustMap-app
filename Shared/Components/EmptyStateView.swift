@@ -19,6 +19,7 @@ struct EmptyStateView: View {
                         Circle()
                             .fill(Color(uiColor: .secondarySystemGroupedBackground))
                     )
+                    .accessibilityHidden(true)
 
                 Text(title)
                     .font(.headline)
@@ -33,6 +34,8 @@ struct EmptyStateView: View {
             .padding(.vertical, 28)
             .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .shadow(color: .black.opacity(0.04), radius: 18, y: 8)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(title). \(message)")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(24)
@@ -79,6 +82,7 @@ struct ProductEmptyStateView: View {
                     Image(systemName: systemImage)
                         .font(.system(size: 28, weight: .semibold))
                         .foregroundStyle(Color.accentColor)
+                        .accessibilityHidden(true)
                 }
 
                 VStack(spacing: 8) {
@@ -99,12 +103,14 @@ struct ProductEmptyStateView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                    .accessibilityLabel(primaryActionTitle)
 
                     if let secondaryActionTitle, let onSecondaryAction {
                         Button(secondaryActionTitle, action: onSecondaryAction)
                             .font(.subheadline.weight(.semibold))
                             .buttonStyle(.plain)
                             .foregroundStyle(Color.accentColor)
+                            .accessibilityLabel(secondaryActionTitle)
                     }
                 }
             }

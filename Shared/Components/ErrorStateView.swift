@@ -19,6 +19,7 @@ struct ErrorStateView: View {
                         Circle()
                             .fill(Color.orange.opacity(0.12))
                     )
+                    .accessibilityHidden(true)
 
                 Text("Something Went Wrong")
                     .font(.headline)
@@ -31,6 +32,7 @@ struct ErrorStateView: View {
                 if let retryAction {
                     Button(retryTitle, action: retryAction)
                         .buttonStyle(.borderedProminent)
+                        .accessibilityLabel(retryTitle)
                 }
             }
             .frame(maxWidth: 320)
