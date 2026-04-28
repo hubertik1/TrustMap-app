@@ -201,7 +201,7 @@ struct MapScreen: View {
         ) {
             if let selectedPlace = viewModel.selectedPlace {
                 NavigationStack {
-                    PlaceDetailView(container: container, place: selectedPlace)
+                    PlaceDetailView(container: container, place: selectedPlace, showsDoneButton: true)
                 }
             }
         }
@@ -380,14 +380,14 @@ struct MapScreen: View {
 
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
-                    if isValidCoordinate(place.coordinate) {
+                    if AppleMapsDirectionsOpener.canOpenDirections(to: place) {
                         directionsButton(for: place)
                     }
                     viewPlaceButton
                 }
 
                 VStack(spacing: 10) {
-                    if isValidCoordinate(place.coordinate) {
+                    if AppleMapsDirectionsOpener.canOpenDirections(to: place) {
                         directionsButton(for: place)
                     }
                     viewPlaceButton
@@ -408,7 +408,7 @@ struct MapScreen: View {
 
     private func directionsButton(for place: Place) -> some View {
         Button {
-            openDirections(to: place)
+            AppleMapsDirectionsOpener.openDirections(to: place)
         } label: {
             Label("Directions", systemImage: "arrow.triangle.turn.up.right.diamond")
                 .font(.subheadline.weight(.semibold))
@@ -429,31 +429,6 @@ struct MapScreen: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-    }
-
-    private func openDirections(to place: Place) {
-        let coordinate = place.coordinate
-        guard isValidCoordinate(coordinate) else {
-            return
-        }
-
-        let destination = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
-        destination.name = place.displayName
-        MKMapItem.openMaps(
-            with: [
-                MKMapItem.forCurrentLocation(),
-                destination
-            ],
-            launchOptions: [
-                MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
-            ]
-        )
-    }
-
-    private func isValidCoordinate(_ coordinate: CLLocationCoordinate2D) -> Bool {
-        coordinate.latitude.isFinite
-            && coordinate.longitude.isFinite
-            && CLLocationCoordinate2DIsValid(coordinate)
     }
 
     private func reviewCountText(_ count: Int) -> String {

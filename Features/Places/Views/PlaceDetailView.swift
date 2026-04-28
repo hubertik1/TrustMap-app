@@ -5,10 +5,12 @@ struct PlaceDetailView: View {
     @ObservedObject private var container: AppContainer
     @ObservedObject private var refreshCenter: AppRefreshCenter
     @StateObject private var viewModel: PlaceDetailViewModel
+    private let showsDoneButton: Bool
 
-    init(container: AppContainer, place: Place) {
+    init(container: AppContainer, place: Place, showsDoneButton: Bool = false) {
         self.container = container
         self.refreshCenter = container.refreshCenter
+        self.showsDoneButton = showsDoneButton
         _viewModel = StateObject(
             wrappedValue: PlaceDetailViewModel(
                 place: place,
@@ -39,7 +41,9 @@ struct PlaceDetailView: View {
                             contributors: viewModel.recentContributors,
                             contributorCount: viewModel.contributorCount,
                             currentUserID: viewModel.currentUserID
-                        )
+                        ) {
+                            placeHeaderActions
+                        }
 
                         if viewModel.canRenameCustomPlace {
                             Button(viewModel.customPlaceActionTitle) {
@@ -93,8 +97,12 @@ struct PlaceDetailView: View {
                         } header: {
                             PlaceDetailSectionHeaderView(
                                 title: "Dish Reviews",
-                                count: viewModel.dishReviews.isEmpty ? nil : viewModel.dishReviews.count
-                            )
+                                count: viewModel.dishReviews.isEmpty ? nil : viewModel.dishReviews.count,
+                                actionTitle: "Add",
+                                actionAccessibilityLabel: "Add Dish Review"
+                            ) {
+                                viewModel.isPresentingAddDishReview = true
+                            }
                         }
                     }
                 }
@@ -103,30 +111,6 @@ struct PlaceDetailView: View {
         }
         .navigationTitle(viewModel.place.displayName)
         .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 12) {
-                Button(viewModel.placeReviewButtonTitle) {
-                    viewModel.isPresentingAddPlaceReview = true
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
-                .frame(maxWidth: .infinity)
-
-                if viewModel.canAddDishReview {
-                    Button("Add Dish Review") {
-                        viewModel.isPresentingAddDishReview = true
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
-                    .frame(maxWidth: .infinity)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .frame(minHeight: 48)
-            .frame(maxWidth: .infinity)
-            .background(.thinMaterial)
-        }
         .sheet(isPresented: $viewModel.isPresentingAddPlaceReview, onDismiss: {
             Task { await viewModel.load() }
         }) {
@@ -178,10 +162,62 @@ struct PlaceDetailView: View {
             Text("Only the original creator of a custom map pin can change this shared name.")
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Done") { dismiss() }
+            if showsDoneButton {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
             }
         }
+    }
+
+    @ViewBuilder
+    private var placeHeaderActions: some View {
+        if AppleMapsDirectionsOpener.canOpenDirections(to: viewModel.place) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    directionsButton
+                    placeReviewButton
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    placeReviewButton
+                    directionsButton
+                }
+            }
+        } else {
+            placeReviewButton
+        }
+    }
+
+    private var directionsButton: some View {
+        Button {
+            AppleMapsDirectionsOpener.openDirections(to: viewModel.place)
+        } label: {
+            Label("Directions", systemImage: "arrow.triangle.turn.up.right.diamond")
+                .font(.subheadline.weight(.semibold))
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.regular)
+        .accessibilityLabel("Directions")
+        .accessibilityHint("Opens Apple Maps")
+    }
+
+    private var placeReviewButton: some View {
+        Button {
+            viewModel.beginPlaceReviewFlow()
+        } label: {
+            Label {
+                Text(viewModel.placeReviewButtonTitle)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+            } icon: {
+                Image(systemName: viewModel.currentUserPlaceReview == nil ? "plus.bubble" : "square.and.pencil")
+            }
+            .font(.subheadline.weight(.semibold))
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.regular)
+        .accessibilityLabel(viewModel.placeReviewButtonTitle)
     }
 
     @ViewBuilder
@@ -196,7 +232,7 @@ struct PlaceDetailView: View {
 
         if review.authorUserId == viewModel.currentUserID {
             Button {
-                viewModel.isPresentingAddPlaceReview = true
+                viewModel.beginPlaceReviewFlow()
             } label: {
                 row
             }

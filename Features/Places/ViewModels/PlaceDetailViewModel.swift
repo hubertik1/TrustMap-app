@@ -105,6 +105,10 @@ final class PlaceDetailViewModel: ObservableObject {
         editingDishReview = review
     }
 
+    func beginPlaceReviewFlow() {
+        isPresentingAddPlaceReview = true
+    }
+
     var canRenameCustomPlace: Bool {
         place.canRenameCustomDisplayName(as: currentUserID)
     }

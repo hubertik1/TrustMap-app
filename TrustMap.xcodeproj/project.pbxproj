@@ -46,6 +46,7 @@
 		50BF98FC1ED95EE6CB4E57B5 /* Friendship.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19C4727966C8C6D216A2803 /* Friendship.swift */; };
 		53EB3D4DCFB20A4FAFA025EF /* AppContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98A04D5F93CFF07E091034E /* AppContainer.swift */; };
 		54BECB14F3DFF268F31F3216 /* AppPreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3CCC3B2CEC33F8EC696D299 /* AppPreferencesStore.swift */; };
+		8F67AB0C31D74E56B92A0411 /* AppleMapsDirectionsOpener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F67AB0D31D74E56B92A0411 /* AppleMapsDirectionsOpener.swift */; };
 		558540D84353C4DBCF4F5DE8 /* DishReviewDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32DE188FC9E00A7B36EEF267 /* DishReviewDraft.swift */; };
 		5DA0C75A58C85CEE66C43077 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6058BFAEEF1A259D8DF20FF3 /* Preview Assets.xcassets */; };
 		5DDFA2AC2CC72028999D56F8 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C9261E9610DC2E23357F24 /* ProfileView.swift */; };
@@ -167,6 +168,7 @@
 		8006D162A5B7DB9E8E5B11CB /* ReviewCardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ReviewCardView.swift; path = Shared/Components/ReviewCardView.swift; sourceTree = "<group>"; };
 		84C9261E9610DC2E23357F24 /* ProfileView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProfileView.swift; path = Features/Profile/Views/ProfileView.swift; sourceTree = "<group>"; };
 		8844F64E199912AED1BF654D /* AvatarView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AvatarView.swift; path = Shared/Components/AvatarView.swift; sourceTree = "<group>"; };
+		8F67AB0D31D74E56B92A0411 /* AppleMapsDirectionsOpener.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppleMapsDirectionsOpener.swift; path = Shared/Services/AppleMapsDirectionsOpener.swift; sourceTree = "<group>"; };
 		885F445EC795FAFB07D048DC /* UserLocationAccessState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UserLocationAccessState.swift; path = Features/Map/Models/UserLocationAccessState.swift; sourceTree = "<group>"; };
 		9174EDDA90764D4E4AB3EFA5 /* TrustMap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TrustMap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		94EF79F6F3BC039E7D15D6CF /* DishReview.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DishReview.swift; path = Features/Dishes/Models/DishReview.swift; sourceTree = "<group>"; };
@@ -613,6 +615,14 @@
 			name = ViewModels;
 			sourceTree = "<group>";
 		};
+		8F67AB0E31D74E56B92A0411 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				8F67AB0D31D74E56B92A0411 /* AppleMapsDirectionsOpener.swift */,
+			);
+			name = Services;
+			sourceTree = "<group>";
+		};
 		8F4FE33E60E8F66EFD21A1C8 /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -750,6 +760,7 @@
 				7AB707A6F11995A9DD0A9864 /* Components */,
 				66E8E780A8493DFBD4C62076 /* Extensions */,
 				B48E3CC3BBF6F720E254D7BD /* Models */,
+				8F67AB0E31D74E56B92A0411 /* Services */,
 				0E8900FB96F64C1929C3C7D6 /* Preview */,
 			);
 			name = Shared;
@@ -1005,6 +1016,7 @@
 				BE813E46BFF8BF3278FD728C /* RemotePhotoView.swift in Sources */,
 				4BB39B6BDD8B4EC7B158B5D7 /* ReviewCardView.swift in Sources */,
 				D3EF27A0F15CE794BD7DD485 /* MKMapItem+Address.swift in Sources */,
+				8F67AB0C31D74E56B92A0411 /* AppleMapsDirectionsOpener.swift in Sources */,
 				DE69B7B60A9B5184229DA3BE /* ReviewSourceFilterMode.swift in Sources */,
 				EE21E92A18A2C61960C0B441 /* PreviewAppFactory.swift in Sources */,
 				2E862FBB1A319D894220BAE1 /* AddHubViewModel.swift in Sources */,

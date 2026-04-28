@@ -40,24 +40,52 @@ enum PlaceDetailVisualSystem {
 struct PlaceDetailSectionHeaderView: View {
     let title: String
     var count: Int? = nil
+    var actionTitle: String? = nil
+    var actionAccessibilityLabel: String? = nil
+    var action: (() -> Void)? = nil
 
     var body: some View {
-        HStack {
-            Text(title)
-                .font(PlaceDetailVisualSystem.Typography.sectionTitle)
-                .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(PlaceDetailVisualSystem.Typography.sectionTitle)
+                    .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
+
+                if let count {
+                    Text("\(count)")
+                        .font(PlaceDetailVisualSystem.Typography.sectionTitle)
+                        .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
+                        .monospacedDigit()
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityLabel)
 
             Spacer()
 
-            if let count {
-                Text("\(count)")
-                    .font(PlaceDetailVisualSystem.Typography.sectionTitle)
-                    .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
-                    .monospacedDigit()
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule()
+                            .fill(Color.accentColor.opacity(0.12))
+                    )
+                    .accessibilityLabel(actionAccessibilityLabel ?? actionTitle)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .textCase(nil)
+    }
+
+    private var accessibilityLabel: String {
+        guard let count else {
+            return title
+        }
+
+        return "\(title), \(count)"
     }
 }
 

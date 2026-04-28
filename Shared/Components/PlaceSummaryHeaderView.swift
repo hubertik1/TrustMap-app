@@ -1,12 +1,34 @@
 import SwiftUI
 
-struct PlaceSummaryHeaderView: View {
+struct PlaceSummaryHeaderView<Accessory: View>: View {
     let place: Place
     let averageRating: Double?
     let categoryNames: [String]
     var contributors: [UserSummary] = []
     var contributorCount = 0
     var currentUserID: UUID? = nil
+    private let showsAccessory: Bool
+    private let accessory: Accessory
+
+    init(
+        place: Place,
+        averageRating: Double?,
+        categoryNames: [String],
+        contributors: [UserSummary] = [],
+        contributorCount: Int = 0,
+        currentUserID: UUID? = nil,
+        showsAccessory: Bool = true,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
+        self.place = place
+        self.averageRating = averageRating
+        self.categoryNames = categoryNames
+        self.contributors = contributors
+        self.contributorCount = contributorCount
+        self.currentUserID = currentUserID
+        self.showsAccessory = showsAccessory
+        self.accessory = accessory()
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -50,8 +72,36 @@ struct PlaceSummaryHeaderView: View {
                         .padding(.top, 2)
                 }
             }
+
+            if showsAccessory {
+                accessory
+                    .padding(.top, 6)
+            }
         }
         .padding(.vertical, 4)
+    }
+}
+
+extension PlaceSummaryHeaderView where Accessory == EmptyView {
+    init(
+        place: Place,
+        averageRating: Double?,
+        categoryNames: [String],
+        contributors: [UserSummary] = [],
+        contributorCount: Int = 0,
+        currentUserID: UUID? = nil
+    ) {
+        self.init(
+            place: place,
+            averageRating: averageRating,
+            categoryNames: categoryNames,
+            contributors: contributors,
+            contributorCount: contributorCount,
+            currentUserID: currentUserID,
+            showsAccessory: false
+        ) {
+            EmptyView()
+        }
     }
 }
 
