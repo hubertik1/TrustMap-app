@@ -65,7 +65,7 @@ struct AddHubView: View {
                     } else {
                         RecentPlacesCard(
                             places: viewModel.recentPlaces,
-                            placeReviewActionTitle: viewModel.placeReviewActionTitle(for:),
+                            hasPlaceReview: { viewModel.placeReview(for: $0) != nil },
                             supportsDishReview: viewModel.isEligibleDishPlace(_:),
                             onPlaceReview: { place in
                                 activeFlow = .placeReview
@@ -99,10 +99,12 @@ struct AddHubView: View {
             PlaceSearchSheet(
                 container: container,
                 title: activeFlow?.title ?? "Add Place Review",
-                requiresRestaurantsCategory: false
+                requiresRestaurantsCategory: false,
+                suggestedPlaces: viewModel.recentPlaces,
+                suggestedSectionTitle: "Recent Places"
             ) { place in
                 selectedPlace = place
-                selectedPlaceReview = nil
+                selectedPlaceReview = viewModel.placeReview(for: place)
             }
         }
         .sheet(
@@ -238,7 +240,7 @@ private struct AddHubActionCard: View {
 
 private struct RecentPlacesCard: View {
     let places: [Place]
-    let placeReviewActionTitle: (Place) -> String
+    let hasPlaceReview: (Place) -> Bool
     let supportsDishReview: (Place) -> Bool
     let onPlaceReview: (Place) -> Void
     let onDishReview: (Place) -> Void
@@ -246,36 +248,15 @@ private struct RecentPlacesCard: View {
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(places.enumerated()), id: \.element.id) { index, place in
-                Menu {
-                    Button(placeReviewActionTitle(place)) {
-                        onPlaceReview(place)
-                    }
+                RecentPlaceActionRow(
+                    place: place,
+                    hasExistingPlaceReview: hasPlaceReview(place),
+                    supportsDishReview: supportsDishReview(place),
+                    onPlaceReview: { onPlaceReview(place) },
+                    onDishReview: { onDishReview(place) }
+                )
 
-                    if supportsDishReview(place) {
-                        Button("Add Dish Review") {
-                            onDishReview(place)
-                        }
-                    }
-                } label: {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(place.displayName)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-
-                        if let secondaryDisplayText = place.secondaryDisplayText {
-                            Text(secondaryDisplayText)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 16)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-
-                if index < places.index(before: places.endIndex) {
+                if index < places.count - 1 {
                     Divider()
                         .overlay(Color(uiColor: .separator).opacity(0.25))
                         .padding(.horizontal, 16)
@@ -290,6 +271,97 @@ private struct RecentPlacesCard: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(Color(uiColor: .separator).opacity(0.12), lineWidth: 1)
         )
+    }
+}
+
+private struct RecentPlaceActionRow: View {
+    let place: Place
+    let hasExistingPlaceReview: Bool
+    let supportsDishReview: Bool
+    let onPlaceReview: () -> Void
+    let onDishReview: () -> Void
+
+    private var placeReviewTitle: String {
+        hasExistingPlaceReview ? "Edit Review" : "Add Review"
+    }
+
+    private var placeReviewAccessibilityLabel: String {
+        hasExistingPlaceReview ? "Edit place review" : "Add place review"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(place.displayName)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+
+                if let secondaryDisplayText = place.secondaryDisplayText {
+                    Text(secondaryDisplayText)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    placeReviewButton
+                    dishReviewButton
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    placeReviewButton
+                    dishReviewButton
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+    }
+
+    private var placeReviewButton: some View {
+        Button(action: onPlaceReview) {
+            Text(placeReviewTitle)
+        }
+        .buttonStyle(RecentPlaceQuickActionButtonStyle(fillOpacity: 0.13))
+        .accessibilityLabel(Text(placeReviewAccessibilityLabel))
+    }
+
+    @ViewBuilder
+    private var dishReviewButton: some View {
+        if supportsDishReview {
+            Button(action: onDishReview) {
+                Text("+ Dish")
+            }
+            .buttonStyle(RecentPlaceQuickActionButtonStyle(fillOpacity: 0.09))
+            .accessibilityLabel(Text("Add dish review"))
+        }
+    }
+}
+
+private struct RecentPlaceQuickActionButtonStyle: ButtonStyle {
+    let fillOpacity: Double
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.footnote.weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .foregroundStyle(Color.accentColor)
+            .padding(.horizontal, 14)
+            .frame(height: 36)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.accentColor.opacity(configuration.isPressed ? fillOpacity * 1.35 : fillOpacity))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(Color.accentColor.opacity(0.18), lineWidth: 1)
+            )
+            .opacity(configuration.isPressed ? 0.78 : 1)
     }
 }
 
@@ -325,12 +397,10 @@ private struct DishReviewPlacePickerSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    guidanceState
-
                     if places.isEmpty {
-                        noRestaurantsView
+                        rateFirstState
                     } else {
-                        selectionSection
+                        ratedRestaurantSelectionState
                     }
                 }
                 .padding(.horizontal, 20)
@@ -357,7 +427,7 @@ private struct DishReviewPlacePickerSheet: View {
         dismiss()
     }
 
-    private var guidanceState: some View {
+    private var rateFirstState: some View {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
@@ -374,7 +444,7 @@ private struct DishReviewPlacePickerSheet: View {
                     .font(.title3.weight(.semibold))
                     .multilineTextAlignment(.center)
 
-                Text("To add a dish review, first choose a place and rate it.")
+                Text("To add a dish review, first choose a restaurant and rate it.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -386,6 +456,7 @@ private struct DishReviewPlacePickerSheet: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.regular)
+            .accessibilityLabel(Text("Add place review"))
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
@@ -400,38 +471,19 @@ private struct DishReviewPlacePickerSheet: View {
         )
     }
 
-    private var noRestaurantsView: some View {
-        VStack(spacing: 8) {
-            Text("No rated restaurants yet")
-                .font(.headline)
-
-            Text("Only places you've already rated in the \(TrustMapCategory.restaurantsName) category can be used for a dish review.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 28)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemBackground))
-        )
-    }
-
     private func searchableText(for place: Place) -> String {
         [place.displayName, place.address]
             .joined(separator: " ")
             .normalizedSearchText
     }
 
-    private var selectionSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+    private var ratedRestaurantSelectionState: some View {
+        VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Already rated a place?")
-                    .font(.headline)
+                Text("Choose a rated restaurant")
+                    .font(.title3.weight(.semibold))
 
-                Text("Choose one of your rated restaurants to continue with a dish review.")
+                Text("Pick a place you've already reviewed to add a dish.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -508,11 +560,30 @@ private struct DishReviewPlacePickerSheet: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Text(accessibilityLabel(for: place)))
                     }
                 }
             }
+
+            Button {
+                onAddPlaceReview()
+                dismiss()
+            } label: {
+                Text("+ Rate another place")
+            }
+            .buttonStyle(RecentPlaceQuickActionButtonStyle(fillOpacity: 0.09))
+            .accessibilityLabel(Text("Rate another place"))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func accessibilityLabel(for place: Place) -> String {
+        if let secondaryDisplayText = place.secondaryDisplayText {
+            return "\(place.displayName), \(secondaryDisplayText)"
+        }
+
+        return place.displayName
     }
 }
 

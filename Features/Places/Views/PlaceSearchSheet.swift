@@ -7,20 +7,34 @@ struct PlaceSearchSheet: View {
     @FocusState private var isSearchFieldFocused: Bool
     let title: String
     let requiresRestaurantsCategory: Bool
+    let suggestedPlaces: [Place]
+    let suggestedSectionTitle: String
     let onPlaceSelected: (Place) -> Void
 
     private var hasSearchQuery: Bool {
         !viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    private var eligibleSuggestedPlaces: [Place] {
+        guard requiresRestaurantsCategory else {
+            return suggestedPlaces
+        }
+
+        return suggestedPlaces.filter(\.supportsDishReviews)
+    }
+
     init(
         container: AppContainer,
         title: String,
         requiresRestaurantsCategory: Bool = false,
+        suggestedPlaces: [Place] = [],
+        suggestedSectionTitle: String = "Recent Places",
         onPlaceSelected: @escaping (Place) -> Void
     ) {
         self.title = title
         self.requiresRestaurantsCategory = requiresRestaurantsCategory
+        self.suggestedPlaces = suggestedPlaces
+        self.suggestedSectionTitle = suggestedSectionTitle
         self.onPlaceSelected = onPlaceSelected
         _viewModel = StateObject(
             wrappedValue: PlaceSearchViewModel(
@@ -110,7 +124,11 @@ struct PlaceSearchSheet: View {
            !hasSearchQuery {
             inlineErrorView(message: errorMessage)
         } else if !hasSearchQuery {
-            helperState
+            if eligibleSuggestedPlaces.isEmpty {
+                helperState
+            } else {
+                suggestedPlacesView
+            }
         } else if viewModel.results.isEmpty {
             searchStatusState
         } else {
@@ -141,6 +159,35 @@ struct PlaceSearchSheet: View {
         }
         .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
         .padding(.horizontal, 28)
+    }
+
+    private var suggestedPlacesView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(suggestedSectionTitle)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+
+                LazyVStack(spacing: 8) {
+                    ForEach(eligibleSuggestedPlaces) { place in
+                        Button {
+                            selectSuggestedPlace(place)
+                        } label: {
+                            placeRow(
+                                title: place.displayName,
+                                subtitle: place.secondaryDisplayText
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Text(accessibilityLabel(for: place)))
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, 12)
+        }
+        .scrollIndicators(.hidden)
     }
 
     @ViewBuilder
@@ -194,26 +241,55 @@ struct PlaceSearchSheet: View {
                     Button {
                         selectResult(result)
                     } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(result.name)
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-
-                            Text(result.subtitle)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        placeRow(
+                            title: result.name,
+                            subtitle: result.subtitle
+                        )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(accessibilityLabel(title: result.name, subtitle: result.subtitle)))
                 }
             }
-            .padding(.horizontal)
             .padding(.bottom, 12)
         }
         .scrollIndicators(.hidden)
+    }
+
+    private func placeRow(title: String, subtitle: String?) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+
+                if let subtitle,
+                   !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+
+            Spacer(minLength: 12)
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemBackground).opacity(0.7))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.primary.opacity(0.04), lineWidth: 1)
+        )
     }
 
     private func selectResult(_ result: PlaceSearchResult) {
@@ -230,6 +306,29 @@ struct PlaceSearchSheet: View {
                 viewModel.errorMessage = AppError.wrap(error).errorDescription
             }
         }
+    }
+
+    private func selectSuggestedPlace(_ place: Place) {
+        if requiresRestaurantsCategory && !place.supportsDishReviews {
+            selectionErrorMessage = "Dish reviews are available only for places in the \(TrustMapCategory.restaurantsName) category."
+            return
+        }
+
+        onPlaceSelected(place)
+        dismiss()
+    }
+
+    private func accessibilityLabel(for place: Place) -> String {
+        accessibilityLabel(title: place.displayName, subtitle: place.secondaryDisplayText)
+    }
+
+    private func accessibilityLabel(title: String, subtitle: String?) -> String {
+        guard let subtitle,
+              !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return title
+        }
+
+        return "\(title), \(subtitle)"
     }
 }
 
