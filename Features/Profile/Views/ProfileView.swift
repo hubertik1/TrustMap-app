@@ -87,6 +87,27 @@ struct ProfileView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
+                    ProfileSectionHeader(title: "Network")
+
+                    ProfileCardGroup {
+                        NavigationLink {
+                            FriendsView(container: container)
+                        } label: {
+                            ProfileCardRow(
+                                icon: "person.2.fill",
+                                iconColor: .cyan,
+                                title: "Friends",
+                                subtitle: viewModel.friendsSummary.secondaryText,
+                                value: viewModel.friendsSummary.friendCount.formatted()
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(friendsRowAccessibilityLabel)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
                     ProfileSectionHeader(title: "Your activity")
 
                     ProfileCardGroup {
@@ -179,6 +200,10 @@ struct ProfileView: View {
         viewModel.prepareProfileEditor()
         isPresentingEditProfile = true
     }
+
+    private var friendsRowAccessibilityLabel: String {
+        "Friends, \(viewModel.friendsSummary.friendCount.formatted()), \(viewModel.friendsSummary.secondaryText)"
+    }
 }
 
 private struct ProfileSectionHeader: View {
@@ -216,7 +241,16 @@ private struct ProfileCardRow: View {
     let icon: String
     let iconColor: Color
     let title: String
+    var subtitle: String?
     var value: String?
+
+    init(icon: String, iconColor: Color, title: String, subtitle: String? = nil, value: String? = nil) {
+        self.icon = icon
+        self.iconColor = iconColor
+        self.title = title
+        self.subtitle = subtitle
+        self.value = value
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -227,11 +261,21 @@ private struct ProfileCardRow: View {
                 .background(iconColor.opacity(0.075), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .accessibilityHidden(true)
 
-            Text(title)
-                .font(.body.weight(.medium))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.86)
+                }
+            }
 
             Spacer(minLength: 10)
 
