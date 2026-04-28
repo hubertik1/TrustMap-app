@@ -132,7 +132,11 @@ struct FriendsView: View {
             }
         }
         .navigationTitle("Friends")
-        .searchable(text: $viewModel.searchText, prompt: "Search usernames")
+        .searchable(
+            text: $viewModel.searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "Search usernames"
+        )
         .onChange(of: viewModel.searchText) { _, _ in
             viewModel.handleSearchTextChange()
         }
