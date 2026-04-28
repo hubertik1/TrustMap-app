@@ -44,10 +44,7 @@ struct ReviewCardView: View {
                 PhotoGridView(
                     assets: photos,
                     allowsFullscreenPresentation: true,
-                    thumbnailSize: CGSize(
-                        width: PlaceDetailVisualSystem.Metrics.leadingVisualSize,
-                        height: PlaceDetailVisualSystem.Metrics.leadingVisualSize
-                    ),
+                    thumbnailSize: PlaceDetailVisualSystem.Metrics.inlinePhotoThumbnailSize,
                     cornerRadius: PlaceDetailVisualSystem.Metrics.photoCornerRadius,
                     spacing: PlaceDetailVisualSystem.Metrics.photoSpacing
                 )

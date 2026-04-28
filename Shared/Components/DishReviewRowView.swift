@@ -42,8 +42,9 @@ struct DishReviewRowView: View {
             if !trailingPhotos.isEmpty {
                 PhotoGridView(
                     assets: trailingPhotos,
+                    presentationAssets: photos,
                     allowsFullscreenPresentation: true,
-                    thumbnailSize: PlaceDetailVisualSystem.Metrics.photoThumbnailSize,
+                    thumbnailSize: PlaceDetailVisualSystem.Metrics.inlinePhotoThumbnailSize,
                     cornerRadius: PlaceDetailVisualSystem.Metrics.photoCornerRadius,
                     spacing: PlaceDetailVisualSystem.Metrics.photoSpacing
                 )
@@ -56,6 +57,7 @@ struct DishReviewRowView: View {
         if let primaryPhoto = photos.first {
             PhotoGridView(
                 assets: [primaryPhoto],
+                presentationAssets: photos,
                 allowsFullscreenPresentation: true,
                 thumbnailSize: CGSize(
                     width: PlaceDetailVisualSystem.Metrics.leadingVisualSize,

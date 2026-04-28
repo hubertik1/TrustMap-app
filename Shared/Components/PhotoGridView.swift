@@ -8,6 +8,7 @@ private struct PhotoGridSelectedPhoto: Identifiable {
 
 struct PhotoGridView: View {
     let assets: [PhotoAsset]
+    var presentationAssets: [PhotoAsset]?
     var allowsFullscreenPresentation = false
     var thumbnailSize = CGSize(width: 96, height: 96)
     var cornerRadius: CGFloat = 12
@@ -19,23 +20,31 @@ struct PhotoGridView: View {
         if !assets.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: spacing) {
-                    ForEach(assets) { asset in
-                        photoThumbnail(for: asset)
+                    ForEach(assets.indices, id: \.self) { index in
+                        photoThumbnail(for: assets[index], at: index)
                     }
                 }
                 .padding(.vertical, 4)
             }
             .fullScreenCover(item: $selectedPhoto) { selectedPhoto in
                 PhotoLightboxView(
-                    photos: assets,
+                    photos: lightboxAssets,
                     initialPhotoID: selectedPhoto.id
                 )
             }
         }
     }
 
+    private var lightboxAssets: [PhotoAsset] {
+        guard let presentationAssets, !presentationAssets.isEmpty else {
+            return assets
+        }
+
+        return presentationAssets
+    }
+
     @ViewBuilder
-    private func photoThumbnail(for asset: PhotoAsset) -> some View {
+    private func photoThumbnail(for asset: PhotoAsset, at index: Int) -> some View {
         if allowsFullscreenPresentation {
             Button {
                 selectedPhoto = PhotoGridSelectedPhoto(asset: asset)
@@ -49,6 +58,8 @@ struct PhotoGridView: View {
                     .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             }
             .buttonStyle(.plain)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityLabel(forPhotoAt: index))
         } else {
             RemotePhotoView(
                 asset: asset,
@@ -57,7 +68,17 @@ struct PhotoGridView: View {
             )
                 .frame(width: thumbnailSize.width, height: thumbnailSize.height)
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(accessibilityLabel(forPhotoAt: index))
         }
+    }
+
+    private func accessibilityLabel(forPhotoAt index: Int) -> String {
+        guard assets.count > 1 else {
+            return "Review photo"
+        }
+
+        return "Review photo, \(index + 1) of \(assets.count)"
     }
 }
 
@@ -69,35 +90,83 @@ private struct PhotoLightboxView: View {
 
     init(photos: [PhotoAsset], initialPhotoID: UUID) {
         self.photos = photos
-        _selectedPhotoID = State(initialValue: initialPhotoID)
+
+        let resolvedInitialID = photos.contains(where: { $0.id == initialPhotoID })
+            ? initialPhotoID
+            : photos.first?.id ?? initialPhotoID
+        _selectedPhotoID = State(initialValue: resolvedInitialID)
     }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .top) {
             Color.black.ignoresSafeArea()
 
-            TabView(selection: $selectedPhotoID) {
-                ForEach(photos) { photo in
-                    RemotePhotoView(
-                        asset: photo,
-                        preferredVariant: .medium,
-                        contentMode: .fit,
-                        targetDisplaySize: UIScreen.main.bounds.size
-                    )
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding()
-                        .background(Color.black)
-                        .tag(photo.id)
+            if !photos.isEmpty {
+                GeometryReader { proxy in
+                    TabView(selection: $selectedPhotoID) {
+                        ForEach(photos) { photo in
+                            RemotePhotoView(
+                                asset: photo,
+                                preferredVariant: .medium,
+                                contentMode: .fit,
+                                targetDisplaySize: proxy.size
+                            )
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 56)
+                            .padding(.bottom, photos.count > 1 ? 44 : 16)
+                            .background(Color.black)
+                            .tag(photo.id)
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .automatic : .never))
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .automatic : .never))
 
-            Button("Done") {
-                dismiss()
+            topBar
+        }
+    }
+
+    private var selectedIndex: Int {
+        photos.firstIndex(where: { $0.id == selectedPhotoID }) ?? 0
+    }
+
+    private var topBar: some View {
+        ZStack {
+            if photos.count > 1 {
+                Text("\(selectedIndex + 1) of \(photos.count)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.92))
+                    .monospacedDigit()
+                    .accessibilityLabel("Photo \(selectedIndex + 1) of \(photos.count)")
             }
-            .padding(.top, 16)
-            .padding(.trailing, 16)
-            .foregroundStyle(.white)
+
+            HStack {
+                Spacer()
+
+                Button("Done") {
+                    dismiss()
+                }
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.white)
+                .buttonStyle(.plain)
+                .accessibilityLabel("Done")
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.top, 14)
+        .padding(.bottom, 22)
+        .background {
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.72),
+                    Color.black.opacity(0.0)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea(edges: .top)
         }
     }
 }

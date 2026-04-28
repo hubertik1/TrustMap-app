@@ -28,6 +28,7 @@ enum PlaceDetailVisualSystem {
         static let contentSpacing: CGFloat = 6
         static let textSpacing: CGFloat = 2
         static let leadingVisualSize: CGFloat = 52
+        static let inlinePhotoThumbnailSize = CGSize(width: 72, height: 72)
         static let photoThumbnailSize = CGSize(width: 88, height: 88)
         static let photoCornerRadius: CGFloat = 14
         static let photoSpacing: CGFloat = 10
