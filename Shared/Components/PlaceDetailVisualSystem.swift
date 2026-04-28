@@ -34,50 +34,95 @@ enum PlaceDetailVisualSystem {
         static let ratingAccessorySpacing: CGFloat = 8
         static let chevronWidth: CGFloat = 12
         static let trailingAccessoryMinWidth: CGFloat = 52
+        static let headerActionHeight: CGFloat = 44
+        static let headerActionHorizontalPadding: CGFloat = 12
+        static let headerActionIconSize: CGFloat = 15
+        static let sectionHeaderMinHeight: CGFloat = 36
+        static let sectionHeaderTitleVerticalOffset: CGFloat = 6
+        static let sectionActionHeight: CGFloat = 30
+        static let sectionActionHorizontalPadding: CGFloat = 12
     }
 }
 
 struct PlaceDetailSectionHeaderView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let title: String
     var count: Int? = nil
     var actionTitle: String? = nil
     var actionAccessibilityLabel: String? = nil
+    var titleVerticalOffset: CGFloat = 0
     var action: (() -> Void)? = nil
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            HStack(spacing: 8) {
-                Text(title)
-                    .font(PlaceDetailVisualSystem.Typography.sectionTitle)
-                    .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
+        ViewThatFits(in: .horizontal) {
+            horizontalHeader
 
-                if let count {
-                    Text("\(count)")
-                        .font(PlaceDetailVisualSystem.Typography.sectionTitle)
-                        .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
-                        .monospacedDigit()
+            if action != nil {
+                VStack(alignment: .leading, spacing: 8) {
+                    titleCountLabel
+                    actionButton
                 }
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(accessibilityLabel)
-
-            Spacer()
-
-            if let actionTitle, let action {
-                Button(actionTitle, action: action)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule()
-                            .fill(Color.accentColor.opacity(0.12))
-                    )
-                    .accessibilityLabel(actionAccessibilityLabel ?? actionTitle)
+            } else {
+                titleCountLabel
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .offset(y: titleVerticalOffset)
         .textCase(nil)
+    }
+
+    private var horizontalHeader: some View {
+        HStack(alignment: .center, spacing: 8) {
+            titleCountLabel
+
+            Spacer(minLength: 12)
+
+            actionButton
+        }
+        .frame(minHeight: PlaceDetailVisualSystem.Metrics.sectionHeaderMinHeight, alignment: .center)
+    }
+
+    private var titleCountLabel: some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(PlaceDetailVisualSystem.Typography.sectionTitle)
+                .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
+
+            if let count {
+                Text("\(count)")
+                    .font(PlaceDetailVisualSystem.Typography.sectionTitle)
+                    .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
+                    .monospacedDigit()
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    @ViewBuilder
+    private var actionButton: some View {
+        if let actionTitle, let action {
+            Button(action: action) {
+                Text(actionTitle)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
+                    .padding(.horizontal, PlaceDetailVisualSystem.Metrics.sectionActionHorizontalPadding)
+                    .frame(minHeight: PlaceDetailVisualSystem.Metrics.sectionActionHeight)
+                    .background(
+                        Capsule()
+                            .fill(Color.accentColor.opacity(actionBackgroundOpacity))
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.accentColor.opacity(actionBorderOpacity), lineWidth: 1)
+                            )
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(actionAccessibilityLabel ?? actionTitle)
+        }
     }
 
     private var accessibilityLabel: String {
@@ -86,6 +131,14 @@ struct PlaceDetailSectionHeaderView: View {
         }
 
         return "\(title), \(count)"
+    }
+
+    private var actionBackgroundOpacity: Double {
+        colorScheme == .dark ? 0.24 : 0.10
+    }
+
+    private var actionBorderOpacity: Double {
+        colorScheme == .dark ? 0.38 : 0
     }
 }
 

@@ -61,19 +61,20 @@ struct PlaceDetailView: View {
                                 message: "Visible place reviews for this location will appear here.",
                                 systemImage: "text.bubble"
                             )
-                            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
                             .listRowBackground(Color.clear)
                         } else {
                             ForEach(viewModel.placeReviews, id: \.id) { review in
                                 placeReviewRow(for: review)
-                                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
                                     .listRowBackground(Color.clear)
                             }
                         }
                     } header: {
                         PlaceDetailSectionHeaderView(
                             title: "Place Reviews",
-                            count: viewModel.placeReviews.isEmpty ? nil : viewModel.placeReviews.count
+                            count: viewModel.placeReviews.isEmpty ? nil : viewModel.placeReviews.count,
+                            titleVerticalOffset: PlaceDetailVisualSystem.Metrics.sectionHeaderTitleVerticalOffset
                         )
                     }
 
@@ -85,12 +86,12 @@ struct PlaceDetailView: View {
                                     message: "Dish reviews added for this place will appear here.",
                                     systemImage: "fork.knife"
                                 )
-                                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
                                 .listRowBackground(Color.clear)
                             } else {
                                 ForEach(viewModel.dishReviews, id: \.id) { review in
                                     dishReviewRow(for: review)
-                                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
                                         .listRowBackground(Color.clear)
                                 }
                             }
@@ -98,8 +99,8 @@ struct PlaceDetailView: View {
                             PlaceDetailSectionHeaderView(
                                 title: "Dish Reviews",
                                 count: viewModel.dishReviews.isEmpty ? nil : viewModel.dishReviews.count,
-                                actionTitle: "Add",
-                                actionAccessibilityLabel: "Add Dish Review"
+                                actionTitle: "+ Add Dish",
+                                actionAccessibilityLabel: "Add dish review"
                             ) {
                                 viewModel.isPresentingAddDishReview = true
                             }
@@ -176,16 +177,21 @@ struct PlaceDetailView: View {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
                     directionsButton
+                        .frame(maxWidth: .infinity)
                     placeReviewButton
+                        .frame(maxWidth: .infinity)
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
                     placeReviewButton
+                        .frame(maxWidth: .infinity)
                     directionsButton
+                        .frame(maxWidth: .infinity)
                 }
             }
         } else {
             placeReviewButton
+                .frame(maxWidth: .infinity)
         }
     }
 
@@ -193,11 +199,26 @@ struct PlaceDetailView: View {
         Button {
             AppleMapsDirectionsOpener.openDirections(to: viewModel.place)
         } label: {
-            Label("Directions", systemImage: "arrow.triangle.turn.up.right.diamond")
-                .font(.subheadline.weight(.semibold))
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.triangle.turn.up.right.diamond")
+                    .font(.system(size: PlaceDetailVisualSystem.Metrics.headerActionIconSize, weight: .semibold))
+
+                Text("Directions")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Color.accentColor)
+            .padding(.horizontal, PlaceDetailVisualSystem.Metrics.headerActionHorizontalPadding)
+            .frame(maxWidth: .infinity)
+            .frame(height: PlaceDetailVisualSystem.Metrics.headerActionHeight)
+            .background(
+                Capsule()
+                    .fill(Color(uiColor: .tertiarySystemFill))
+            )
+            .contentShape(Capsule())
         }
-        .buttonStyle(.bordered)
-        .controlSize(.regular)
+        .buttonStyle(.plain)
         .accessibilityLabel("Directions")
         .accessibilityHint("Opens Apple Maps")
     }
@@ -206,18 +227,40 @@ struct PlaceDetailView: View {
         Button {
             viewModel.beginPlaceReviewFlow()
         } label: {
-            Label {
-                Text(viewModel.placeReviewButtonTitle)
-                    .lineLimit(2)
+            HStack(spacing: 6) {
+                Image(systemName: placeReviewButtonSystemImage)
+                    .font(.system(size: PlaceDetailVisualSystem.Metrics.headerActionIconSize, weight: .semibold))
+
+                Text(compactPlaceReviewButtonTitle)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                     .multilineTextAlignment(.center)
-            } icon: {
-                Image(systemName: viewModel.currentUserPlaceReview == nil ? "plus.bubble" : "square.and.pencil")
             }
-            .font(.subheadline.weight(.semibold))
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Color.white)
+            .padding(.horizontal, PlaceDetailVisualSystem.Metrics.headerActionHorizontalPadding)
+            .frame(maxWidth: .infinity)
+            .frame(height: PlaceDetailVisualSystem.Metrics.headerActionHeight)
+            .background(
+                Capsule()
+                    .fill(Color.accentColor)
+            )
+            .contentShape(Capsule())
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.regular)
-        .accessibilityLabel(viewModel.placeReviewButtonTitle)
+        .buttonStyle(.plain)
+        .accessibilityLabel(placeReviewButtonAccessibilityLabel)
+    }
+
+    private var compactPlaceReviewButtonTitle: String {
+        viewModel.currentUserPlaceReview == nil ? "Add Review" : "Edit Review"
+    }
+
+    private var placeReviewButtonSystemImage: String {
+        viewModel.currentUserPlaceReview == nil ? "plus.bubble" : "mappin.and.ellipse"
+    }
+
+    private var placeReviewButtonAccessibilityLabel: String {
+        viewModel.currentUserPlaceReview == nil ? "Add place review" : "Edit place review"
     }
 
     @ViewBuilder
