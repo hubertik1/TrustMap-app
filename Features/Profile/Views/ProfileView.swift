@@ -1,5 +1,6 @@
 import PhotosUI
 import SwiftUI
+import UIKit
 
 struct ProfileView: View {
     @ObservedObject private var container: AppContainer
@@ -565,6 +566,8 @@ private struct ProfileEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: ProfileViewModel
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var pendingAvatarCrop: PendingAvatarCrop?
+    @State private var isPreparingCroppedAvatar = false
     @State private var isShowingDiscardConfirmation = false
 
     var body: some View {
@@ -594,7 +597,20 @@ private struct ProfileEditorSheet: View {
         .navigationTitle("Edit Profile")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: selectedPhotoItem) {
-            await prepareSelectedPhoto(from: selectedPhotoItem)
+            await loadPendingAvatarCrop(from: selectedPhotoItem)
+        }
+        .fullScreenCover(item: $pendingAvatarCrop, onDismiss: avatarCropperDidDismiss) { pendingCrop in
+            ProfilePhotoCropperView(
+                image: pendingCrop.image,
+                isPreparingPhoto: isPreparingCroppedAvatar,
+                errorMessage: viewModel.errorMessage,
+                onCancel: cancelAvatarCropping,
+                onUsePhoto: prepareCroppedAvatarPhoto,
+                onCropError: showAvatarCropPreparationError,
+                onDismissError: { viewModel.errorMessage = nil }
+            )
+            .interactiveDismissDisabled(isPreparingCroppedAvatar)
+            .id(pendingCrop.id)
         }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -640,7 +656,7 @@ private struct ProfileEditorSheet: View {
         .alert(
             "Unable to Save Profile",
             isPresented: Binding(
-                get: { viewModel.errorMessage != nil },
+                get: { viewModel.errorMessage != nil && pendingAvatarCrop == nil },
                 set: { if !$0 { viewModel.errorMessage = nil } }
             )
         ) {
@@ -746,6 +762,8 @@ private struct ProfileEditorSheet: View {
                 if hasEditedPhoto {
                     Button("Remove Photo", role: .destructive) {
                         selectedPhotoItem = nil
+                        pendingAvatarCrop = nil
+                        isPreparingCroppedAvatar = false
                         viewModel.removeAvatar()
                     }
                     .font(.subheadline.weight(.semibold))
@@ -813,25 +831,93 @@ private struct ProfileEditorSheet: View {
         }
     }
 
-    private func prepareSelectedPhoto(from item: PhotosPickerItem?) async {
+    private func loadPendingAvatarCrop(from item: PhotosPickerItem?) async {
         guard let item else {
             return
         }
 
+        viewModel.errorMessage = nil
+
         do {
             guard let rawData = try await item.loadTransferable(type: Data.self) else {
-                throw AppError.validationFailure("Select a supported image before uploading.")
+                throw AppError.validationFailure("Couldn't load the selected photo. Try another image.")
             }
 
-            let preparedPhoto = try await PhotoUploadPreparation.prepareSelectedPhoto(from: rawData)
-            viewModel.setSelectedAvatarPhoto(preparedPhoto)
+            guard let image = ProfilePhotoCropperImageLoader.image(from: rawData) else {
+                throw AppError.validationFailure("Couldn't load the selected photo. Try another image.")
+            }
+
+            pendingAvatarCrop = PendingAvatarCrop(image: image)
         } catch is CancellationError {
             return
         } catch {
-            viewModel.errorMessage = AppError.wrap(error).errorDescription
+            viewModel.errorMessage = "Couldn't load the selected photo. Try another image."
             selectedPhotoItem = nil
+            pendingAvatarCrop = nil
         }
     }
+
+    private func prepareCroppedAvatarPhoto(_ croppedImage: UIImage) {
+        guard !isPreparingCroppedAvatar else {
+            return
+        }
+
+        guard let croppedData = croppedImage.jpegData(compressionQuality: 0.9) else {
+            showAvatarCropPreparationError()
+            return
+        }
+
+        isPreparingCroppedAvatar = true
+        viewModel.errorMessage = nil
+
+        Task {
+            do {
+                let preparedPhoto = try await PhotoUploadPreparation.prepareSelectedPhoto(from: croppedData)
+                viewModel.setSelectedAvatarPhoto(preparedPhoto)
+                finishAvatarCropping()
+            } catch is CancellationError {
+                isPreparingCroppedAvatar = false
+            } catch {
+                isPreparingCroppedAvatar = false
+                showAvatarCropPreparationError()
+            }
+        }
+    }
+
+    private func cancelAvatarCropping() {
+        guard !isPreparingCroppedAvatar else {
+            return
+        }
+
+        pendingAvatarCrop = nil
+        selectedPhotoItem = nil
+        viewModel.errorMessage = nil
+    }
+
+    private func avatarCropperDidDismiss() {
+        guard !isPreparingCroppedAvatar else {
+            return
+        }
+
+        selectedPhotoItem = nil
+        viewModel.errorMessage = nil
+    }
+
+    private func finishAvatarCropping() {
+        isPreparingCroppedAvatar = false
+        pendingAvatarCrop = nil
+        selectedPhotoItem = nil
+        viewModel.errorMessage = nil
+    }
+
+    private func showAvatarCropPreparationError() {
+        viewModel.errorMessage = "Couldn't prepare photo. Try another image."
+    }
+}
+
+private struct PendingAvatarCrop: Identifiable {
+    let id = UUID()
+    let image: UIImage
 }
 
 private struct ProfileEditorToolbarButtonLabel: View {
