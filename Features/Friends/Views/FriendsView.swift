@@ -51,7 +51,7 @@ struct FriendsView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
 
-            TextField("Search usernames", text: $viewModel.searchText)
+            TextField("Search names or usernames", text: $viewModel.searchText)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
@@ -93,7 +93,7 @@ struct FriendsView: View {
             }
 
             if normalizedSearchQuery.count < 2 {
-                Text("Search by username to add friends.")
+                Text("Search by name or username to add friends.")
                     .foregroundStyle(.secondary)
             } else if viewModel.isSearching && viewModel.searchResults.isEmpty {
                 HStack(spacing: 10) {
@@ -222,15 +222,21 @@ private struct SearchResultRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AvatarView(name: result.displayName, avatarURL: result.avatarURL)
+            AvatarView(name: avatarName, avatarURL: result.avatarURL)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("@\(result.handle)")
-                    .font(.headline.monospacedDigit())
-                Text(result.displayName)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Text(primaryText)
+                    .font(.body.weight(.semibold))
+                    .lineLimit(1)
+                if shouldShowHandleSubtitle {
+                    Text("@\(result.handle)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
+            .layoutPriority(1)
+            .accessibilityElement(children: .combine)
 
             Spacer()
 
@@ -261,6 +267,23 @@ private struct SearchResultRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private var primaryText: String {
+        trimmedDisplayName.isEmpty ? "@\(result.handle)" : trimmedDisplayName
+    }
+
+    private var avatarName: String {
+        trimmedDisplayName.isEmpty ? result.handle : trimmedDisplayName
+    }
+
+    private var shouldShowHandleSubtitle: Bool {
+        !result.handle.isEmpty && !trimmedDisplayName.isEmpty
+    }
+
+    private var trimmedDisplayName: String {
+        let displayName = result.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return displayName
     }
 }
 
