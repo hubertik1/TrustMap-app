@@ -27,6 +27,9 @@ let package = Package(
                 "Features/Friends/Models/Friendship.swift",
                 "Features/Friends/Services/FriendRepository.swift",
                 "Features/Places/Models/Place.swift",
+                "Features/Places/Models/PlaceListItem.swift",
+                "Features/Places/Models/PlaceReviewerRating.swift",
+                "Features/Places/Models/PlaceSourceType.swift",
                 "Features/Profile/Models/User.swift",
                 "Features/Reviews/Models/PhotoAsset.swift",
                 "Features/Reviews/Models/VisibilityStatus.swift"

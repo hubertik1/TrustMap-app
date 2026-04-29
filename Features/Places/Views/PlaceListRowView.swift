@@ -113,7 +113,8 @@ struct PlaceListRowView: View {
             latestActivityAtUtc: .now,
             categoryNames: [],
             reviewerRatings: [],
-            createdByUserId: nil
+            createdByUserId: nil,
+            searchText: ""
         )
     )
     .padding()

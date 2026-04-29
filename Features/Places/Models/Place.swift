@@ -270,6 +270,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
     let contributorCount: Int
     let latestActivityAtUtc: Date
     let recentContributors: [UserSummary]
+    let searchText: String
 
     enum CodingKeys: String, CodingKey {
         case placeId
@@ -291,6 +292,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
         case contributorCount
         case latestActivityAtUtc
         case recentContributors
+        case searchText
     }
 
     init(from decoder: Decoder) throws {
@@ -313,6 +315,7 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
         contributorCount = try container.decode(Int.self, forKey: .contributorCount)
         latestActivityAtUtc = try container.decode(Date.self, forKey: .latestActivityAtUtc)
         recentContributors = try container.decodeIfPresent([UserSummary].self, forKey: .recentContributors) ?? []
+        searchText = try container.decodeIfPresent(String.self, forKey: .searchText) ?? ""
         displayName = try container.decodeIfPresent(String.self, forKey: .displayName)
             ?? Place(
                 id: placeId,

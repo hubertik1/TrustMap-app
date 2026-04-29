@@ -341,6 +341,87 @@ final class BackendContractTests: XCTestCase {
         XCTAssertEqual(user.avatarURL?.absoluteString, "http://127.0.0.1:5104/avatars/hubert.jpg")
     }
 
+    func testMapPlaceDecodesSearchTextAndFallsBackWhenMissing() throws {
+        let mapPlaces = try JSONDecoder().decode([MapPlace].self, from: Data("""
+        [
+          {
+            "placeId": "9F6E8AA6-9BFA-4E63-BCA3-1ED12E904C7D",
+            "name": "IKEA",
+            "displayName": "IKEA",
+            "customDisplayName": null,
+            "sourceType": "ProviderVenue",
+            "address": "Main Street 1",
+            "city": "Warsaw",
+            "countryCode": "PL",
+            "latitude": 50.0,
+            "longitude": 19.0,
+            "createdByUserId": null,
+            "categoryNames": ["Restaurants"],
+            "visiblePlaceReviewCount": 1,
+            "visibleDishReviewCount": 1,
+            "averagePlaceRating": 5,
+            "contributorCount": 1,
+            "latestActivityAtUtc": 0,
+            "recentContributors": [],
+            "searchText": "Hot dog crispy and cheap"
+          },
+          {
+            "placeId": "0D31AE2F-B36B-4336-B723-B2A4B8A8577D",
+            "name": "Old Backend Place",
+            "displayName": "Old Backend Place",
+            "customDisplayName": null,
+            "sourceType": "ProviderVenue",
+            "address": "Market Square 2",
+            "city": "Krakow",
+            "countryCode": "PL",
+            "latitude": 50.1,
+            "longitude": 19.1,
+            "createdByUserId": null,
+            "categoryNames": [],
+            "visiblePlaceReviewCount": 1,
+            "visibleDishReviewCount": 0,
+            "averagePlaceRating": 4,
+            "contributorCount": 1,
+            "latestActivityAtUtc": 0,
+            "recentContributors": []
+          }
+        ]
+        """.utf8))
+
+        XCTAssertEqual(mapPlaces[0].searchText, "Hot dog crispy and cheap")
+        XCTAssertEqual(mapPlaces[1].searchText, "")
+    }
+
+    func testPlaceListSearchMatchesBackendSearchTextAndTokens() {
+        let item = PlaceListItem(
+            id: UUID(uuidString: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD")!,
+            place: Place(
+                id: UUID(uuidString: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD")!,
+                name: "Nowe zoo",
+                latitude: 50.0,
+                longitude: 19.0,
+                address: "Zoo Street 1",
+                city: "Poznań",
+                countryCode: "PL"
+            ),
+            averageRating: 5,
+            reviewCount: 2,
+            contributorCount: 1,
+            recentContributors: [],
+            latestActivityAtUtc: Date(timeIntervalSinceReferenceDate: 0),
+            categoryNames: ["Restaurants"],
+            reviewerRatings: [],
+            createdByUserId: nil,
+            searchText: "Fajne danie Hot dog Cafés crispy and cheap"
+        )
+
+        XCTAssertTrue(PlaceListSearch.matches(query: "hot dog", item: item))
+        XCTAssertTrue(PlaceListSearch.matches(query: "nowe fajne", item: item))
+        XCTAssertTrue(PlaceListSearch.matches(query: "restaurants", item: item))
+        XCTAssertTrue(PlaceListSearch.matches(query: "cafe", item: item))
+        XCTAssertFalse(PlaceListSearch.matches(query: "ramen", item: item))
+    }
+
     @MainActor
     private func makeAuthorizedClient(json: String) -> (APIClient, MockSessionProvider) {
         let protocolState = URLProtocolState(

@@ -143,7 +143,7 @@ struct PlacesView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
 
-            TextField("Search places", text: $viewModel.searchText)
+            TextField("Search places or dishes", text: $viewModel.searchText)
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
                 .focused($isSearchFieldFocused)

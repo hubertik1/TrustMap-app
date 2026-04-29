@@ -101,14 +101,7 @@ final class PlacesViewModel: ObservableObject {
     }
 
     var visiblePlaceItems: [PlaceListItem] {
-        let normalizedQuery = searchText.normalizedSearchText
-        guard !normalizedQuery.isEmpty else {
-            return placeItems
-        }
-
-        return placeItems.filter { item in
-            searchableText(for: item).contains(normalizedQuery)
-        }
+        placeItems.filter { PlaceListSearch.matches(query: searchText, item: $0) }
     }
 
     var hasSearchText: Bool {
@@ -192,7 +185,8 @@ final class PlacesViewModel: ObservableObject {
                     latestActivityAtUtc: $0.latestActivityAtUtc,
                     categoryNames: $0.categoryNames,
                     reviewerRatings: [],
-                    createdByUserId: $0.createdByUserId
+                    createdByUserId: $0.createdByUserId,
+                    searchText: $0.searchText
                 )
             }
             applyLocalFilters()
@@ -377,16 +371,4 @@ final class PlacesViewModel: ObservableObject {
         return lhs.id.uuidString < rhs.id.uuidString
     }
 
-    private func searchableText(for item: PlaceListItem) -> String {
-        [item.place.displayName, item.place.name, item.place.address]
-            .joined(separator: " ")
-            .normalizedSearchText
-    }
-}
-
-private extension String {
-    var normalizedSearchText: String {
-        trimmingCharacters(in: .whitespacesAndNewlines)
-            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-    }
 }
