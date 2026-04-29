@@ -238,13 +238,13 @@ struct PlaceDetailReviewCard<LeadingVisual: View, Content: View>: View {
                 HStack(alignment: .top, spacing: PlaceDetailVisualSystem.Metrics.ratingAccessorySpacing) {
                     RatingBadgeView(rating: rating)
 
-                    if showsChevron {
-                        Image(systemName: "chevron.right")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
-                            .frame(width: PlaceDetailVisualSystem.Metrics.chevronWidth)
-                            .frame(maxHeight: .infinity, alignment: .center)
-                    }
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
+                        .frame(width: PlaceDetailVisualSystem.Metrics.chevronWidth)
+                        .frame(maxHeight: .infinity, alignment: .center)
+                        .opacity(showsChevron ? 1 : 0)
+                        .accessibilityHidden(!showsChevron)
                 }
                 .frame(
                     minWidth: PlaceDetailVisualSystem.Metrics.trailingAccessoryMinWidth,

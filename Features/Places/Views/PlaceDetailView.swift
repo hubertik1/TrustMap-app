@@ -71,11 +71,13 @@ struct PlaceDetailView: View {
                             )
                             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
                             .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                         } else {
                             ForEach(viewModel.placeReviews, id: \.id) { review in
                                 placeReviewRow(for: review)
                                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
                                     .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
                             }
                         }
                     } header: {
@@ -96,11 +98,13 @@ struct PlaceDetailView: View {
                                 )
                                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
                                 .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
                             } else {
                                 ForEach(viewModel.dishReviews, id: \.id) { review in
                                     dishReviewRow(for: review)
                                         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
                                         .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
                                 }
                             }
                         } header: {
