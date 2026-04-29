@@ -363,6 +363,7 @@ final class BackendContractTests: XCTestCase {
             "contributorCount": 1,
             "latestActivityAtUtc": 0,
             "recentContributors": [],
+            "isReviewedByCurrentUser": true,
             "searchText": "Hot dog crispy and cheap"
           },
           {
@@ -389,7 +390,9 @@ final class BackendContractTests: XCTestCase {
         """.utf8))
 
         XCTAssertEqual(mapPlaces[0].searchText, "Hot dog crispy and cheap")
+        XCTAssertTrue(mapPlaces[0].isReviewedByCurrentUser)
         XCTAssertEqual(mapPlaces[1].searchText, "")
+        XCTAssertFalse(mapPlaces[1].isReviewedByCurrentUser)
     }
 
     func testPlaceListSearchMatchesBackendSearchTextAndTokens() {
@@ -412,6 +415,7 @@ final class BackendContractTests: XCTestCase {
             categoryNames: ["Restaurants"],
             reviewerRatings: [],
             createdByUserId: nil,
+            isReviewedByCurrentUser: false,
             searchText: "Fajne danie Hot dog Cafés crispy and cheap"
         )
 
@@ -420,6 +424,64 @@ final class BackendContractTests: XCTestCase {
         XCTAssertTrue(PlaceListSearch.matches(query: "restaurants", item: item))
         XCTAssertTrue(PlaceListSearch.matches(query: "cafe", item: item))
         XCTAssertFalse(PlaceListSearch.matches(query: "ramen", item: item))
+    }
+
+    func testPlaceListItemMineMatchesCreatedOrReviewedByCurrentUser() {
+        let currentUserID = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
+        let otherUserID = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
+
+        let createdByCurrentUser = makePlaceListItem(
+            id: UUID(uuidString: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC")!,
+            createdByUserId: currentUserID,
+            isReviewedByCurrentUser: false
+        )
+        let reviewedByCurrentUser = makePlaceListItem(
+            id: UUID(uuidString: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD")!,
+            createdByUserId: otherUserID,
+            isReviewedByCurrentUser: true
+        )
+        let otherUserOnly = makePlaceListItem(
+            id: UUID(uuidString: "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEEE")!,
+            createdByUserId: otherUserID,
+            isReviewedByCurrentUser: false
+        )
+        let legacyUnknownAuthor = makePlaceListItem(
+            id: UUID(uuidString: "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")!,
+            createdByUserId: nil,
+            isReviewedByCurrentUser: false
+        )
+
+        XCTAssertTrue(createdByCurrentUser.isMine(currentUserID: currentUserID))
+        XCTAssertTrue(reviewedByCurrentUser.isMine(currentUserID: currentUserID))
+        XCTAssertFalse(otherUserOnly.isMine(currentUserID: currentUserID))
+        XCTAssertFalse(legacyUnknownAuthor.isMine(currentUserID: nil))
+    }
+
+    private func makePlaceListItem(
+        id: UUID,
+        createdByUserId: UUID?,
+        isReviewedByCurrentUser: Bool
+    ) -> PlaceListItem {
+        PlaceListItem(
+            id: id,
+            place: Place(
+                id: id,
+                name: "Place",
+                latitude: 50.0,
+                longitude: 19.0,
+                address: "Street 1"
+            ),
+            averageRating: 5,
+            reviewCount: 1,
+            contributorCount: 1,
+            recentContributors: [],
+            latestActivityAtUtc: Date(timeIntervalSinceReferenceDate: 0),
+            categoryNames: [],
+            reviewerRatings: [],
+            createdByUserId: createdByUserId,
+            isReviewedByCurrentUser: isReviewedByCurrentUser,
+            searchText: ""
+        )
     }
 
     @MainActor

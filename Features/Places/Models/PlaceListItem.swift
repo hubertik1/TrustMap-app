@@ -11,7 +11,20 @@ struct PlaceListItem: Identifiable, Hashable {
     let categoryNames: [String]
     let reviewerRatings: [PlaceReviewerRating]
     let createdByUserId: UUID?
+    let isReviewedByCurrentUser: Bool
     let searchText: String
+
+    func isMine(currentUserID: UUID?) -> Bool {
+        if isReviewedByCurrentUser {
+            return true
+        }
+
+        guard let currentUserID else {
+            return false
+        }
+
+        return createdByUserId == currentUserID
+    }
 }
 
 enum PlaceListSearch {

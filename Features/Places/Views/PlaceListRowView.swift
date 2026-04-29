@@ -114,6 +114,7 @@ struct PlaceListRowView: View {
             categoryNames: [],
             reviewerRatings: [],
             createdByUserId: nil,
+            isReviewedByCurrentUser: false,
             searchText: ""
         )
     )

@@ -186,6 +186,7 @@ final class PlacesViewModel: ObservableObject {
                     categoryNames: $0.categoryNames,
                     reviewerRatings: [],
                     createdByUserId: $0.createdByUserId,
+                    isReviewedByCurrentUser: $0.isReviewedByCurrentUser,
                     searchText: $0.searchText
                 )
             }
@@ -274,7 +275,7 @@ final class PlacesViewModel: ObservableObject {
             case .all:
                 matchesOwnership = true
             case .mine:
-                matchesOwnership = item.createdByUserId == currentUserID
+                matchesOwnership = item.isMine(currentUserID: currentUserID)
             }
 
             guard matchesOwnership else {

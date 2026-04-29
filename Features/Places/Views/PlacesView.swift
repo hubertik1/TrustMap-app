@@ -418,7 +418,7 @@ private struct PlacesFilterSheet: View {
         NavigationStack {
             Form {
                 Section("Filters") {
-                    Picker("Added by", selection: $filterState.addedBy) {
+                    Picker("Added or reviewed by", selection: $filterState.addedBy) {
                         ForEach(PlaceOwnershipFilter.allCases) { option in
                             Text(option.title).tag(option)
                         }
