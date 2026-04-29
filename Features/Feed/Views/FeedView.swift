@@ -197,7 +197,7 @@ private struct FeedActivityCard: View {
                 if let body = item.feedBodyText {
                     Text(body)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

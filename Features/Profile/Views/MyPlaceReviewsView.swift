@@ -310,7 +310,7 @@ private struct MyPlaceReviewCard: View {
                 if let bodyText {
                     Text(bodyText)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                         .lineLimit(3)
                         .fixedSize(horizontal: false, vertical: true)
                 }
