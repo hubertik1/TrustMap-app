@@ -39,6 +39,8 @@
 	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.food-and-drink</string>
+	<key>NSCameraUsageDescription</key>
+	<string>TrustMap uses your camera to add photos to your reviews.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>TrustMap uses your location to center the map around you and help you discover nearby places.</string>
 	<key>TrustMapAPIBaseURL</key>

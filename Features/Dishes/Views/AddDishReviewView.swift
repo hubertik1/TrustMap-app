@@ -1,10 +1,9 @@
-import PhotosUI
 import SwiftUI
 
 struct AddDishReviewView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: AddDishReviewViewModel
-    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var isPhotoSourceDialogPresented = false
     @State private var isDeleteConfirmationPresented = false
     private let showsCancelButton: Bool
 
@@ -87,8 +86,28 @@ struct AddDishReviewView: View {
             }
 
             Section("Photo") {
-                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                    Label("Add Dish Photo", systemImage: "camera")
+                Button {
+                    isPhotoSourceDialogPresented = true
+                } label: {
+                    Label(photoButtonTitle, systemImage: "photo.on.rectangle.angled")
+                }
+                .accessibilityLabel(photoAccessibilityLabel)
+                .reviewPhotoSourcePicker(
+                    isPresented: $isPhotoSourceDialogPresented,
+                    title: photoButtonTitle,
+                    allowsMultipleSelection: false
+                ) { preparedPhotos, didSkipAnyPhotos in
+                    guard let photo = preparedPhotos.first else {
+                        return
+                    }
+
+                    viewModel.setSelectedPhoto(photo)
+
+                    if didSkipAnyPhotos {
+                        viewModel.errorMessage = AppError.validationFailure("Some selected photos couldn't be prepared.").errorDescription
+                    }
+                } onError: { error in
+                    viewModel.errorMessage = AppError.wrap(error).errorDescription
                 }
 
                 if !viewModel.existingPhotos.isEmpty {
@@ -175,12 +194,6 @@ struct AddDishReviewView: View {
                 }
             }
         }
-        .onChange(of: selectedPhotoItem) { _, item in
-            Task {
-                await prepareSelectedPhoto(from: item)
-                selectedPhotoItem = nil
-            }
-        }
         .task {
             await viewModel.load()
         }
@@ -207,6 +220,17 @@ struct AddDishReviewView: View {
         }
     }
 
+    private var photoButtonTitle: String {
+        let hasActivePhoto = viewModel.selectedPhoto != nil || viewModel.existingPhotos.contains { photo in
+            !viewModel.isExistingPhotoMarkedForRemoval(photo)
+        }
+        return hasActivePhoto ? "Replace Photo" : "Add Photo"
+    }
+
+    private var photoAccessibilityLabel: String {
+        photoButtonTitle == "Replace Photo" ? "Replace photo" : "Add photo"
+    }
+
     private func existingPhotoThumbnail(_ photo: PhotoAsset) -> some View {
         ZStack(alignment: .topTrailing) {
             RemotePhotoView(
@@ -225,6 +249,14 @@ struct AddDishReviewView: View {
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.white)
                             )
+                    } else if viewModel.selectedPhoto != nil {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(.black.opacity(0.36))
+                            .overlay(
+                                Text("Will Replace")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.white)
+                            )
                     }
                 }
 
@@ -238,27 +270,6 @@ struct AddDishReviewView: View {
             }
             .buttonStyle(.plain)
             .padding(6)
-        }
-    }
-
-    @MainActor
-    private func prepareSelectedPhoto(from item: PhotosPickerItem?) async {
-        guard let item else {
-            return
-        }
-
-        do {
-            guard let data = try await item.loadTransferable(type: Data.self) else {
-                viewModel.setSelectedPhoto(nil)
-                return
-            }
-
-            let preparedPhoto = try await PhotoUploadPreparation.prepareSelectedPhoto(from: data)
-            viewModel.setSelectedPhoto(preparedPhoto)
-        } catch is CancellationError {
-            return
-        } catch {
-            viewModel.showPhotoPreparationFailure()
         }
     }
 }

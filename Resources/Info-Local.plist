@@ -44,6 +44,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>TrustMap uses your camera to add photos to your reviews.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>TrustMap uses your local network to reach the Local development API running on your Mac.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

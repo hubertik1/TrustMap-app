@@ -1,10 +1,10 @@
-import PhotosUI
 import SwiftUI
+import UIKit
 
 struct AddPlaceReviewView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: AddPlaceReviewViewModel
-    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var isPhotoSourceDialogPresented = false
     @State private var isDeleteConfirmationPresented = false
     private let showsCancelButton: Bool
 
@@ -59,16 +59,6 @@ struct AddPlaceReviewView: View {
         }
         .task {
             await viewModel.load()
-        }
-        .onChange(of: selectedPhotoItems) { _, items in
-            guard !items.isEmpty else {
-                return
-            }
-
-            Task {
-                selectedPhotoItems = []
-                await prepareSelectedPhotos(from: items)
-            }
         }
         .onChange(of: viewModel.didSave) { _, didSave in
             if didSave {
@@ -165,12 +155,20 @@ struct AddPlaceReviewView: View {
 
     private var photosSection: some View {
         Section("Photos") {
-            PhotosPicker(
-                selection: $selectedPhotoItems,
-                maxSelectionCount: 6,
-                matching: .images
-            ) {
+            Button {
+                isPhotoSourceDialogPresented = true
+            } label: {
                 Label("Add Photos", systemImage: "photo.on.rectangle.angled")
+            }
+            .accessibilityLabel("Add photos")
+            .reviewPhotoSourcePicker(
+                isPresented: $isPhotoSourceDialogPresented,
+                title: "Add Photos",
+                allowsMultipleSelection: true
+            ) { preparedPhotos, didSkipAnyPhotos in
+                viewModel.appendSelectedPhotos(preparedPhotos, didSkipAnyPhotos: didSkipAnyPhotos)
+            } onError: { error in
+                viewModel.errorMessage = AppError.wrap(error).errorDescription
             }
 
             if !viewModel.existingPhotos.isEmpty {
@@ -287,37 +285,6 @@ struct AddPlaceReviewView: View {
             .buttonStyle(.plain)
             .padding(6)
         }
-    }
-
-    @MainActor
-    private func prepareSelectedPhotos(from items: [PhotosPickerItem]) async {
-        guard !items.isEmpty else {
-            return
-        }
-
-        var preparedPhotos: [SelectedPhotoUpload] = []
-        var didSkipAnyPhotos = false
-
-        for item in items {
-            if Task.isCancelled {
-                return
-            }
-
-            do {
-                guard let data = try await item.loadTransferable(type: Data.self) else {
-                    didSkipAnyPhotos = true
-                    continue
-                }
-
-                preparedPhotos.append(try await PhotoUploadPreparation.prepareSelectedPhoto(from: data))
-            } catch is CancellationError {
-                return
-            } catch {
-                didSkipAnyPhotos = true
-            }
-        }
-
-        viewModel.appendSelectedPhotos(preparedPhotos, didSkipAnyPhotos: didSkipAnyPhotos)
     }
 }
 

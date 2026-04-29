@@ -10,6 +10,7 @@
 		01474CE9443BAA8ECC0A2716 /* FeedPlaceActivityItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4D6060C680721FF528ADA1 /* FeedPlaceActivityItem.swift */; };
 		0236B8C637E24CDC2FE3E74B /* AddPlaceReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 202E1D78BADDFEA44B8131D3 /* AddPlaceReviewView.swift */; };
 		02A5636E46F5DE30F2417DEF /* PlacesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D073EFAEE4589F762ABACC1 /* PlacesViewModel.swift */; };
+		E4B4F973C4E44C66B80B0C43 /* ReviewPhotoSourcePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A8D9155B4D64D269A92D847 /* ReviewPhotoSourcePicker.swift */; };
 		03A214E164BD04507421121D /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 048EF525166F452900693E1B /* AppRootView.swift */; };
 		03D39BE4C05265E599DE7FF9 /* MapSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1691FBBA7CC38D06EE40570 /* MapSearchService.swift */; };
 		063A5431490C21B56DD65423 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDFE895F29836B8F6B2C1A43 /* AppConfiguration.swift */; };
@@ -121,6 +122,7 @@
 		111A960988004279EE0C1E8D /* AddHubView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AddHubView.swift; path = Features/Add/Views/AddHubView.swift; sourceTree = "<group>"; };
 		1376FD8A490FB033B745D080 /* PlaceReviewerRating.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaceReviewerRating.swift; path = Features/Places/Models/PlaceReviewerRating.swift; sourceTree = "<group>"; };
 		1C28343CE76204A876ED804F /* FeedViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FeedViewModel.swift; path = Features/Feed/ViewModels/FeedViewModel.swift; sourceTree = "<group>"; };
+		1A8D9155B4D64D269A92D847 /* ReviewPhotoSourcePicker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ReviewPhotoSourcePicker.swift; path = Features/Reviews/Views/ReviewPhotoSourcePicker.swift; sourceTree = "<group>"; };
 		202E1D78BADDFEA44B8131D3 /* AddPlaceReviewView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AddPlaceReviewView.swift; path = Features/Reviews/Views/AddPlaceReviewView.swift; sourceTree = "<group>"; };
 		2035AE2E1F42F7B09D23D29F /* User.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = User.swift; path = Features/Profile/Models/User.swift; sourceTree = "<group>"; };
 		26900C7364B6B52925E48A11 /* UserStats.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UserStats.swift; path = Features/Profile/Models/UserStats.swift; sourceTree = "<group>"; };
@@ -898,6 +900,7 @@
 			isa = PBXGroup;
 			children = (
 				202E1D78BADDFEA44B8131D3 /* AddPlaceReviewView.swift */,
+				1A8D9155B4D64D269A92D847 /* ReviewPhotoSourcePicker.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -1088,6 +1091,7 @@
 				15DDE0DEBD0A3899F52C0C90 /* PlaceReviewRepository.swift in Sources */,
 				6BD31649AC69DA07C7ECE111 /* AddPlaceReviewViewModel.swift in Sources */,
 				0236B8C637E24CDC2FE3E74B /* AddPlaceReviewView.swift in Sources */,
+				E4B4F973C4E44C66B80B0C43 /* ReviewPhotoSourcePicker.swift in Sources */,
 				A44586230244A1235C958A17 /* SettingsViewModel.swift in Sources */,
 				9A67E0B91435F76189235145 /* SettingsView.swift in Sources */,
 			);

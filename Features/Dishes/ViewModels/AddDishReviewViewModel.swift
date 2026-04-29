@@ -163,6 +163,10 @@ final class AddDishReviewViewModel: ObservableObject {
             let existingPlaceReviewID = existingReview?.placeReviewId ?? placeReviewID
 
             let price = Double(priceText.replacingOccurrences(of: ",", with: "."))
+            var photoIDsToDelete = photoIDsMarkedForDeletion
+            if selectedPhoto != nil {
+                photoIDsToDelete.formUnion(existingPhotos.map(\.id))
+            }
 
             let draft = DishReviewDraft(
                 placeId: place.id,
@@ -173,7 +177,7 @@ final class AddDishReviewViewModel: ObservableObject {
                 dishReviewText: dishReviewText,
                 price: price,
                 photoData: selectedPhotoData,
-                photoIDsToDelete: Array(photoIDsMarkedForDeletion),
+                photoIDsToDelete: Array(photoIDsToDelete),
                 selectedCategoryId: selectedCategoryId
             )
 
