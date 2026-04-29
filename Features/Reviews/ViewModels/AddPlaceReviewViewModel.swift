@@ -91,11 +91,14 @@ final class AddPlaceReviewViewModel: ObservableObject {
         place.canRenameCustomDisplayName(as: currentUserID) || provisionalCanEditCustomPlaceDisplayName
     }
 
+    var hasChanges: Bool {
+        hasReviewChanges || hasCustomPlaceDisplayNameChange
+    }
+
     var canSave: Bool {
         !isSaving
             && !isDeleting
-            && ratingOverall > 0
-            && selectedCategoryId != nil
+            && isFormValid
     }
 
     var placeAddressLine: String? {
@@ -178,6 +181,13 @@ final class AddPlaceReviewViewModel: ObservableObject {
             return
         }
 
+        guard !isEditing || hasChanges else {
+            didSave = true
+            return
+        }
+
+        let shouldSaveReview = !isEditing || hasReviewChanges
+
         lastAction = .save
         isSaving = true
         errorMessage = nil
@@ -185,27 +195,30 @@ final class AddPlaceReviewViewModel: ObservableObject {
         do {
             try await saveCustomPlaceDisplayNameIfNeeded()
 
-            let draft = PlaceReviewDraft(
-                placeId: place.id,
-                ratingOverall: ratingOverall,
-                reviewText: "",
-                descriptionText: descriptionText,
-                visibility: visibility.selectableValue,
-                photoDataItems: selectedPhotoData,
-                photoIDsToDelete: Array(photoIDsMarkedForDeletion),
-                selectedCategoryId: selectedCategoryId
-            )
+            if shouldSaveReview {
+                let draft = PlaceReviewDraft(
+                    placeId: place.id,
+                    ratingOverall: ratingOverall,
+                    reviewText: reviewTitleForSave,
+                    descriptionText: descriptionText,
+                    visibility: visibility.selectableValue,
+                    photoDataItems: selectedPhotoData,
+                    photoIDsToDelete: Array(photoIDsMarkedForDeletion),
+                    selectedCategoryId: selectedCategoryId
+                )
 
-            if let existingReview {
-                self.existingReview = try await placeReviewRepository.updateReview(existingReview, with: draft)
-            } else {
-                self.existingReview = try await placeReviewRepository.createReview(draft)
+                if let existingReview {
+                    self.existingReview = try await placeReviewRepository.updateReview(existingReview, with: draft)
+                } else {
+                    self.existingReview = try await placeReviewRepository.createReview(draft)
+                }
+
+                isEditing = true
+                if let updatedReview = self.existingReview {
+                    populateForm(with: updatedReview)
+                }
             }
 
-            isEditing = true
-            if let updatedReview = self.existingReview {
-                populateForm(with: updatedReview)
-            }
             refreshCenter.invalidateAll()
             didSave = true
         } catch {
@@ -246,6 +259,50 @@ final class AddPlaceReviewViewModel: ObservableObject {
         photoIDsMarkedForDeletion = []
         selectedPhotos = []
         syncEditablePlaceNameInput()
+    }
+
+    private var isFormValid: Bool {
+        ratingOverall > 0 && selectedCategoryId != nil
+    }
+
+    private var hasReviewChanges: Bool {
+        guard let existingReview else {
+            return true
+        }
+
+        return ratingOverall != existingReview.ratingOverall
+            || selectedCategoryId != existingReview.categoryId
+            || visibility.selectableValue != existingReview.visibility.selectableValue
+            || normalizedOptionalText(reviewTitleForSave) != normalizedOptionalText(existingReview.reviewText)
+            || normalizedOptionalText(descriptionText) != normalizedOptionalText(existingReview.descriptionText)
+            || !selectedPhotos.isEmpty
+            || !photoIDsMarkedForDeletion.isEmpty
+    }
+
+    private var reviewTitleForSave: String {
+        existingReview?.reviewText ?? ""
+    }
+
+    private var hasCustomPlaceDisplayNameChange: Bool {
+        guard canEditCustomPlaceDisplayName else {
+            return false
+        }
+
+        guard let currentDisplayName = normalizedCustomPlaceDisplayNameForSave else {
+            return false
+        }
+
+        return currentDisplayName != editablePlaceNameBaseline.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var normalizedCustomPlaceDisplayNameForSave: String? {
+        let trimmedDisplayName = customPlaceDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedDisplayName.isEmpty ? nil : trimmedDisplayName
+    }
+
+    private func normalizedOptionalText(_ value: String) -> String? {
+        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedValue.isEmpty ? nil : trimmedValue
     }
 
     private func defaultCategoryID(in categories: [CustomCategory]) -> UUID? {

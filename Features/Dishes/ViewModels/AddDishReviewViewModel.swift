@@ -83,12 +83,14 @@ final class AddDishReviewViewModel: ObservableObject {
         selectedPhoto?.previewImage
     }
 
+    var hasChanges: Bool {
+        hasReviewChanges
+    }
+
     var canSave: Bool {
         !isSaving
             && !isDeleting
-            && !dishName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && dishRating > 0
-            && selectedCategoryId != nil
+            && isFormValid
     }
 
     func load() async {
@@ -155,6 +157,11 @@ final class AddDishReviewViewModel: ObservableObject {
             return
         }
 
+        guard !isEditing || hasChanges else {
+            didSave = true
+            return
+        }
+
         lastAction = .save
         isSaving = true
         errorMessage = nil
@@ -162,7 +169,7 @@ final class AddDishReviewViewModel: ObservableObject {
         do {
             let existingPlaceReviewID = existingReview?.placeReviewId ?? placeReviewID
 
-            let price = Double(priceText.replacingOccurrences(of: ",", with: "."))
+            let price = normalizedPriceForSave
             var photoIDsToDelete = photoIDsMarkedForDeletion
             if selectedPhoto != nil {
                 photoIDsToDelete.formUnion(existingPhotos.map(\.id))
@@ -255,5 +262,56 @@ final class AddDishReviewViewModel: ObservableObject {
         }
 
         return isEditingReview ? nil : defaultCategoryID(in: availableCategories)
+    }
+
+    private var isFormValid: Bool {
+        !normalizedDishName.isEmpty
+            && dishRating > 0
+            && selectedCategoryId != nil
+    }
+
+    private var hasReviewChanges: Bool {
+        guard let existingReview else {
+            return true
+        }
+
+        return normalizedDishName != existingReview.dishName.trimmingCharacters(in: .whitespacesAndNewlines)
+            || dishRating != existingReview.dishRating
+            || selectedCategoryId != existingReview.categoryId
+            || visibility.selectableValue != existingReview.visibility.selectableValue
+            || normalizedOptionalText(dishReviewText) != normalizedOptionalText(existingReview.dishReviewText)
+            || normalizedPriceForSave != existingReview.price
+            || normalizedCurrencyCode(currencyCodeForSave) != normalizedCurrencyCode(existingReview.currencyCode)
+            || selectedPhoto != nil
+            || !photoIDsMarkedForDeletion.isEmpty
+    }
+
+    private var normalizedDishName: String {
+        dishName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var normalizedPriceForSave: Double? {
+        let normalizedText = priceText
+            .replacingOccurrences(of: ",", with: ".")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return Double(normalizedText)
+    }
+
+    private var currencyCodeForSave: String? {
+        normalizedPriceForSave == nil ? nil : Locale.current.currency?.identifier
+    }
+
+    private func normalizedOptionalText(_ value: String) -> String? {
+        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedValue.isEmpty ? nil : trimmedValue
+    }
+
+    private func normalizedCurrencyCode(_ value: String?) -> String? {
+        guard let value else {
+            return nil
+        }
+
+        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedValue.isEmpty ? nil : trimmedValue.uppercased()
     }
 }
