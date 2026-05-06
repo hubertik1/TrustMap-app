@@ -21,7 +21,6 @@ struct SettingsView: View {
     var body: some View {
         Form {
             accountSection
-            reviewDefaultsSection
             privacySection
             mapAndDiscoverySection
             appearanceSection
@@ -55,53 +54,80 @@ struct SettingsView: View {
         }
     }
 
-    private var reviewDefaultsSection: some View {
-        Section {
-            Picker("New place reviews", selection: binding(\.defaultPlaceReviewVisibility)) {
-                ForEach(VisibilityStatus.allCases) { status in
-                    Text(status.displayName).tag(status)
-                }
-            }
-            .pickerStyle(.menu)
-
-            Picker("New dish reviews", selection: binding(\.defaultDishReviewVisibility)) {
-                ForEach(VisibilityStatus.allCases) { status in
-                    Text(status.displayName).tag(status)
-                }
-            }
-            .pickerStyle(.menu)
-        } header: {
-            Text("Review Defaults")
-        } footer: {
-            Text("These defaults apply only to new reviews. Existing reviews keep their current visibility.")
-        }
-    }
-
     private var privacySection: some View {
         Section {
-            Toggle("Show my friends to others", isOn: friendsVisibilityBinding)
-                .disabled(viewModel.currentUser == nil || viewModel.isUpdatingFriendsPrivacy)
-
-            if viewModel.isUpdatingFriendsPrivacy {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Updating privacy...")
-                        .foregroundStyle(.secondary)
+            Picker("Reviews", selection: privacyBinding(
+                get: { viewModel.reviewVisibility },
+                set: { viewModel.setReviewVisibility($0) }
+            )) {
+                ForEach(VisibilityStatus.reviewPrivacyOptions) { status in
+                    Text(status.displayName).tag(status)
                 }
-                .font(.footnote)
+            }
+            .pickerStyle(.menu)
+            .disabled(isPrivacyControlDisabled)
+
+            Picker("Friends list", selection: privacyBinding(
+                get: { viewModel.friendListVisibility },
+                set: { viewModel.setFriendListVisibility($0) }
+            )) {
+                ForEach(VisibilityStatus.friendListPrivacyOptions) { status in
+                    Text(status.displayName).tag(status)
+                }
+            }
+            .pickerStyle(.menu)
+            .disabled(isPrivacyControlDisabled)
+
+            Picker("Profile", selection: privacyBinding(
+                get: { viewModel.profileVisibility },
+                set: { viewModel.setProfileVisibility($0) }
+            )) {
+                ForEach(VisibilityStatus.profilePrivacyOptions) { status in
+                    Text(status.displayName).tag(status)
+                }
+            }
+            .pickerStyle(.menu)
+            .disabled(isPrivacyControlDisabled)
+
+            Picker("Profile photo", selection: privacyBinding(
+                get: { viewModel.profilePictureVisibility },
+                set: { viewModel.setProfilePictureVisibility($0) }
+            )) {
+                ForEach(VisibilityStatus.profilePicturePrivacyOptions) { status in
+                    Text(status.displayName).tag(status)
+                }
+            }
+            .pickerStyle(.menu)
+            .disabled(isPrivacyControlDisabled)
+
+            if viewModel.currentUser != nil && !viewModel.supportsPrivacySettings {
+                Text("Privacy settings are not available on this server version.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let privacyErrorMessage = viewModel.privacyErrorMessage {
+                Text(privacyErrorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
             }
         } header: {
             Text("Privacy")
-        } footer: {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("When this is off, other users can see your profile and visible reviews, but not your friend list.")
+        }
+    }
 
-                if let privacyErrorMessage = viewModel.privacyErrorMessage {
-                    Text(privacyErrorMessage)
-                        .foregroundStyle(.red)
-                }
-            }
+    private var isPrivacyControlDisabled: Bool {
+        viewModel.currentUser == nil || !viewModel.supportsPrivacySettings || viewModel.isUpdatingPrivacy
+    }
+
+    private func privacyBinding(
+        get: @escaping () -> VisibilityStatus,
+        set: @escaping (VisibilityStatus) -> Void
+    ) -> Binding<VisibilityStatus> {
+        Binding {
+            get()
+        } set: { newValue in
+            set(newValue)
         }
     }
 
@@ -159,15 +185,6 @@ struct SettingsView: View {
         Binding(
             get: { viewModel[keyPath: keyPath] },
             set: { viewModel[keyPath: keyPath] = $0 }
-        )
-    }
-
-    private var friendsVisibilityBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.friendsVisibleToOthers },
-            set: { newValue in
-                Task { await viewModel.setFriendsVisibleToOthers(newValue) }
-            }
         )
     }
 

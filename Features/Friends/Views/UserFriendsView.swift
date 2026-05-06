@@ -2,11 +2,13 @@ import SwiftUI
 
 struct UserFriendsView: View {
     let user: User
+    @ObservedObject private var container: AppContainer
     @ObservedObject private var refreshCenter: AppRefreshCenter
     @StateObject private var viewModel: UserFriendsViewModel
 
     init(container: AppContainer, user: User) {
         self.user = user
+        self.container = container
         self.refreshCenter = container.refreshCenter
         _viewModel = StateObject(
             wrappedValue: UserFriendsViewModel(
@@ -56,6 +58,7 @@ struct UserFriendsView: View {
             Section(user.displayName) {
                 ForEach(viewModel.friends) { friend in
                     UserFriendRow(
+                        container: container,
                         item: friend,
                         isBusy: viewModel.activeUserID == friend.id
                     ) {
@@ -83,31 +86,44 @@ struct FriendListPrivacyStateView: View {
 }
 
 private struct UserFriendRow: View {
+    @ObservedObject var container: AppContainer
     let item: UserFriendListItem
     let isBusy: Bool
     let onAdd: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
-            AvatarView(name: item.user.displayName, avatarURL: item.user.avatarURL)
+            NavigationLink {
+                FriendProfileView(
+                    container: container,
+                    userID: item.user.id,
+                    initialUser: item.user
+                )
+            } label: {
+                HStack(spacing: 12) {
+                    AvatarView(name: item.user.displayName, avatarURL: item.user.avatarURL)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(primaryText)
-                    .font(.body.weight(.semibold))
-                    .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(primaryText)
+                            .font(.body.weight(.semibold))
+                            .lineLimit(1)
 
-                if shouldShowHandleSubtitle {
-                    Text("@\(item.user.handle)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        if shouldShowHandleSubtitle {
+                            Text("@\(item.user.handle)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+
+                        Text("Friends since \(item.friendsSinceUtc.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    .layoutPriority(1)
                 }
-
-                Text("Friends since \(item.friendsSinceUtc.formatted(date: .abbreviated, time: .omitted))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
             }
+            .buttonStyle(.plain)
             .layoutPriority(1)
 
             Spacer(minLength: 10)

@@ -118,10 +118,13 @@ final class BackendContractTests: XCTestCase {
     }
 
     @MainActor
-    func testUserProfileRepositoryUpdatesFriendListVisibility() async throws {
+    func testUserProfileRepositoryUpdatesPrivacySettings() async throws {
         let response = makeUserResponse(
             displayName: "Hubert",
-            friendsVisibleToOthers: false,
+            reviewVisibility: "FriendsOfFriends",
+            friendListVisibility: "Private",
+            profileVisibility: "Friends",
+            profilePictureVisibility: "FriendsOfFriends",
             canViewFriends: true
         )
         let protocolState = URLProtocolState(responses: [.json(statusCode: 200, body: response)])
@@ -129,30 +132,83 @@ final class BackendContractTests: XCTestCase {
         _ = sessionProvider
         let repository = UserProfileRepository(apiClient: apiClient)
 
-        let updated = try await repository.updateFriendListVisibility(false)
+        let updated = try await repository.updatePrivacySettings(
+            reviewVisibility: .friendsOfFriends,
+            friendListVisibility: .onlyMe,
+            profileVisibility: .friendsOnly,
+            profilePictureVisibility: .friendsOfFriends
+        )
 
-        XCTAssertFalse(updated.friendsVisibleToOthers)
+        XCTAssertEqual(updated.reviewVisibility, .friendsOfFriends)
+        XCTAssertEqual(updated.friendListVisibility, .onlyMe)
+        XCTAssertEqual(updated.profileVisibility, .friendsOnly)
+        XCTAssertEqual(updated.profilePictureVisibility, .friendsOfFriends)
         XCTAssertTrue(updated.canViewFriends)
 
         let requests = await protocolState.requests
         XCTAssertEqual(requests.first?.httpMethod, "PATCH")
         XCTAssertEqual(requests.first?.url?.path, "/me/privacy")
+        XCTAssertEqual(requests.first?.value(forHTTPHeaderField: "Content-Type"), "application/json")
+
+        let requestBodies = await protocolState.requestBodies
+        let bodyData = try XCTUnwrap(requestBodies.first ?? nil)
+        let payload = try JSONDecoder().decode(PrivacySettingsPayloadProbe.self, from: bodyData)
+        XCTAssertEqual(payload.reviewVisibility, "FriendsOfFriends")
+        XCTAssertEqual(payload.friendListVisibility, "Private")
+        XCTAssertEqual(payload.profileVisibility, "Friends")
+        XCTAssertEqual(payload.profilePictureVisibility, "FriendsOfFriends")
     }
 
-    func testUserDecodesFriendPrivacyFields() throws {
+    func testVisibilityStatusDecodesFriendsOfFriends() throws {
+        let status = try JSONDecoder().decode(VisibilityStatus.self, from: Data(#""FriendsOfFriends""#.utf8))
+
+        XCTAssertEqual(status, .friendsOfFriends)
+        XCTAssertEqual(status.displayName, "Friends of Friends")
+    }
+
+    func testVisibilityStatusDecodesIntegerFriendsOfFriends() throws {
+        let status = try JSONDecoder().decode(VisibilityStatus.self, from: Data("4".utf8))
+
+        XCTAssertEqual(status, .friendsOfFriends)
+    }
+
+    func testVisibilityStatusEncodesFriendsOfFriendsAsString() throws {
+        let data = try JSONEncoder().encode(VisibilityStatus.friendsOfFriends)
+        let encoded = String(decoding: data, as: UTF8.self)
+
+        XCTAssertEqual(encoded, #""FriendsOfFriends""#)
+    }
+
+    func testVisibilityStatusRejectsInvalidStringAndInteger() {
+        XCTAssertThrowsError(try JSONDecoder().decode(VisibilityStatus.self, from: Data(#""Invalid""#.utf8)))
+        XCTAssertThrowsError(try JSONDecoder().decode(VisibilityStatus.self, from: Data("99".utf8)))
+    }
+
+    func testUserDecodesPrivacyFields() throws {
         let response = makeUserResponse(
             displayName: "Hubert",
-            friendsVisibleToOthers: false,
-            canViewFriends: false
+            reviewVisibility: "FriendsOfFriends",
+            friendListVisibility: "Private",
+            profileVisibility: "Friends",
+            profilePictureVisibility: "FriendsOfFriends",
+            canViewProfile: false,
+            canViewFriends: false,
+            canViewProfilePicture: false
         )
 
         let user = try JSONDecoder().decode(User.self, from: Data(response.utf8))
 
-        XCTAssertFalse(user.friendsVisibleToOthers)
+        XCTAssertEqual(user.reviewVisibility, .friendsOfFriends)
+        XCTAssertEqual(user.friendListVisibility, .onlyMe)
+        XCTAssertEqual(user.profileVisibility, .friendsOnly)
+        XCTAssertEqual(user.profilePictureVisibility, .friendsOfFriends)
+        XCTAssertFalse(user.canViewProfile)
         XCTAssertFalse(user.canViewFriends)
+        XCTAssertFalse(user.canViewProfilePicture)
+        XCTAssertTrue(user.supportsPrivacySettings)
     }
 
-    func testUserDecodingDefaultsMissingFriendPrivacyFields() throws {
+    func testUserDecodingDefaultsMissingPrivacyFields() throws {
         let response = makeUserResponse(
             displayName: "Hubert",
             includesPrivacyFields: false
@@ -160,8 +216,30 @@ final class BackendContractTests: XCTestCase {
 
         let user = try JSONDecoder().decode(User.self, from: Data(response.utf8))
 
-        XCTAssertTrue(user.friendsVisibleToOthers)
+        XCTAssertEqual(user.reviewVisibility, .friendsOnly)
+        XCTAssertEqual(user.friendListVisibility, .friendsOnly)
+        XCTAssertEqual(user.profileVisibility, .public)
+        XCTAssertEqual(user.profilePictureVisibility, .public)
+        XCTAssertTrue(user.canViewProfile)
         XCTAssertTrue(user.canViewFriends)
+        XCTAssertTrue(user.canViewProfilePicture)
+        XCTAssertFalse(user.supportsPrivacySettings)
+    }
+
+    func testUserDecodesPrivateProfileDtoWithNilAvatar() throws {
+        let response = makeUserResponse(
+            displayName: "Hubert",
+            avatarUrl: nil,
+            canViewProfile: false,
+            canViewFriends: false,
+            canViewProfilePicture: false
+        )
+
+        let user = try JSONDecoder().decode(User.self, from: Data(response.utf8))
+
+        XCTAssertFalse(user.canViewProfile)
+        XCTAssertFalse(user.canViewProfilePicture)
+        XCTAssertNil(user.avatarURL)
     }
 
     func testHandleComponentsSplitCanonicalHandle() {
@@ -600,14 +678,26 @@ final class BackendContractTests: XCTestCase {
 
     private func makeUserResponse(
         displayName: String,
-        friendsVisibleToOthers: Bool = true,
+        avatarUrl: String? = nil,
+        reviewVisibility: String = "Friends",
+        friendListVisibility: String = "Friends",
+        profileVisibility: String = "Public",
+        profilePictureVisibility: String = "Public",
+        canViewProfile: Bool = true,
         canViewFriends: Bool = true,
+        canViewProfilePicture: Bool = true,
         includesPrivacyFields: Bool = true
     ) -> String {
+        let avatarValue = avatarUrl.map { "\"\($0)\"" } ?? "null"
         let privacyFields = includesPrivacyFields
             ? """
-          "friendsVisibleToOthers": \(friendsVisibleToOthers),
+          "reviewVisibility": "\(reviewVisibility)",
+          "friendListVisibility": "\(friendListVisibility)",
+          "profileVisibility": "\(profileVisibility)",
+          "profilePictureVisibility": "\(profilePictureVisibility)",
+          "canViewProfile": \(canViewProfile),
           "canViewFriends": \(canViewFriends),
+          "canViewProfilePicture": \(canViewProfilePicture),
         """
             : ""
 
@@ -617,7 +707,7 @@ final class BackendContractTests: XCTestCase {
           "handle": "hubert#1234",
           "displayName": "\(displayName)",
           "bio": null,
-          "avatarUrl": null,
+          "avatarUrl": \(avatarValue),
           "relationshipStatus": "Self",
           "friendCount": 3,
           "visiblePlaceReviewCount": 5,
@@ -648,6 +738,7 @@ private actor URLProtocolState {
     }
 
     private(set) var requests: [URLRequest] = []
+    private(set) var requestBodies: [Data?] = []
     private var responses: [StubbedResponse]
 
     init(responses: [StubbedResponse]) {
@@ -656,6 +747,7 @@ private actor URLProtocolState {
 
     func nextResponse(for request: URLRequest) -> (HTTPURLResponse, Data) {
         requests.append(request)
+        requestBodies.append(Self.bodyData(from: request))
 
         let stub = responses.removeFirst()
         switch stub {
@@ -682,6 +774,42 @@ private actor URLProtocolState {
             )
         }
     }
+
+    private static func bodyData(from request: URLRequest) -> Data? {
+        if let httpBody = request.httpBody {
+            return httpBody
+        }
+
+        guard let stream = request.httpBodyStream else {
+            return nil
+        }
+
+        stream.open()
+        defer { stream.close() }
+
+        var data = Data()
+        let bufferSize = 1024
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        defer { buffer.deallocate() }
+
+        while true {
+            let readCount = stream.read(buffer, maxLength: bufferSize)
+            if readCount > 0 {
+                data.append(buffer, count: readCount)
+            } else {
+                break
+            }
+        }
+
+        return data
+    }
+}
+
+private struct PrivacySettingsPayloadProbe: Decodable {
+    let reviewVisibility: String
+    let friendListVisibility: String
+    let profileVisibility: String
+    let profilePictureVisibility: String
 }
 
 private final class MockURLProtocol: URLProtocol, @unchecked Sendable {

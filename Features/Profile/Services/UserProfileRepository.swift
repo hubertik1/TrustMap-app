@@ -16,7 +16,10 @@ final class UserProfileRepository {
     }
 
     private struct UpdateMePrivacyPayload: Encodable {
-        let friendsVisibleToOthers: Bool
+        let reviewVisibility: VisibilityStatus
+        let friendListVisibility: VisibilityStatus
+        let profileVisibility: VisibilityStatus
+        let profilePictureVisibility: VisibilityStatus
     }
 
     private enum AvatarAction: String {
@@ -122,12 +125,26 @@ final class UserProfileRepository {
         )
     }
 
-    func updateFriendListVisibility(_ isVisible: Bool) async throws -> User {
+    func updatePrivacySettings(
+        reviewVisibility: VisibilityStatus,
+        friendListVisibility: VisibilityStatus,
+        profileVisibility: VisibilityStatus,
+        profilePictureVisibility: VisibilityStatus
+    ) async throws -> User {
         try await apiClient.send(
             APIRequest<User>(
                 method: .patch,
                 path: "me/privacy",
-                body: .json(AnyEncodable(UpdateMePrivacyPayload(friendsVisibleToOthers: isVisible)))
+                body: .json(
+                    AnyEncodable(
+                        UpdateMePrivacyPayload(
+                            reviewVisibility: reviewVisibility,
+                            friendListVisibility: friendListVisibility,
+                            profileVisibility: profileVisibility,
+                            profilePictureVisibility: profilePictureVisibility
+                        )
+                    )
+                )
             )
         )
     }

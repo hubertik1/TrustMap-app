@@ -457,10 +457,12 @@ extension VisibilityStatus {
         switch self {
         case .friendsOnly:
             return "Friends"
+        case .friendsOfFriends:
+            return "Friends of Friends"
         case .onlyMe:
             return "Private"
         case .public:
-            return "Public"
+            return "Everyone"
         }
     }
 }

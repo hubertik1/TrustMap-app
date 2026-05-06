@@ -34,7 +34,11 @@ struct FriendProfileView: View {
                     }
                 )
             } else if let user = viewModel.user {
-                profileContent(for: user)
+                if user.canViewProfile {
+                    profileContent(for: user)
+                } else {
+                    privateProfileContent(for: user)
+                }
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
@@ -94,6 +98,47 @@ struct FriendProfileView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 4)
+            .padding(.bottom, 132)
+        }
+        .refreshable {
+            await viewModel.load()
+        }
+    }
+
+    private func privateProfileContent(for user: User) -> some View {
+        ScrollView {
+            VStack(spacing: 14) {
+                AvatarView(name: user.displayName, avatarURL: user.avatarURL, size: 82)
+                    .overlay {
+                        Circle()
+                            .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+                    }
+
+                VStack(spacing: 5) {
+                    Text(user.displayName)
+                        .font(.title3.weight(.semibold))
+                        .multilineTextAlignment(.center)
+
+                    Text("@\(user.handle)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                VStack(spacing: 6) {
+                    Text("This profile is private.")
+                        .font(.headline)
+                    Text("This user doesn’t allow you to view their profile.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 8)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
+            .padding(.top, 56)
             .padding(.bottom, 132)
         }
         .refreshable {

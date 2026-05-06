@@ -16,6 +16,7 @@ final class FriendsViewModel: ObservableObject {
     struct RequestListItem: Identifiable, Equatable {
         let id: UUID
         let userID: UUID
+        let user: UserSummary
         let displayName: String
         let handle: String
         let avatarURL: URL?
@@ -26,6 +27,7 @@ final class FriendsViewModel: ObservableObject {
     struct SearchResultItem: Identifiable, Equatable {
         let id: UUID
         let userID: UUID
+        let user: UserSummary
         let displayName: String
         let handle: String
         let avatarURL: URL?
@@ -89,6 +91,7 @@ final class FriendsViewModel: ObservableObject {
                 RequestListItem(
                     id: $0.id,
                     userID: $0.sender.id,
+                    user: $0.sender,
                     displayName: $0.sender.displayName,
                     handle: $0.sender.handle,
                     avatarURL: $0.sender.avatarURL,
@@ -101,6 +104,7 @@ final class FriendsViewModel: ObservableObject {
                 RequestListItem(
                     id: $0.id,
                     userID: $0.receiver.id,
+                    user: $0.receiver,
                     displayName: $0.receiver.displayName,
                     handle: $0.receiver.handle,
                     avatarURL: $0.receiver.avatarURL,
@@ -193,6 +197,7 @@ final class FriendsViewModel: ObservableObject {
                 SearchResultItem(
                     id: $0.user.id,
                     userID: $0.user.id,
+                    user: $0.user,
                     displayName: $0.user.displayName,
                     handle: $0.user.handle,
                     avatarURL: $0.user.avatarURL,

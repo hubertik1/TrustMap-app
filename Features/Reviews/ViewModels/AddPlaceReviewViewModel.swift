@@ -53,6 +53,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
         categoryRepository: CategoryRepository,
         refreshCenter: AppRefreshCenter,
         preferencesStore: AppPreferencesStore,
+        currentUserReviewVisibility: VisibilityStatus?,
         existingReview: PlaceReview? = nil
     ) {
         self.place = place
@@ -65,7 +66,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
             place.isCustomPin && (place.createdByUserId == currentUserID || place.createdByUserId == nil)
         self.existingReview = existingReview
         self.isEditing = existingReview != nil
-        self.visibility = preferencesStore.defaultPlaceReviewVisibility.selectableValue
+        self.visibility = (currentUserReviewVisibility ?? preferencesStore.defaultPlaceReviewVisibility).selectableValue
         let editablePlaceName = place.customDisplayName ?? place.displayName
         self.customPlaceDisplayName = editablePlaceName
         self.editablePlaceNameBaseline = editablePlaceName

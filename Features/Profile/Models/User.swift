@@ -51,7 +51,7 @@ struct UserSummary: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-struct User: Identifiable, Codable, Hashable, Sendable {
+struct User: Identifiable, Decodable, Hashable, Sendable {
     let id: UUID
     let handle: String
     let displayName: String
@@ -62,20 +62,31 @@ struct User: Identifiable, Codable, Hashable, Sendable {
     let visiblePlaceReviewCount: Int
     let visibleDishReviewCount: Int
     let isMe: Bool
-    let friendsVisibleToOthers: Bool
+    let reviewVisibility: VisibilityStatus
+    let friendListVisibility: VisibilityStatus
+    let profileVisibility: VisibilityStatus
+    let profilePictureVisibility: VisibilityStatus
+    let canViewProfile: Bool
     let canViewFriends: Bool
+    let canViewProfilePicture: Bool
+    let supportsPrivacySettings: Bool
 
     enum CodingKeys: String, CodingKey {
         case avatarURLString = "avatarUrl"
         case bio
+        case canViewProfile
         case canViewFriends
+        case canViewProfilePicture
         case displayName
         case friendCount
-        case friendsVisibleToOthers
+        case friendListVisibility
         case handle
         case id
         case isMe
+        case profilePictureVisibility
+        case profileVisibility
         case relationshipStatus
+        case reviewVisibility
         case visibleDishReviewCount
         case visiblePlaceReviewCount
     }
@@ -104,8 +115,14 @@ struct User: Identifiable, Codable, Hashable, Sendable {
         visiblePlaceReviewCount: Int = 0,
         visibleDishReviewCount: Int = 0,
         isMe: Bool = false,
-        friendsVisibleToOthers: Bool = true,
-        canViewFriends: Bool = true
+        reviewVisibility: VisibilityStatus = .friendsOnly,
+        friendListVisibility: VisibilityStatus = .friendsOnly,
+        profileVisibility: VisibilityStatus = .public,
+        profilePictureVisibility: VisibilityStatus = .public,
+        canViewProfile: Bool = true,
+        canViewFriends: Bool = true,
+        canViewProfilePicture: Bool = true,
+        supportsPrivacySettings: Bool = true
     ) {
         self.id = id
         self.handle = handle
@@ -117,8 +134,14 @@ struct User: Identifiable, Codable, Hashable, Sendable {
         self.visiblePlaceReviewCount = visiblePlaceReviewCount
         self.visibleDishReviewCount = visibleDishReviewCount
         self.isMe = isMe
-        self.friendsVisibleToOthers = friendsVisibleToOthers
+        self.reviewVisibility = reviewVisibility
+        self.friendListVisibility = friendListVisibility
+        self.profileVisibility = profileVisibility
+        self.profilePictureVisibility = profilePictureVisibility
+        self.canViewProfile = canViewProfile
         self.canViewFriends = canViewFriends
+        self.canViewProfilePicture = canViewProfilePicture
+        self.supportsPrivacySettings = supportsPrivacySettings
     }
 
     init(from decoder: Decoder) throws {
@@ -133,8 +156,20 @@ struct User: Identifiable, Codable, Hashable, Sendable {
         visiblePlaceReviewCount = try container.decode(Int.self, forKey: .visiblePlaceReviewCount)
         visibleDishReviewCount = try container.decode(Int.self, forKey: .visibleDishReviewCount)
         isMe = try container.decode(Bool.self, forKey: .isMe)
-        friendsVisibleToOthers = try container.decodeIfPresent(Bool.self, forKey: .friendsVisibleToOthers) ?? true
+        supportsPrivacySettings = container.contains(.reviewVisibility)
+            && container.contains(.friendListVisibility)
+            && container.contains(.profileVisibility)
+            && container.contains(.profilePictureVisibility)
+            && container.contains(.canViewProfile)
+            && container.contains(.canViewFriends)
+            && container.contains(.canViewProfilePicture)
+        reviewVisibility = try container.decodeIfPresent(VisibilityStatus.self, forKey: .reviewVisibility) ?? .friendsOnly
+        friendListVisibility = try container.decodeIfPresent(VisibilityStatus.self, forKey: .friendListVisibility) ?? .friendsOnly
+        profileVisibility = try container.decodeIfPresent(VisibilityStatus.self, forKey: .profileVisibility) ?? .public
+        profilePictureVisibility = try container.decodeIfPresent(VisibilityStatus.self, forKey: .profilePictureVisibility) ?? .public
+        canViewProfile = try container.decodeIfPresent(Bool.self, forKey: .canViewProfile) ?? true
         canViewFriends = try container.decodeIfPresent(Bool.self, forKey: .canViewFriends) ?? true
+        canViewProfilePicture = try container.decodeIfPresent(Bool.self, forKey: .canViewProfilePicture) ?? true
     }
 }
 

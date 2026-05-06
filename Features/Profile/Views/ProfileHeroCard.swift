@@ -124,6 +124,7 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
             } label: {
                 ProfileStatColumn(
                     count: friendCount,
+                    valueText: canNavigateToFriends ? nil : "Private",
                     label: "Friends",
                     pendingRequestCount: pendingRequestCount,
                     accessibilityLabel: friendsAccessibilityLabel,
@@ -171,6 +172,10 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
             return "\(friendCount) friends, \(pendingRequestCount) pending requests"
         }
 
+        if !canNavigateToFriends {
+            return "Friend list private"
+        }
+
         return "\(friendCount) friends"
     }
 }
@@ -190,6 +195,7 @@ private struct ProfileStatNavigationButtonStyle: ButtonStyle {
 
 private struct ProfileStatColumn: View {
     let count: Int
+    var valueText: String?
     let label: String
     var pendingRequestCount = 0
     let accessibilityLabel: String
@@ -201,7 +207,7 @@ private struct ProfileStatColumn: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            Text(count.formatted())
+            Text(valueText ?? count.formatted())
                 .font(.headline.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(.primary)

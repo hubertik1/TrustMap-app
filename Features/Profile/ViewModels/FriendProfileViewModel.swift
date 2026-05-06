@@ -48,6 +48,12 @@ final class FriendProfileViewModel: ObservableObject {
         do {
             let loadedUser = try await userRepository.fetchUser(id: userID)
             user = loadedUser
+            guard loadedUser.canViewProfile else {
+                placeReviews = []
+                dishReviews = []
+                placeNames = [:]
+                return
+            }
         } catch {
             guard !Self.isCancellation(error) else { return }
             errorMessage = AppError.wrap(error).errorDescription

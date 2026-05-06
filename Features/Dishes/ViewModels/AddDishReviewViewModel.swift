@@ -50,6 +50,7 @@ final class AddDishReviewViewModel: ObservableObject {
         categoryRepository: CategoryRepository,
         refreshCenter: AppRefreshCenter,
         preferencesStore: AppPreferencesStore,
+        currentUserReviewVisibility: VisibilityStatus?,
         existingReview: DishReview? = nil,
         existingPhotoData: Data? = nil
     ) {
@@ -60,7 +61,7 @@ final class AddDishReviewViewModel: ObservableObject {
         self.refreshCenter = refreshCenter
         self.existingReview = existingReview
         self.isEditing = existingReview != nil
-        self.visibility = preferencesStore.defaultDishReviewVisibility.selectableValue
+        self.visibility = (currentUserReviewVisibility ?? preferencesStore.defaultDishReviewVisibility).selectableValue
 
         if let existingReview {
             populateForm(with: existingReview)

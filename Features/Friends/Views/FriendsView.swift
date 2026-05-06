@@ -117,10 +117,14 @@ struct FriendsView: View {
                     ForEach(viewModel.searchResults) { result in
                         SearchResultRow(
                             result: result,
-                            isBusy: viewModel.activeUserID == result.userID
-                        ) {
-                            Task { await viewModel.sendRequest(to: result) }
-                        }
+                            isBusy: viewModel.activeUserID == result.userID,
+                            onOpenProfile: {
+                                selectedFriendProfile = FriendProfileRoute(initialUser: result.user)
+                            },
+                            action: {
+                                Task { await viewModel.sendRequest(to: result) }
+                            }
+                        )
                     }
                 }
             }
@@ -138,12 +142,17 @@ struct FriendsView: View {
                             createdAt: request.createdAt,
                             primaryActionTitle: "Accept",
                             secondaryActionTitle: "Reject",
-                            isBusy: viewModel.activeUserID == request.userID
-                        ) {
-                            Task { await viewModel.accept(request) }
-                        } secondaryAction: {
-                            Task { await viewModel.reject(request) }
-                        }
+                            isBusy: viewModel.activeUserID == request.userID,
+                            onOpenProfile: {
+                                selectedFriendProfile = FriendProfileRoute(initialUser: request.user)
+                            },
+                            primaryAction: {
+                                Task { await viewModel.accept(request) }
+                            },
+                            secondaryAction: {
+                                Task { await viewModel.reject(request) }
+                            }
+                        )
                     }
                 }
             }
@@ -161,10 +170,15 @@ struct FriendsView: View {
                             createdAt: request.createdAt,
                             primaryActionTitle: "Cancel",
                             secondaryActionTitle: nil,
-                            isBusy: viewModel.activeUserID == request.userID
-                        ) {
-                            Task { await viewModel.cancel(request) }
-                        } secondaryAction: {}
+                            isBusy: viewModel.activeUserID == request.userID,
+                            onOpenProfile: {
+                                selectedFriendProfile = FriendProfileRoute(initialUser: request.user)
+                            },
+                            primaryAction: {
+                                Task { await viewModel.cancel(request) }
+                            },
+                            secondaryAction: {}
+                        )
                     }
                 }
             }
@@ -247,25 +261,33 @@ private struct FriendProfileRoute: Identifiable, Hashable {
 private struct SearchResultRow: View {
     let result: FriendsViewModel.SearchResultItem
     let isBusy: Bool
+    let onOpenProfile: () -> Void
     let action: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
-            AvatarView(name: avatarName, avatarURL: result.avatarURL)
+            Button(action: onOpenProfile) {
+                HStack(spacing: 12) {
+                    AvatarView(name: avatarName, avatarURL: result.avatarURL)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(primaryText)
-                    .font(.body.weight(.semibold))
-                    .lineLimit(1)
-                if shouldShowHandleSubtitle {
-                    Text("@\(result.handle)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(primaryText)
+                            .font(.body.weight(.semibold))
+                            .lineLimit(1)
+                        if shouldShowHandleSubtitle {
+                            Text("@\(result.handle)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .layoutPriority(1)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             .layoutPriority(1)
-            .accessibilityElement(children: .combine)
 
             Spacer()
 
@@ -291,7 +313,10 @@ private struct SearchResultRow: View {
                     ProgressView()
                 } else {
                     Button("Add", action: action)
+                        .font(.caption.weight(.semibold))
+                        .controlSize(.small)
                         .buttonStyle(.borderedProminent)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
             }
         }
@@ -324,52 +349,55 @@ private struct RequestRow: View {
     let primaryActionTitle: String
     let secondaryActionTitle: String?
     let isBusy: Bool
+    let onOpenProfile: () -> Void
     let primaryAction: () -> Void
     let secondaryAction: () -> Void
 
     var body: some View {
         if secondaryActionTitle == nil {
-            HStack(alignment: .center, spacing: 12) {
-                personInfo
-
-                Spacer(minLength: 10)
-
-                if isBusy {
-                    ProgressView()
-                } else {
-                    Button(role: .destructive, action: primaryAction) {
-                        Text(primaryActionTitle)
-                    }
-                        .font(.caption.weight(.semibold))
-                        .controlSize(.small)
-                        .buttonStyle(.bordered)
-                }
-            }
-            .padding(.vertical, 4)
+            outgoingStyleRow
         } else {
-            HStack(alignment: .top, spacing: 12) {
-                AvatarView(name: title, avatarURL: avatarURL)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    requestText
-
-                    HStack {
-                        if isBusy {
-                            ProgressView()
-                        } else {
-                            Button(primaryActionTitle, action: primaryAction)
-                                .buttonStyle(.borderedProminent)
-
-                            if let secondaryActionTitle {
-                                Button(secondaryActionTitle, role: .destructive, action: secondaryAction)
-                                    .buttonStyle(.bordered)
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(.vertical, 4)
+            incomingStyleRow
         }
+    }
+
+    private var outgoingStyleRow: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Button(action: onOpenProfile) {
+                personInfo
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .layoutPriority(1)
+
+            Spacer(minLength: 10)
+
+            requestActions
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var incomingStyleRow: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Button(action: onOpenProfile) {
+                AvatarView(name: title, avatarURL: avatarURL)
+            }
+            .buttonStyle(.plain)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Button(action: onOpenProfile) {
+                    requestText
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                requestActions
+            }
+            .layoutPriority(1)
+        }
+        .padding(.vertical, 4)
     }
 
     private var personInfo: some View {
@@ -390,6 +418,35 @@ private struct RequestRow: View {
             Text(createdAt, style: .date)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var requestActions: some View {
+        if isBusy {
+            ProgressView()
+        } else if let secondaryActionTitle {
+            HStack(spacing: 8) {
+                Button(primaryActionTitle, action: primaryAction)
+                    .font(.caption.weight(.semibold))
+                    .controlSize(.small)
+                    .buttonStyle(.borderedProminent)
+                    .fixedSize(horizontal: true, vertical: false)
+
+                Button(secondaryActionTitle, role: .destructive, action: secondaryAction)
+                    .font(.caption.weight(.semibold))
+                    .controlSize(.small)
+                    .buttonStyle(.bordered)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+        } else {
+            Button(role: .destructive, action: primaryAction) {
+                Text(primaryActionTitle)
+            }
+            .font(.caption.weight(.semibold))
+            .controlSize(.small)
+            .buttonStyle(.bordered)
+            .fixedSize(horizontal: true, vertical: false)
         }
     }
 }
