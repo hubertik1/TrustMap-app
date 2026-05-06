@@ -5,6 +5,8 @@ struct FriendsView: View {
     @ObservedObject private var refreshCenter: AppRefreshCenter
     @StateObject private var viewModel: FriendsViewModel
     @State private var selectedFriendProfile: FriendProfileRoute?
+    @State private var requestPendingCancellationID: UUID?
+    @State private var friendPendingRemovalID: UUID?
     @FocusState private var isSearchFieldFocused: Bool
 
     init(container: AppContainer) {
@@ -163,22 +165,7 @@ struct FriendsView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(viewModel.outgoingRequests) { request in
-                        RequestRow(
-                            avatarURL: request.avatarURL,
-                            title: request.displayName,
-                            subtitle: "@\(request.handle)",
-                            createdAt: request.createdAt,
-                            primaryActionTitle: "Cancel",
-                            secondaryActionTitle: nil,
-                            isBusy: viewModel.activeUserID == request.userID,
-                            onOpenProfile: {
-                                selectedFriendProfile = FriendProfileRoute(initialUser: request.user)
-                            },
-                            primaryAction: {
-                                Task { await viewModel.cancel(request) }
-                            },
-                            secondaryAction: {}
-                        )
+                        outgoingRequestRow(request)
                     }
                 }
             }
@@ -191,47 +178,7 @@ struct FriendsView: View {
             } else {
                 Section("Friends") {
                     ForEach(viewModel.friends) { friend in
-                        HStack(spacing: 12) {
-                            Button {
-                                selectedFriendProfile = FriendProfileRoute(initialUser: friend.user)
-                            } label: {
-                                HStack(spacing: 12) {
-                                    AvatarView(name: friend.displayName, avatarURL: friend.avatarURL)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(friend.displayName)
-                                        Text("@\(friend.handle)")
-                                            .font(.subheadline)
-                                            .foregroundStyle(.secondary)
-                                        if let bio = friend.bio, !bio.isEmpty {
-                                            Text(bio)
-                                                .font(.subheadline)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Text("Added \(friend.addedAt.formatted(date: .abbreviated, time: .omitted))")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .layoutPriority(1)
-
-                                    Spacer(minLength: 10)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-
-                            if viewModel.activeUserID == friend.userID {
-                                ProgressView()
-                            } else {
-                                Button("Remove", role: .destructive) {
-                                    Task { await viewModel.remove(friend: friend) }
-                                }
-                                .font(.caption.weight(.semibold))
-                                .controlSize(.small)
-                                .buttonStyle(.bordered)
-                            }
-                        }
-                        .padding(.vertical, 4)
+                        friendRow(friend)
                     }
                 }
             }
@@ -247,6 +194,103 @@ struct FriendsView: View {
         .refreshable {
             await viewModel.load()
         }
+    }
+
+    private func outgoingRequestRow(_ request: FriendsViewModel.RequestListItem) -> some View {
+        RequestRow(
+            avatarURL: request.avatarURL,
+            title: request.displayName,
+            subtitle: "@\(request.handle)",
+            createdAt: request.createdAt,
+            primaryActionTitle: "Cancel",
+            secondaryActionTitle: nil,
+            isBusy: viewModel.activeUserID == request.userID,
+            onOpenProfile: {
+                selectedFriendProfile = FriendProfileRoute(initialUser: request.user)
+            },
+            primaryAction: {
+                requestPendingCancellationID = request.id
+                friendPendingRemovalID = nil
+            },
+            secondaryAction: {},
+            showsPrimaryConfirmation: requestPendingCancellationID == request.id,
+            primaryConfirmationActionTitle: "Cancel Request",
+            primaryConfirmationCancelTitle: "Keep",
+            confirmPrimaryAction: {
+                requestPendingCancellationID = nil
+                Task { await viewModel.cancel(request) }
+            },
+            cancelPrimaryConfirmation: {
+                requestPendingCancellationID = nil
+            }
+        )
+    }
+
+    private func friendRow(_ friend: FriendsViewModel.FriendListItem) -> some View {
+        HStack(spacing: 12) {
+            Button {
+                selectedFriendProfile = FriendProfileRoute(initialUser: friend.user)
+            } label: {
+                HStack(spacing: 12) {
+                    AvatarView(name: friend.displayName, avatarURL: friend.avatarURL)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(friend.displayName)
+                        Text("@\(friend.handle)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        if let bio = friend.bio, !bio.isEmpty {
+                            Text(bio)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Text("Added \(friend.addedAt.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .layoutPriority(1)
+
+                    Spacer(minLength: 10)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if viewModel.activeUserID == friend.userID {
+                ProgressView()
+            } else {
+                Button("Remove", role: .destructive) {
+                    friendPendingRemovalID = friend.id
+                    requestPendingCancellationID = nil
+                }
+                .font(.caption.weight(.semibold))
+                .controlSize(.small)
+                .buttonStyle(.bordered)
+                .popover(
+                    isPresented: Binding(
+                        get: { friendPendingRemovalID == friend.id },
+                        set: { if !$0 { friendPendingRemovalID = nil } }
+                    ),
+                    attachmentAnchor: .rect(.bounds),
+                    arrowEdge: .trailing
+                ) {
+                    DestructiveConfirmationPopover(
+                        title: "Remove friend?",
+                        message: "Are you sure you want to remove \(friend.displayName)?",
+                        destructiveTitle: "Remove",
+                        cancelTitle: "Keep",
+                        destructiveAction: {
+                            friendPendingRemovalID = nil
+                            Task { await viewModel.remove(friend: friend) }
+                        },
+                        cancelAction: {
+                            friendPendingRemovalID = nil
+                        }
+                    )
+                }
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -352,6 +396,45 @@ private struct RequestRow: View {
     let onOpenProfile: () -> Void
     let primaryAction: () -> Void
     let secondaryAction: () -> Void
+    let showsPrimaryConfirmation: Bool
+    let primaryConfirmationActionTitle: String
+    let primaryConfirmationCancelTitle: String
+    let confirmPrimaryAction: (() -> Void)?
+    let cancelPrimaryConfirmation: (() -> Void)?
+
+    init(
+        avatarURL: URL?,
+        title: String,
+        subtitle: String,
+        createdAt: Date,
+        primaryActionTitle: String,
+        secondaryActionTitle: String?,
+        isBusy: Bool,
+        onOpenProfile: @escaping () -> Void,
+        primaryAction: @escaping () -> Void,
+        secondaryAction: @escaping () -> Void,
+        showsPrimaryConfirmation: Bool = false,
+        primaryConfirmationActionTitle: String = "Confirm",
+        primaryConfirmationCancelTitle: String = "Keep",
+        confirmPrimaryAction: (() -> Void)? = nil,
+        cancelPrimaryConfirmation: (() -> Void)? = nil
+    ) {
+        self.avatarURL = avatarURL
+        self.title = title
+        self.subtitle = subtitle
+        self.createdAt = createdAt
+        self.primaryActionTitle = primaryActionTitle
+        self.secondaryActionTitle = secondaryActionTitle
+        self.isBusy = isBusy
+        self.onOpenProfile = onOpenProfile
+        self.primaryAction = primaryAction
+        self.secondaryAction = secondaryAction
+        self.showsPrimaryConfirmation = showsPrimaryConfirmation
+        self.primaryConfirmationActionTitle = primaryConfirmationActionTitle
+        self.primaryConfirmationCancelTitle = primaryConfirmationCancelTitle
+        self.confirmPrimaryAction = confirmPrimaryAction
+        self.cancelPrimaryConfirmation = cancelPrimaryConfirmation
+    }
 
     var body: some View {
         if secondaryActionTitle == nil {
@@ -447,7 +530,85 @@ private struct RequestRow: View {
             .controlSize(.small)
             .buttonStyle(.bordered)
             .fixedSize(horizontal: true, vertical: false)
+            .popover(
+                isPresented: primaryConfirmationBinding,
+                attachmentAnchor: .rect(.bounds),
+                arrowEdge: .trailing
+            ) {
+                if let confirmPrimaryAction, let cancelPrimaryConfirmation {
+                    DestructiveConfirmationPopover(
+                        title: "Cancel request?",
+                        message: "Are you sure you want to cancel this friend request?",
+                        destructiveTitle: primaryConfirmationActionTitle,
+                        cancelTitle: primaryConfirmationCancelTitle,
+                        destructiveAction: confirmPrimaryAction,
+                        cancelAction: cancelPrimaryConfirmation
+                    )
+                }
+            }
         }
+    }
+
+    private var primaryConfirmationBinding: Binding<Bool> {
+        Binding(
+            get: { showsPrimaryConfirmation },
+            set: { isPresented in
+                if !isPresented {
+                    cancelPrimaryConfirmation?()
+                }
+            }
+        )
+    }
+}
+
+private struct DestructiveConfirmationPopover: View {
+    let title: String
+    let message: String
+    let destructiveTitle: String
+    let cancelTitle: String
+    let destructiveAction: () -> Void
+    let cancelAction: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 12) {
+                Button(action: cancelAction) {
+                    PopoverActionButtonLabel(title: cancelTitle, foregroundStyle: .primary)
+                }
+                .buttonStyle(.plain)
+
+                Button(role: .destructive, action: destructiveAction) {
+                    PopoverActionButtonLabel(title: destructiveTitle, foregroundStyle: .red)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(16)
+        .frame(width: 270, alignment: .leading)
+        .presentationCompactAdaptation(.popover)
+    }
+}
+
+private struct PopoverActionButtonLabel: View {
+    let title: String
+    let foregroundStyle: Color
+
+    var body: some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(foregroundStyle)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 36)
+            .background(Color(uiColor: .tertiarySystemFill), in: Capsule())
+            .fixedSize(horizontal: true, vertical: false)
     }
 }
 
