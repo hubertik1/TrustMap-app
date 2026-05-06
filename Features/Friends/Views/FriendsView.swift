@@ -333,38 +333,44 @@ private struct SearchResultRow: View {
             .buttonStyle(.plain)
             .layoutPriority(1)
 
-            Spacer()
+            Spacer(minLength: 10)
 
-            switch result.relationshipStatus {
-            case .friends:
-                Text("Friends")
+            relationshipControl
+        }
+        .frame(height: 56, alignment: .center)
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var relationshipControl: some View {
+        switch result.relationshipStatus {
+        case .friends:
+            statusText("Friends")
+        case .incomingRequest:
+            statusText("Incoming")
+        case .outgoingRequest:
+            statusText("Pending")
+        case .self:
+            statusText("You")
+        case .none:
+            if isBusy {
+                ProgressView()
+            } else {
+                Button("Add", action: action)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            case .incomingRequest:
-                Text("Incoming")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            case .outgoingRequest:
-                Text("Pending")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            case .self:
-                Text("You")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            case .none:
-                if isBusy {
-                    ProgressView()
-                } else {
-                    Button("Add", action: action)
-                        .font(.caption.weight(.semibold))
-                        .controlSize(.small)
-                        .buttonStyle(.borderedProminent)
-                        .fixedSize(horizontal: true, vertical: false)
-                }
+                    .controlSize(.small)
+                    .buttonStyle(.borderedProminent)
+                    .fixedSize(horizontal: true, vertical: false)
             }
         }
-        .padding(.vertical, 4)
+    }
+
+    private func statusText(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     private var primaryText: String {
