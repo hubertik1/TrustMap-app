@@ -6,19 +6,27 @@ import Foundation
 final class SettingsViewModel: ObservableObject {
     private let sessionStore: SessionStore
     private let preferencesStore: AppPreferencesStore
+    private let refreshCenter: AppRefreshCenter
+    private let userRepository: UserProfileRepository
     private let userLocationService: UserLocationServicing
     private var cancellables = Set<AnyCancellable>()
 
     @Published private(set) var locationAuthorizationStatus: CLAuthorizationStatus
     @Published private(set) var isSigningOut = false
+    @Published private(set) var isUpdatingFriendsPrivacy = false
+    @Published var privacyErrorMessage: String?
 
     init(
         sessionStore: SessionStore,
         preferencesStore: AppPreferencesStore,
+        refreshCenter: AppRefreshCenter,
+        userRepository: UserProfileRepository,
         userLocationService: UserLocationServicing
     ) {
         self.sessionStore = sessionStore
         self.preferencesStore = preferencesStore
+        self.refreshCenter = refreshCenter
+        self.userRepository = userRepository
         self.userLocationService = userLocationService
         self.locationAuthorizationStatus = userLocationService.authorizationStatus
 
@@ -37,6 +45,10 @@ final class SettingsViewModel: ObservableObject {
 
     var currentUser: User? {
         sessionStore.currentUser
+    }
+
+    var friendsVisibleToOthers: Bool {
+        currentUser?.friendsVisibleToOthers ?? true
     }
 
     var buildSummary: String {
@@ -113,5 +125,25 @@ final class SettingsViewModel: ObservableObject {
         isSigningOut = true
         defer { isSigningOut = false }
         await sessionStore.signOut()
+    }
+
+    func setFriendsVisibleToOthers(_ isVisible: Bool) async {
+        guard !isUpdatingFriendsPrivacy else { return }
+        guard friendsVisibleToOthers != isVisible else {
+            privacyErrorMessage = nil
+            return
+        }
+
+        isUpdatingFriendsPrivacy = true
+        privacyErrorMessage = nil
+        defer { isUpdatingFriendsPrivacy = false }
+
+        do {
+            let updatedUser = try await userRepository.updateFriendListVisibility(isVisible)
+            sessionStore.updateCurrentUser(updatedUser)
+            refreshCenter.invalidateAll()
+        } catch {
+            privacyErrorMessage = AppError.wrap(error).errorDescription
+        }
     }
 }

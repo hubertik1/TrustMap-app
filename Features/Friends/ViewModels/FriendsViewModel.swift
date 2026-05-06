@@ -5,6 +5,7 @@ final class FriendsViewModel: ObservableObject {
     struct FriendListItem: Identifiable, Equatable {
         let id: UUID
         let userID: UUID
+        let user: UserSummary
         let displayName: String
         let handle: String
         let avatarURL: URL?
@@ -75,6 +76,7 @@ final class FriendsViewModel: ObservableObject {
                 FriendListItem(
                     id: $0.id,
                     userID: $0.user.id,
+                    user: $0.user,
                     displayName: $0.user.displayName,
                     handle: $0.user.handle,
                     avatarURL: $0.user.avatarURL,
@@ -118,13 +120,15 @@ final class FriendsViewModel: ObservableObject {
         searchTask?.cancel()
 
         let normalized = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard normalized.count >= 2 else {
+        guard !normalized.isEmpty else {
             searchResults = []
             isSearching = false
             errorMessage = nil
             return
         }
 
+        isSearching = true
+        searchResults = []
         searchTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(250))
             guard !Task.isCancelled else { return }
@@ -174,7 +178,7 @@ final class FriendsViewModel: ObservableObject {
 
     private func searchUsers() async {
         let normalized = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard normalized.count >= 2 else {
+        guard !normalized.isEmpty else {
             searchResults = []
             isSearching = false
             return

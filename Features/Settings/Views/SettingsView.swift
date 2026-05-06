@@ -11,6 +11,8 @@ struct SettingsView: View {
             wrappedValue: SettingsViewModel(
                 sessionStore: container.sessionStore,
                 preferencesStore: container.preferencesStore,
+                refreshCenter: container.refreshCenter,
+                userRepository: container.userRepository,
                 userLocationService: container.userLocationService
             )
         )
@@ -20,6 +22,7 @@ struct SettingsView: View {
         Form {
             accountSection
             reviewDefaultsSection
+            privacySection
             mapAndDiscoverySection
             appearanceSection
             aboutSection
@@ -71,6 +74,34 @@ struct SettingsView: View {
             Text("Review Defaults")
         } footer: {
             Text("These defaults apply only to new reviews. Existing reviews keep their current visibility.")
+        }
+    }
+
+    private var privacySection: some View {
+        Section {
+            Toggle("Show my friends to others", isOn: friendsVisibilityBinding)
+                .disabled(viewModel.currentUser == nil || viewModel.isUpdatingFriendsPrivacy)
+
+            if viewModel.isUpdatingFriendsPrivacy {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Updating privacy...")
+                        .foregroundStyle(.secondary)
+                }
+                .font(.footnote)
+            }
+        } header: {
+            Text("Privacy")
+        } footer: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("When this is off, other users can see your profile and visible reviews, but not your friend list.")
+
+                if let privacyErrorMessage = viewModel.privacyErrorMessage {
+                    Text(privacyErrorMessage)
+                        .foregroundStyle(.red)
+                }
+            }
         }
     }
 
@@ -128,6 +159,15 @@ struct SettingsView: View {
         Binding(
             get: { viewModel[keyPath: keyPath] },
             set: { viewModel[keyPath: keyPath] = $0 }
+        )
+    }
+
+    private var friendsVisibilityBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.friendsVisibleToOthers },
+            set: { newValue in
+                Task { await viewModel.setFriendsVisibleToOthers(newValue) }
+            }
         )
     }
 

@@ -1,11 +1,14 @@
 import SwiftUI
 
 struct FriendsView: View {
+    @ObservedObject private var container: AppContainer
     @ObservedObject private var refreshCenter: AppRefreshCenter
     @StateObject private var viewModel: FriendsViewModel
+    @State private var selectedFriendProfile: FriendProfileRoute?
     @FocusState private var isSearchFieldFocused: Bool
 
     init(container: AppContainer) {
+        self.container = container
         self.refreshCenter = container.refreshCenter
         _viewModel = StateObject(
             wrappedValue: FriendsViewModel(
@@ -39,6 +42,13 @@ struct FriendsView: View {
         }
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
+        }
+        .navigationDestination(item: $selectedFriendProfile) { route in
+            FriendProfileView(
+                container: container,
+                userID: route.id,
+                initialUser: route.initialUser
+            )
         }
     }
 
@@ -92,26 +102,25 @@ struct FriendsView: View {
                 }
             }
 
-            if normalizedSearchQuery.count < 2 {
-                Text("Search by name or username to add friends.")
-                    .foregroundStyle(.secondary)
-            } else if viewModel.isSearching && viewModel.searchResults.isEmpty {
-                HStack(spacing: 10) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Searching users...")
+            if !normalizedSearchQuery.isEmpty {
+                if viewModel.isSearching && viewModel.searchResults.isEmpty {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Searching users...")
+                            .foregroundStyle(.secondary)
+                    }
+                } else if viewModel.searchResults.isEmpty {
+                    Text("No users.")
                         .foregroundStyle(.secondary)
-                }
-            } else if viewModel.searchResults.isEmpty {
-                Text("No matching users.")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(viewModel.searchResults) { result in
-                    SearchResultRow(
-                        result: result,
-                        isBusy: viewModel.activeUserID == result.userID
-                    ) {
-                        Task { await viewModel.sendRequest(to: result) }
+                } else {
+                    ForEach(viewModel.searchResults) { result in
+                        SearchResultRow(
+                            result: result,
+                            isBusy: viewModel.activeUserID == result.userID
+                        ) {
+                            Task { await viewModel.sendRequest(to: result) }
+                        }
                     }
                 }
             }
@@ -169,23 +178,33 @@ struct FriendsView: View {
                 Section("Friends") {
                     ForEach(viewModel.friends) { friend in
                         HStack(spacing: 12) {
-                            AvatarView(name: friend.displayName, avatarURL: friend.avatarURL)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(friend.displayName)
-                                Text("@\(friend.handle)")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                if let bio = friend.bio, !bio.isEmpty {
-                                    Text(bio)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Text("Added \(friend.addedAt.formatted(date: .abbreviated, time: .omitted))")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+                            Button {
+                                selectedFriendProfile = FriendProfileRoute(initialUser: friend.user)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    AvatarView(name: friend.displayName, avatarURL: friend.avatarURL)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(friend.displayName)
+                                        Text("@\(friend.handle)")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                        if let bio = friend.bio, !bio.isEmpty {
+                                            Text(bio)
+                                                .font(.subheadline)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Text("Added \(friend.addedAt.formatted(date: .abbreviated, time: .omitted))")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .layoutPriority(1)
 
-                            Spacer()
+                                    Spacer(minLength: 10)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
 
                             if viewModel.activeUserID == friend.userID {
                                 ProgressView()
@@ -193,6 +212,8 @@ struct FriendsView: View {
                                 Button("Remove", role: .destructive) {
                                     Task { await viewModel.remove(friend: friend) }
                                 }
+                                .font(.caption.weight(.semibold))
+                                .controlSize(.small)
                                 .buttonStyle(.bordered)
                             }
                         }
@@ -212,6 +233,14 @@ struct FriendsView: View {
         .refreshable {
             await viewModel.load()
         }
+    }
+}
+
+private struct FriendProfileRoute: Identifiable, Hashable {
+    let initialUser: UserSummary
+
+    var id: UUID {
+        initialUser.id
     }
 }
 
@@ -299,37 +328,69 @@ private struct RequestRow: View {
     let secondaryAction: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            AvatarView(name: title, avatarURL: avatarURL)
+        if secondaryActionTitle == nil {
+            HStack(alignment: .center, spacing: 12) {
+                personInfo
 
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.headline)
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text(createdAt, style: .date)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                Spacer(minLength: 10)
+
+                if isBusy {
+                    ProgressView()
+                } else {
+                    Button(role: .destructive, action: primaryAction) {
+                        Text(primaryActionTitle)
+                    }
+                        .font(.caption.weight(.semibold))
+                        .controlSize(.small)
+                        .buttonStyle(.bordered)
                 }
+            }
+            .padding(.vertical, 4)
+        } else {
+            HStack(alignment: .top, spacing: 12) {
+                AvatarView(name: title, avatarURL: avatarURL)
 
-                HStack {
-                    if isBusy {
-                        ProgressView()
-                    } else {
-                        Button(primaryActionTitle, action: primaryAction)
-                            .buttonStyle(.borderedProminent)
+                VStack(alignment: .leading, spacing: 12) {
+                    requestText
 
-                        if let secondaryActionTitle {
-                            Button(secondaryActionTitle, role: .destructive, action: secondaryAction)
-                                .buttonStyle(.bordered)
+                    HStack {
+                        if isBusy {
+                            ProgressView()
+                        } else {
+                            Button(primaryActionTitle, action: primaryAction)
+                                .buttonStyle(.borderedProminent)
+
+                            if let secondaryActionTitle {
+                                Button(secondaryActionTitle, role: .destructive, action: secondaryAction)
+                                    .buttonStyle(.bordered)
+                            }
                         }
                     }
                 }
             }
+            .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
+    }
+
+    private var personInfo: some View {
+        HStack(spacing: 12) {
+            AvatarView(name: title, avatarURL: avatarURL)
+            requestText
+                .layoutPriority(1)
+        }
+    }
+
+    private var requestText: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.headline)
+            Text(subtitle)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Text(createdAt, style: .date)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 

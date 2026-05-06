@@ -15,6 +15,10 @@ final class UserProfileRepository {
         let avatarUrl: String?
     }
 
+    private struct UpdateMePrivacyPayload: Encodable {
+        let friendsVisibleToOthers: Bool
+    }
+
     private enum AvatarAction: String {
         case keep = "Keep"
         case remove = "Remove"
@@ -114,6 +118,16 @@ final class UserProfileRepository {
             APIRequest<User>(
                 method: .get,
                 path: "users/\(id.uuidString)"
+            )
+        )
+    }
+
+    func updateFriendListVisibility(_ isVisible: Bool) async throws -> User {
+        try await apiClient.send(
+            APIRequest<User>(
+                method: .patch,
+                path: "me/privacy",
+                body: .json(AnyEncodable(UpdateMePrivacyPayload(friendsVisibleToOthers: isVisible)))
             )
         )
     }

@@ -44,13 +44,13 @@ struct MyPlaceReviewsView: View {
     private var reviewsContent: some View {
         ScrollView {
             LazyVStack(spacing: 14) {
-                MyReviewsSearchField(
+                ProfileReviewsSearchField(
                     text: $searchText,
                     placeholder: "Search rated places"
                 )
 
                 if filteredReviews.isEmpty {
-                    MyReviewsFilteredEmptyState(
+                    ProfileReviewsFilteredEmptyState(
                         title: "No matching rated places",
                         message: "Try a different search.",
                         onClearSearch: {
@@ -60,10 +60,11 @@ struct MyPlaceReviewsView: View {
                     .padding(.top, 10)
                 } else {
                     ForEach(filteredReviews, id: \.id) { review in
-                        MyPlaceReviewCard(
+                        ProfilePlaceReviewCard(
                             review: review,
                             placeName: placeDisplayName(for: review),
-                            onEdit: {
+                            showsChevron: true,
+                            onTap: {
                                 reviewBeingEdited = review
                             }
                         )
@@ -86,7 +87,7 @@ struct MyPlaceReviewsView: View {
     }
 
     private var filteredReviews: [PlaceReview] {
-        let query = searchText.myReviewsNormalizedSearchText
+        let query = searchText.profileReviewsNormalizedSearchText
         guard !query.isEmpty else {
             return reviews
         }
@@ -97,8 +98,8 @@ struct MyPlaceReviewsView: View {
     }
 
     private func placeDisplayName(for review: PlaceReview) -> String {
-        let displayName = review.place.displayName.myReviewsTrimmedNonEmptyText
-        let fallbackName = placeNames[review.placeId]?.myReviewsTrimmedNonEmptyText
+        let displayName = review.place.displayName.profileReviewsTrimmedNonEmptyText
+        let fallbackName = placeNames[review.placeId]?.profileReviewsTrimmedNonEmptyText
         return displayName ?? fallbackName ?? "Place"
     }
 
@@ -115,7 +116,7 @@ struct MyPlaceReviewsView: View {
         ]
         .compactMap { $0 }
         .joined(separator: " ")
-        .myReviewsNormalizedSearchText
+        .profileReviewsNormalizedSearchText
     }
 }
 
@@ -178,294 +179,5 @@ struct MyPlaceReviewsView: View {
             ],
             onDelete: { _ in }
         )
-    }
-}
-
-private struct MyPlaceReviewCard: View {
-    let review: PlaceReview
-    let placeName: String
-    let onEdit: () -> Void
-
-    private var categoryName: String? {
-        review.categoryName?.myReviewsTrimmedNonEmptyText
-            ?? review.place.categoryNames.first?.myReviewsTrimmedNonEmptyText
-    }
-
-    private var addressText: String? {
-        review.place.subtitle.myReviewsTrimmedNonEmptyText
-    }
-
-    private var titleText: String? {
-        review.reviewText.myReviewsTrimmedNonEmptyText
-    }
-
-    private var bodyText: String? {
-        review.descriptionText.myReviewsTrimmedNonEmptyText
-    }
-
-    private var previewPhotos: [PhotoAsset] {
-        Array(review.photos.prefix(2))
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 9) {
-                    header
-                    details
-                    reviewText
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    onEdit()
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(accessibilitySummary)
-                .accessibilityHint("Opens edit review")
-
-                if !previewPhotos.isEmpty {
-                    PhotoGridView(
-                        assets: previewPhotos,
-                        presentationAssets: review.photos,
-                        allowsFullscreenPresentation: true,
-                        thumbnailSize: PlaceDetailVisualSystem.Metrics.inlinePhotoThumbnailSize,
-                        cornerRadius: PlaceDetailVisualSystem.Metrics.photoCornerRadius,
-                        spacing: PlaceDetailVisualSystem.Metrics.photoSpacing
-                    )
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            tapAffordance
-                .onTapGesture {
-                    onEdit()
-                }
-                .accessibilityHidden(true)
-        }
-        .accessibilityAction {
-            onEdit()
-        }
-        .padding(16)
-        .background {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color(uiColor: .separator).opacity(0.12), lineWidth: 1)
-        }
-    }
-
-    private var header: some View {
-        HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(placeName)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(metadataText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.86)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            RatingBadgeView(rating: Double(review.ratingOverall))
-        }
-    }
-
-    @ViewBuilder
-    private var details: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            if let categoryName {
-                PlaceCategoryChipView(name: categoryName)
-            }
-
-            if let addressText {
-                Text(addressText)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var reviewText: some View {
-        if titleText != nil || bodyText != nil {
-            VStack(alignment: .leading, spacing: 5) {
-                if let titleText {
-                    Text(titleText)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                if let bodyText {
-                    Text(bodyText)
-                        .font(.subheadline)
-                        .foregroundStyle(.primary)
-                        .lineLimit(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-    }
-
-    private var tapAffordance: some View {
-        Image(systemName: "chevron.right")
-            .font(.footnote.weight(.bold))
-            .foregroundStyle(.secondary)
-            .frame(width: 28, height: 28)
-    }
-
-    private var metadataText: String {
-        "Updated \(review.updatedAt.myReviewsCompactTimestampTextWithAgo) · \(review.visibility.myReviewsCompactLabel)"
-    }
-
-    private var accessibilitySummary: String {
-        "\(placeName), rating \(RatingDisplayFormatter.rating(review.ratingOverall)), \(metadataText)"
-    }
-}
-
-private struct MyReviewsSearchField: View {
-    @Binding var text: String
-    let placeholder: String
-
-    private var hasText: Bool {
-        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-
-            TextField(placeholder, text: $text)
-                .textInputAutocapitalization(.words)
-                .autocorrectionDisabled()
-                .accessibilityLabel(placeholder)
-
-            if hasText {
-                Button {
-                    text = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Clear search")
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color(uiColor: .separator).opacity(0.12), lineWidth: 1)
-        }
-    }
-}
-
-private struct MyReviewsFilteredEmptyState: View {
-    let title: String
-    let message: String
-    let onClearSearch: () -> Void
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: 44, height: 44)
-                .background(
-                    Circle()
-                        .fill(Color(uiColor: .tertiarySystemFill))
-                )
-                .accessibilityHidden(true)
-
-            VStack(spacing: 4) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-
-                Text(message)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-
-            Button("Clear Search", action: onClearSearch)
-                .font(.subheadline.weight(.semibold))
-                .buttonStyle(.bordered)
-                .accessibilityLabel("Clear Search")
-        }
-        .frame(maxWidth: .infinity)
-        .padding(24)
-        .background {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color(uiColor: .separator).opacity(0.12), lineWidth: 1)
-        }
-    }
-}
-
-private extension String {
-    var myReviewsNormalizedSearchText: String {
-        trimmingCharacters(in: .whitespacesAndNewlines)
-            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-    }
-
-    var myReviewsTrimmedNonEmptyText: String? {
-        let trimmedText = trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmedText.isEmpty ? nil : trimmedText
-    }
-}
-
-private extension Date {
-    var myReviewsCompactTimestampTextWithAgo: String {
-        let elapsedSeconds = max(0, Int(Date.now.timeIntervalSince(self)))
-        if elapsedSeconds < 60 {
-            return "just now"
-        }
-
-        let minutes = elapsedSeconds / 60
-        if minutes < 60 {
-            return "\(minutes) min ago"
-        }
-
-        let hours = minutes / 60
-        if hours < 24 {
-            return "\(hours) h ago"
-        }
-
-        let days = hours / 24
-        return "\(days) d ago"
-    }
-}
-
-private extension VisibilityStatus {
-    var myReviewsCompactLabel: String {
-        switch self {
-        case .friendsOnly:
-            return "Friends"
-        case .onlyMe:
-            return "Private"
-        case .public:
-            return "Public"
-        }
     }
 }

@@ -83,6 +83,87 @@ final class BackendContractTests: XCTestCase {
         XCTAssertEqual(friends[0].createdAt, iso8601("2026-04-07T12:00:00Z"))
     }
 
+    @MainActor
+    func testFriendRepositoryFetchesUserFriendsWithRelationshipStatus() async throws {
+        let friendId = UUID(uuidString: "C5B43D5F-14FB-4E83-B5A5-0CC4B394B095")!
+        let ownerId = UUID(uuidString: "7AD7BF4A-7D7C-4DDE-92CA-A6C4B635C922")!
+        let response = """
+        [
+          {
+            "user": {
+              "id": "\(friendId.uuidString.lowercased())",
+              "handle": "friend.one#1234",
+              "displayName": "Friend One",
+              "avatarUrl": null
+            },
+            "friendsSinceUtc": "2026-04-07T12:00:00Z",
+            "relationshipStatus": "OutgoingRequest"
+          }
+        ]
+        """
+
+        let protocolState = URLProtocolState(responses: [.json(statusCode: 200, body: response)])
+        let (apiClient, sessionProvider) = makeAuthorizedClient(protocolState: protocolState)
+        _ = sessionProvider
+        let repository = FriendRepository(apiClient: apiClient)
+        let friends = try await repository.fetchFriends(of: ownerId)
+
+        XCTAssertEqual(friends.count, 1)
+        XCTAssertEqual(friends[0].id, friendId)
+        XCTAssertEqual(friends[0].relationshipStatus, .outgoingRequest)
+
+        let requests = await protocolState.requests
+        XCTAssertEqual(requests.first?.httpMethod, "GET")
+        XCTAssertEqual(requests.first?.url?.path, "/users/\(ownerId.uuidString)/friends")
+    }
+
+    @MainActor
+    func testUserProfileRepositoryUpdatesFriendListVisibility() async throws {
+        let response = makeUserResponse(
+            displayName: "Hubert",
+            friendsVisibleToOthers: false,
+            canViewFriends: true
+        )
+        let protocolState = URLProtocolState(responses: [.json(statusCode: 200, body: response)])
+        let (apiClient, sessionProvider) = makeAuthorizedClient(protocolState: protocolState)
+        _ = sessionProvider
+        let repository = UserProfileRepository(apiClient: apiClient)
+
+        let updated = try await repository.updateFriendListVisibility(false)
+
+        XCTAssertFalse(updated.friendsVisibleToOthers)
+        XCTAssertTrue(updated.canViewFriends)
+
+        let requests = await protocolState.requests
+        XCTAssertEqual(requests.first?.httpMethod, "PATCH")
+        XCTAssertEqual(requests.first?.url?.path, "/me/privacy")
+    }
+
+    func testUserDecodesFriendPrivacyFields() throws {
+        let response = makeUserResponse(
+            displayName: "Hubert",
+            friendsVisibleToOthers: false,
+            canViewFriends: false
+        )
+
+        let user = try JSONDecoder().decode(User.self, from: Data(response.utf8))
+
+        XCTAssertFalse(user.friendsVisibleToOthers)
+        XCTAssertFalse(user.canViewFriends)
+    }
+
+    func testUserDecodingDefaultsMissingFriendPrivacyFields() throws {
+        let response = makeUserResponse(
+            displayName: "Hubert",
+            includesPrivacyFields: false
+        )
+
+        let user = try JSONDecoder().decode(User.self, from: Data(response.utf8))
+
+        XCTAssertTrue(user.friendsVisibleToOthers)
+        XCTAssertTrue(user.canViewFriends)
+    }
+
     func testHandleComponentsSplitCanonicalHandle() {
         let components = HandleComponents(handle: "friend.one#1234")
 
@@ -517,8 +598,20 @@ final class BackendContractTests: XCTestCase {
         )
     }
 
-    private func makeUserResponse(displayName: String) -> String {
+    private func makeUserResponse(
+        displayName: String,
+        friendsVisibleToOthers: Bool = true,
+        canViewFriends: Bool = true,
+        includesPrivacyFields: Bool = true
+    ) -> String {
+        let privacyFields = includesPrivacyFields
+            ? """
+          "friendsVisibleToOthers": \(friendsVisibleToOthers),
+          "canViewFriends": \(canViewFriends),
         """
+            : ""
+
+        return """
         {
           "id": "7AD7BF4A-7D7C-4DDE-92CA-A6C4B635C922",
           "handle": "hubert#1234",
@@ -529,6 +622,7 @@ final class BackendContractTests: XCTestCase {
           "friendCount": 3,
           "visiblePlaceReviewCount": 5,
           "visibleDishReviewCount": 8,
+        \(privacyFields)
           "isMe": true
         }
         """

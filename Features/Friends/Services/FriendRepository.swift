@@ -1,5 +1,15 @@
 import Foundation
 
+struct UserFriendListItem: Identifiable, Decodable, Sendable {
+    let user: UserSummary
+    let friendsSinceUtc: Date
+    let relationshipStatus: RelationshipStatus
+
+    var id: UUID {
+        user.id
+    }
+}
+
 @MainActor
 final class FriendRepository {
     private struct SendFriendRequestPayload: Encodable {
@@ -28,6 +38,15 @@ final class FriendRepository {
         return response.map {
             Friendship(id: $0.user.id, user: $0.user, createdAt: $0.friendsSinceUtc)
         }
+    }
+
+    func fetchFriends(of userID: UUID) async throws -> [UserFriendListItem] {
+        try await apiClient.send(
+            APIRequest<[UserFriendListItem]>(
+                method: .get,
+                path: "users/\(userID.uuidString)/friends"
+            )
+        )
     }
 
     func fetchIncomingRequests() async throws -> [FriendInvite] {

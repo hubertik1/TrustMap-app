@@ -62,12 +62,16 @@ struct User: Identifiable, Codable, Hashable, Sendable {
     let visiblePlaceReviewCount: Int
     let visibleDishReviewCount: Int
     let isMe: Bool
+    let friendsVisibleToOthers: Bool
+    let canViewFriends: Bool
 
     enum CodingKeys: String, CodingKey {
         case avatarURLString = "avatarUrl"
         case bio
+        case canViewFriends
         case displayName
         case friendCount
+        case friendsVisibleToOthers
         case handle
         case id
         case isMe
@@ -99,7 +103,9 @@ struct User: Identifiable, Codable, Hashable, Sendable {
         friendCount: Int = 0,
         visiblePlaceReviewCount: Int = 0,
         visibleDishReviewCount: Int = 0,
-        isMe: Bool = false
+        isMe: Bool = false,
+        friendsVisibleToOthers: Bool = true,
+        canViewFriends: Bool = true
     ) {
         self.id = id
         self.handle = handle
@@ -111,6 +117,24 @@ struct User: Identifiable, Codable, Hashable, Sendable {
         self.visiblePlaceReviewCount = visiblePlaceReviewCount
         self.visibleDishReviewCount = visibleDishReviewCount
         self.isMe = isMe
+        self.friendsVisibleToOthers = friendsVisibleToOthers
+        self.canViewFriends = canViewFriends
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        handle = try container.decode(String.self, forKey: .handle)
+        displayName = try container.decode(String.self, forKey: .displayName)
+        bio = try container.decodeIfPresent(String.self, forKey: .bio)
+        avatarURLString = try container.decodeIfPresent(String.self, forKey: .avatarURLString)
+        relationshipStatus = try container.decode(RelationshipStatus.self, forKey: .relationshipStatus)
+        friendCount = try container.decode(Int.self, forKey: .friendCount)
+        visiblePlaceReviewCount = try container.decode(Int.self, forKey: .visiblePlaceReviewCount)
+        visibleDishReviewCount = try container.decode(Int.self, forKey: .visibleDishReviewCount)
+        isMe = try container.decode(Bool.self, forKey: .isMe)
+        friendsVisibleToOthers = try container.decodeIfPresent(Bool.self, forKey: .friendsVisibleToOthers) ?? true
+        canViewFriends = try container.decodeIfPresent(Bool.self, forKey: .canViewFriends) ?? true
     }
 }
 
