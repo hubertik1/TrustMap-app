@@ -193,6 +193,7 @@ final class BackendContractTests: XCTestCase {
             profilePictureVisibility: "FriendsOfFriends",
             canViewProfile: false,
             canViewFriends: false,
+            canViewReviews: false,
             canViewProfilePicture: false
         )
 
@@ -204,6 +205,7 @@ final class BackendContractTests: XCTestCase {
         XCTAssertEqual(user.profilePictureVisibility, .friendsOfFriends)
         XCTAssertFalse(user.canViewProfile)
         XCTAssertFalse(user.canViewFriends)
+        XCTAssertFalse(user.canViewReviews)
         XCTAssertFalse(user.canViewProfilePicture)
         XCTAssertTrue(user.supportsPrivacySettings)
     }
@@ -222,8 +224,49 @@ final class BackendContractTests: XCTestCase {
         XCTAssertEqual(user.profilePictureVisibility, .public)
         XCTAssertTrue(user.canViewProfile)
         XCTAssertTrue(user.canViewFriends)
+        XCTAssertTrue(user.canViewReviews)
         XCTAssertTrue(user.canViewProfilePicture)
         XCTAssertFalse(user.supportsPrivacySettings)
+    }
+
+    func testUserDecodingDefaultsMissingCanViewReviews() throws {
+        let response = makeUserResponse(
+            displayName: "Hubert",
+            includesCanViewReviews: false
+        )
+
+        let user = try JSONDecoder().decode(User.self, from: Data(response.utf8))
+
+        XCTAssertTrue(user.canViewReviews)
+        XCTAssertTrue(user.supportsPrivacySettings)
+    }
+
+    func testProfileStatDisplayShowsPrivateReviewStats() {
+        let places = ProfileStatDisplay.places(count: 12, canViewReviews: false)
+        let dishes = ProfileStatDisplay.dishes(count: 8, canViewReviews: false)
+
+        XCTAssertEqual(places.value, "Private")
+        XCTAssertTrue(places.isPrivate)
+        XCTAssertEqual(dishes.value, "Private")
+        XCTAssertTrue(dishes.isPrivate)
+    }
+
+    func testProfileStatDisplayShowsReviewCountsWhenVisible() {
+        let places = ProfileStatDisplay.places(count: 0, canViewReviews: true)
+        let dishes = ProfileStatDisplay.dishes(count: 3, canViewReviews: true)
+
+        XCTAssertEqual(places.value, "0")
+        XCTAssertFalse(places.isPrivate)
+        XCTAssertEqual(dishes.value, "3")
+        XCTAssertFalse(dishes.isPrivate)
+    }
+
+    func testUserReviewsPrivacyFallbackCopyMatchesExpectedMessage() {
+        XCTAssertEqual(ProfileReviewPrivacyContent.title, "Reviews are private")
+        XCTAssertEqual(
+            ProfileReviewPrivacyContent.message,
+            "This user doesn’t allow you to view their rated places or reviewed dishes."
+        )
     }
 
     func testUserDecodesPrivateProfileDtoWithNilAvatar() throws {
@@ -685,10 +728,17 @@ final class BackendContractTests: XCTestCase {
         profilePictureVisibility: String = "Public",
         canViewProfile: Bool = true,
         canViewFriends: Bool = true,
+        canViewReviews: Bool = true,
         canViewProfilePicture: Bool = true,
-        includesPrivacyFields: Bool = true
+        includesPrivacyFields: Bool = true,
+        includesCanViewReviews: Bool = true
     ) -> String {
         let avatarValue = avatarUrl.map { "\"\($0)\"" } ?? "null"
+        let canViewReviewsField = includesCanViewReviews
+            ? """
+          "canViewReviews": \(canViewReviews),
+        """
+            : ""
         let privacyFields = includesPrivacyFields
             ? """
           "reviewVisibility": "\(reviewVisibility)",
@@ -697,6 +747,7 @@ final class BackendContractTests: XCTestCase {
           "profilePictureVisibility": "\(profilePictureVisibility)",
           "canViewProfile": \(canViewProfile),
           "canViewFriends": \(canViewFriends),
+        \(canViewReviewsField)
           "canViewProfilePicture": \(canViewProfilePicture),
         """
             : ""

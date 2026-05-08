@@ -68,6 +68,7 @@ struct User: Identifiable, Decodable, Hashable, Sendable {
     let profilePictureVisibility: VisibilityStatus
     let canViewProfile: Bool
     let canViewFriends: Bool
+    let canViewReviews: Bool
     let canViewProfilePicture: Bool
     let supportsPrivacySettings: Bool
 
@@ -76,6 +77,7 @@ struct User: Identifiable, Decodable, Hashable, Sendable {
         case bio
         case canViewProfile
         case canViewFriends
+        case canViewReviews
         case canViewProfilePicture
         case displayName
         case friendCount
@@ -121,6 +123,7 @@ struct User: Identifiable, Decodable, Hashable, Sendable {
         profilePictureVisibility: VisibilityStatus = .public,
         canViewProfile: Bool = true,
         canViewFriends: Bool = true,
+        canViewReviews: Bool = true,
         canViewProfilePicture: Bool = true,
         supportsPrivacySettings: Bool = true
     ) {
@@ -140,6 +143,7 @@ struct User: Identifiable, Decodable, Hashable, Sendable {
         self.profilePictureVisibility = profilePictureVisibility
         self.canViewProfile = canViewProfile
         self.canViewFriends = canViewFriends
+        self.canViewReviews = canViewReviews
         self.canViewProfilePicture = canViewProfilePicture
         self.supportsPrivacySettings = supportsPrivacySettings
     }
@@ -169,6 +173,7 @@ struct User: Identifiable, Decodable, Hashable, Sendable {
         profilePictureVisibility = try container.decodeIfPresent(VisibilityStatus.self, forKey: .profilePictureVisibility) ?? .public
         canViewProfile = try container.decodeIfPresent(Bool.self, forKey: .canViewProfile) ?? true
         canViewFriends = try container.decodeIfPresent(Bool.self, forKey: .canViewFriends) ?? true
+        canViewReviews = try container.decodeIfPresent(Bool.self, forKey: .canViewReviews) ?? true
         canViewProfilePicture = try container.decodeIfPresent(Bool.self, forKey: .canViewProfilePicture) ?? true
     }
 }

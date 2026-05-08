@@ -1,5 +1,27 @@
 import SwiftUI
 
+struct PrivateProfileSectionView: View {
+    let title: String
+    let message: String
+
+    static var reviews: PrivateProfileSectionView {
+        PrivateProfileSectionView(
+            title: ProfileReviewPrivacyContent.title,
+            message: ProfileReviewPrivacyContent.message
+        )
+    }
+
+    var body: some View {
+        EmptyStateView(
+            title: title,
+            message: message,
+            systemImage: "lock.fill"
+        )
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
 struct UserReviewsView: View {
     enum ContentMode {
         case places
@@ -17,18 +39,18 @@ struct UserReviewsView: View {
         func emptyTitle(for user: User) -> String {
             switch self {
             case .places:
-                return "No visible rated places"
+                return "No rated places yet."
             case .dishes:
-                return "No visible reviewed dishes"
+                return "No reviewed dishes yet."
             }
         }
 
         func emptyMessage(for user: User) -> String {
             switch self {
             case .places:
-                return "\(user.displayName) does not have visible rated places yet."
+                return "\(user.displayName) has not rated any places yet."
             case .dishes:
-                return "\(user.displayName) does not have visible reviewed dishes yet."
+                return "\(user.displayName) has not reviewed any dishes yet."
             }
         }
 
@@ -50,7 +72,9 @@ struct UserReviewsView: View {
 
     var body: some View {
         Group {
-            if isEmpty {
+            if !user.canViewReviews {
+                PrivateProfileSectionView.reviews
+            } else if isEmpty {
                 EmptyStateView(
                     title: mode.emptyTitle(for: user),
                     message: mode.emptyMessage(for: user),
@@ -61,7 +85,7 @@ struct UserReviewsView: View {
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle(mode.navigationTitle)
+        .navigationTitle(user.canViewReviews ? mode.navigationTitle : ProfileReviewPrivacyContent.title)
         .navigationBarTitleDisplayMode(.inline)
     }
 

@@ -7,6 +7,7 @@ final class FriendProfileViewModel: ObservableObject {
     @Published private(set) var dishReviews: [DishReview] = []
     @Published private(set) var placeNames: [UUID: String] = [:]
     @Published private(set) var isLoading = false
+    @Published private(set) var hasLoadedProfile = false
     @Published var errorMessage: String?
     @Published var reviewsErrorMessage: String?
 
@@ -48,7 +49,15 @@ final class FriendProfileViewModel: ObservableObject {
         do {
             let loadedUser = try await userRepository.fetchUser(id: userID)
             user = loadedUser
+            hasLoadedProfile = true
             guard loadedUser.canViewProfile else {
+                placeReviews = []
+                dishReviews = []
+                placeNames = [:]
+                return
+            }
+
+            guard loadedUser.canViewReviews else {
                 placeReviews = []
                 dishReviews = []
                 placeNames = [:]

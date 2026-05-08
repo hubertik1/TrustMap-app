@@ -79,11 +79,11 @@ struct ProfileHeroCard<FriendsDestination: View, PlacesDestination: View, Dishes
             Divider()
 
             ProfileStatsRow(
-                friendCount: friendCount,
+                friendsStat: .friends(count: friendCount, canViewFriends: user.canViewFriends),
                 pendingRequestCount: pendingRequestCount,
-                ratedPlacesCount: ratedPlacesCount,
-                reviewedDishesCount: reviewedDishesCount,
-                canNavigateToFriends: canNavigateToFriends
+                placesStat: .places(count: ratedPlacesCount, canViewReviews: user.canViewReviews),
+                dishesStat: .dishes(count: reviewedDishesCount, canViewReviews: user.canViewReviews),
+                canNavigateToFriends: canNavigateToFriends && user.canViewFriends
             ) {
                 friendsDestination()
             } placesDestination: {
@@ -108,10 +108,10 @@ struct ProfileHeroCard<FriendsDestination: View, PlacesDestination: View, Dishes
 }
 
 private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View, DishesDestination: View>: View {
-    let friendCount: Int
+    let friendsStat: ProfileStatDisplay
     let pendingRequestCount: Int
-    let ratedPlacesCount: Int
-    let reviewedDishesCount: Int
+    let placesStat: ProfileStatDisplay
+    let dishesStat: ProfileStatDisplay
     let canNavigateToFriends: Bool
     @ViewBuilder let friendsDestination: () -> FriendsDestination
     @ViewBuilder let placesDestination: () -> PlacesDestination
@@ -123,9 +123,8 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
                 friendsDestination()
             } label: {
                 ProfileStatColumn(
-                    count: friendCount,
-                    valueText: canNavigateToFriends ? nil : "Private",
-                    label: "Friends",
+                    valueText: friendsStat.value,
+                    label: friendsStat.title,
                     pendingRequestCount: pendingRequestCount,
                     accessibilityLabel: friendsAccessibilityLabel,
                     accessibilityHint: canNavigateToFriends ? "Opens friends" : "Opens friend list privacy status"
@@ -139,10 +138,10 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
                 placesDestination()
             } label: {
                 ProfileStatColumn(
-                    count: ratedPlacesCount,
-                    label: "Places",
-                    accessibilityLabel: "\(ratedPlacesCount) rated places",
-                    accessibilityHint: "Opens places"
+                    valueText: placesStat.value,
+                    label: placesStat.title,
+                    accessibilityLabel: placesStat.isPrivate ? "Rated places private" : "\(placesStat.value) rated places",
+                    accessibilityHint: placesStat.isPrivate ? "Opens review privacy status" : "Opens places"
                 )
             }
             .buttonStyle(ProfileStatNavigationButtonStyle())
@@ -153,10 +152,10 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
                 dishesDestination()
             } label: {
                 ProfileStatColumn(
-                    count: reviewedDishesCount,
-                    label: "Dishes",
-                    accessibilityLabel: "\(reviewedDishesCount) reviewed dishes",
-                    accessibilityHint: "Opens dishes"
+                    valueText: dishesStat.value,
+                    label: dishesStat.title,
+                    accessibilityLabel: dishesStat.isPrivate ? "Reviewed dishes private" : "\(dishesStat.value) reviewed dishes",
+                    accessibilityHint: dishesStat.isPrivate ? "Opens review privacy status" : "Opens dishes"
                 )
             }
             .buttonStyle(ProfileStatNavigationButtonStyle())
@@ -164,19 +163,19 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
     }
 
     private var friendsAccessibilityLabel: String {
-        if pendingRequestCount == 1 {
-            return "\(friendCount) friends, 1 pending request"
-        }
-
-        if pendingRequestCount > 1 {
-            return "\(friendCount) friends, \(pendingRequestCount) pending requests"
-        }
-
-        if !canNavigateToFriends {
+        if friendsStat.isPrivate {
             return "Friend list private"
         }
 
-        return "\(friendCount) friends"
+        if pendingRequestCount == 1 {
+            return "\(friendsStat.value) friends, 1 pending request"
+        }
+
+        if pendingRequestCount > 1 {
+            return "\(friendsStat.value) friends, \(pendingRequestCount) pending requests"
+        }
+
+        return "\(friendsStat.value) friends"
     }
 }
 
@@ -194,8 +193,7 @@ private struct ProfileStatNavigationButtonStyle: ButtonStyle {
 }
 
 private struct ProfileStatColumn: View {
-    let count: Int
-    var valueText: String?
+    let valueText: String
     let label: String
     var pendingRequestCount = 0
     let accessibilityLabel: String
@@ -207,7 +205,7 @@ private struct ProfileStatColumn: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            Text(valueText ?? count.formatted())
+            Text(valueText)
                 .font(.headline.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(.primary)

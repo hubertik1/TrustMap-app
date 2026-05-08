@@ -31,6 +31,7 @@ let package = Package(
                 "Features/Places/Models/PlaceReviewerRating.swift",
                 "Features/Places/Models/PlaceSourceType.swift",
                 "Features/Profile/Models/User.swift",
+                "Features/Profile/Models/UserStats.swift",
                 "Features/Profile/Services/UserProfileRepository.swift",
                 "Features/Reviews/Models/PhotoAsset.swift",
                 "Features/Reviews/Models/VisibilityStatus.swift"

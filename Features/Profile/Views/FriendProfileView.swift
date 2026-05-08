@@ -21,9 +21,9 @@ struct FriendProfileView: View {
 
     var body: some View {
         Group {
-            if viewModel.isLoading && viewModel.user == nil {
+            if !viewModel.hasLoadedProfile && (viewModel.isLoading || viewModel.errorMessage == nil) {
                 LoadingStateView(title: "Loading profile")
-            } else if viewModel.user == nil {
+            } else if !viewModel.hasLoadedProfile || viewModel.user == nil {
                 ProductEmptyStateView(
                     title: "Profile unavailable",
                     message: "We couldn't load this profile.",
@@ -79,21 +79,29 @@ struct FriendProfileView: View {
                         FriendListPrivacyStateView()
                     }
                 } placesDestination: {
-                    UserReviewsView(
-                        user: user,
-                        placeReviews: viewModel.placeReviews,
-                        dishReviews: viewModel.dishReviews,
-                        placeNames: viewModel.placeNames,
-                        mode: .places
-                    )
+                    if user.canViewReviews {
+                        UserReviewsView(
+                            user: user,
+                            placeReviews: viewModel.placeReviews,
+                            dishReviews: viewModel.dishReviews,
+                            placeNames: viewModel.placeNames,
+                            mode: .places
+                        )
+                    } else {
+                        PrivateProfileSectionView.reviews
+                    }
                 } dishesDestination: {
-                    UserReviewsView(
-                        user: user,
-                        placeReviews: viewModel.placeReviews,
-                        dishReviews: viewModel.dishReviews,
-                        placeNames: viewModel.placeNames,
-                        mode: .dishes
-                    )
+                    if user.canViewReviews {
+                        UserReviewsView(
+                            user: user,
+                            placeReviews: viewModel.placeReviews,
+                            dishReviews: viewModel.dishReviews,
+                            placeNames: viewModel.placeNames,
+                            mode: .dishes
+                        )
+                    } else {
+                        PrivateProfileSectionView.reviews
+                    }
                 }
             }
             .padding(.horizontal, 16)
