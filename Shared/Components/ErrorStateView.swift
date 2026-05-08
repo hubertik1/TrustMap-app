@@ -40,9 +40,9 @@ struct ErrorStateView: View {
             .padding(.vertical, 28)
             .background(Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .shadow(color: .black.opacity(0.04), radius: 18, y: 8)
+            .padding(24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(24)
     }
 }
 

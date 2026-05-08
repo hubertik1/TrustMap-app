@@ -36,9 +36,9 @@ struct EmptyStateView: View {
             .shadow(color: .black.opacity(0.04), radius: 18, y: 8)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(title). \(message)")
+            .padding(24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(24)
     }
 }
 
