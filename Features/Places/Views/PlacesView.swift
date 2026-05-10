@@ -24,24 +24,10 @@ struct PlacesView: View {
 
     var body: some View {
         Group {
-            if viewModel.isLoading && !viewModel.shouldShowLibraryContent {
-                LoadingStateView(title: "Loading places")
-            } else if let errorMessage = viewModel.errorMessage, !viewModel.shouldShowLibraryContent {
-                ErrorStateView(message: errorMessage) {
-                    Task { await viewModel.load() }
-                }
-            } else if !viewModel.shouldShowLibraryContent {
-                ProductEmptyStateView(
-                    title: "No places yet",
-                    message: "Add your first review to start building your trusted places.",
-                    systemImage: "fork.knife.circle.fill",
-                    primaryActionTitle: "Add Review",
-                    onPrimaryAction: {
-                        container.selectedTab = .add
-                    }
-                )
+            if TrustMapPlatform.isMacCatalyst {
+                macContent
             } else {
-                placesList
+                phoneContent
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
@@ -72,6 +58,7 @@ struct PlacesView: View {
                     await viewModel.applyFilters(draftFilterState)
                 }
             }
+            .trustMapMacSheet(width: 480, minHeight: 520)
         }
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
@@ -79,8 +66,82 @@ struct PlacesView: View {
         .onAppear {
             viewModel.refreshLocationAvailability()
         }
-        .navigationDestination(item: $selectedPlace) { place in
+        .navigationDestination(item: phoneSelectedPlaceBinding) { place in
             PlaceDetailView(container: container, place: place)
+                .id(place.id)
+        }
+    }
+
+    private var phoneContent: some View {
+        Group {
+            if viewModel.isLoading && !viewModel.shouldShowLibraryContent {
+                LoadingStateView(title: "Loading places")
+            } else if let errorMessage = viewModel.errorMessage, !viewModel.shouldShowLibraryContent {
+                ErrorStateView(message: errorMessage) {
+                    Task { await viewModel.load() }
+                }
+            } else if !viewModel.shouldShowLibraryContent {
+                ProductEmptyStateView(
+                    title: "No places yet",
+                    message: "Add your first review to start building your trusted places.",
+                    systemImage: "fork.knife.circle.fill",
+                    primaryActionTitle: "Add Review",
+                    onPrimaryAction: {
+                        container.selectedTab = .add
+                    }
+                )
+            } else {
+                placesList
+            }
+        }
+    }
+
+    private var macContent: some View {
+        Group {
+            if viewModel.isLoading && !viewModel.shouldShowLibraryContent {
+                LoadingStateView(title: "Loading places")
+            } else if let errorMessage = viewModel.errorMessage, !viewModel.shouldShowLibraryContent {
+                ErrorStateView(message: errorMessage) {
+                    Task { await viewModel.load() }
+                }
+                .trustMapReadableContent()
+            } else if !viewModel.shouldShowLibraryContent {
+                ProductEmptyStateView(
+                    title: "No places yet",
+                    message: "Add your first review to start building your trusted places.",
+                    systemImage: "fork.knife.circle.fill",
+                    primaryActionTitle: "Add Review",
+                    onPrimaryAction: {
+                        container.selectedTab = .add
+                    }
+                )
+                .trustMapReadableContent()
+            } else {
+                HStack(spacing: 0) {
+                    placesList
+                        .frame(width: 400)
+
+                    Divider()
+
+                    Group {
+                        if let selectedPlace {
+                            PlaceDetailView(container: container, place: selectedPlace)
+                                .id(selectedPlace.id)
+                        } else {
+                            MacPlaceSelectionPlaceholder()
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+        }
+    }
+
+    private var phoneSelectedPlaceBinding: Binding<Place?> {
+        Binding {
+            TrustMapPlatform.isMacCatalyst ? nil : selectedPlace
+        } set: { newValue in
+            selectedPlace = newValue
         }
     }
 
@@ -246,6 +307,18 @@ private struct PlacesFilterToolbarIcon: View {
                         .accessibilityHidden(true)
                 }
             }
+    }
+}
+
+private struct MacPlaceSelectionPlaceholder: View {
+    var body: some View {
+        ContentUnavailableView(
+            "Select a place",
+            systemImage: "mappin.and.ellipse",
+            description: Text("Choose a reviewed place from the list to see details, reviews, and actions.")
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(uiColor: .systemGroupedBackground))
     }
 }
 

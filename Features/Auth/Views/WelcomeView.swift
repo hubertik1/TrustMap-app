@@ -19,6 +19,14 @@ struct WelcomeView: View {
     }
 
     var body: some View {
+        if TrustMapPlatform.isMacCatalyst {
+            macBody
+        } else {
+            phoneBody
+        }
+    }
+
+    private var phoneBody: some View {
         NavigationStack {
             ZStack {
                 WelcomeBackgroundView(theme: theme)
@@ -50,6 +58,40 @@ struct WelcomeView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
         }
+    }
+
+    private var macBody: some View {
+        NavigationStack {
+            ZStack {
+                WelcomeBackgroundView(theme: theme)
+
+                GeometryReader { geometry in
+                    ScrollView {
+                        ViewThatFits(in: .horizontal) {
+                            HStack(alignment: .center, spacing: 64) {
+                                macHeroColumn
+                                    .frame(maxWidth: 480, alignment: .leading)
+
+                                WelcomePreviewCard(theme: theme)
+                                    .frame(maxWidth: 540)
+                            }
+
+                            VStack(alignment: .leading, spacing: 36) {
+                                macHeroColumn
+                                WelcomePreviewCard(theme: theme)
+                            }
+                        }
+                        .frame(maxWidth: 1180)
+                        .frame(minHeight: geometry.size.height, alignment: .center)
+                        .padding(.horizontal, 56)
+                        .padding(.vertical, 44)
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+            .toolbar(.hidden, for: .navigationBar)
+        }
+        .trustMapMacWindowConfigurator()
     }
 
     @ViewBuilder
@@ -97,6 +139,25 @@ struct WelcomeView: View {
                 .foregroundStyle(.secondary)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var macHeroColumn: some View {
+        VStack(alignment: .leading, spacing: 30) {
+            WelcomeBrandHeader(theme: theme)
+
+            heroSection
+                .frame(maxWidth: 460, alignment: .leading)
+
+            WelcomeCTASection(
+                theme: theme,
+                isSigningIn: viewModel.isSigningIn,
+                isPreviewEnvironment: AppConfiguration.isRunningPreviews,
+                horizontalPadding: 0,
+                configureRequest: viewModel.configure(_:),
+                handleCompletion: viewModel.handleSignInCompletion(_:)
+            )
+            .frame(maxWidth: 420, alignment: .leading)
         }
     }
 }
@@ -171,6 +232,7 @@ private struct WelcomeCTASection: View {
     let theme: WelcomeTheme
     let isSigningIn: Bool
     let isPreviewEnvironment: Bool
+    var horizontalPadding = WelcomeLayout.horizontalContentPadding
     let configureRequest: (ASAuthorizationAppleIDRequest) -> Void
     let handleCompletion: (Result<ASAuthorization, any Error>) async -> Void
 
@@ -194,7 +256,7 @@ private struct WelcomeCTASection: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.horizontal, WelcomeLayout.horizontalContentPadding)
+        .padding(.horizontal, horizontalPadding)
         .padding(.top, 38)
         .padding(.bottom, 20)
     }

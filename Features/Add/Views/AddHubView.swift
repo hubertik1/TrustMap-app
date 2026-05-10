@@ -25,66 +25,16 @@ struct AddHubView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                VStack(spacing: 10) {
-                    Button(action: presentPlaceReviewSearch) {
-                        AddHubActionCard(
-                            title: "Add Place Review",
-                            subtitle: "Rate a place and share your experience.",
-                            systemImage: "mappin.and.ellipse"
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(action: presentDishReviewPicker) {
-                        AddHubActionCard(
-                            title: "Add Dish Review",
-                            subtitle: "Review a dish from a restaurant you visited.",
-                            systemImage: "fork.knife"
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                if let errorMessage = viewModel.errorMessage {
-                    InlineErrorBanner(title: "Couldn't load recent places", message: errorMessage) {
-                        Task { await viewModel.load() }
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Recent Places")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.primary)
-
-                    if viewModel.recentPlaces.isEmpty {
-                        Text("Places you've reviewed recently will show up here.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        RecentPlacesCard(
-                            places: viewModel.recentPlaces,
-                            hasPlaceReview: { viewModel.placeReview(for: $0) != nil },
-                            supportsDishReview: viewModel.isEligibleDishPlace(_:),
-                            onPlaceReview: { place in
-                                activeFlow = .placeReview
-                                selectedPlace = place
-                                selectedPlaceReview = viewModel.placeReview(for: place)
-                            },
-                            onDishReview: { place in
-                                activeFlow = .dishReview
-                                selectedPlace = place
-                                selectedPlaceReview = nil
-                            }
-                        )
-                    }
-                }
+            if TrustMapPlatform.isMacCatalyst {
+                macHubContent
+            } else {
+                phoneHubContent
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
         .contentMargins(.top, 8, for: .scrollContent)
         .contentMargins(.horizontal, 16, for: .scrollContent)
-        .contentMargins(.bottom, 132, for: .scrollContent)
+        .contentMargins(.bottom, TrustMapLayout.tabAwareBottomPadding, for: .scrollContent)
         .navigationTitle("Add Review")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(
@@ -106,6 +56,7 @@ struct AddHubView: View {
                 selectedPlace = place
                 selectedPlaceReview = viewModel.placeReview(for: place)
             }
+            .trustMapMacSheet(width: 560, minHeight: 620)
         }
         .sheet(
             isPresented: $isDishPlacePickerPresented,
@@ -122,6 +73,7 @@ struct AddHubView: View {
                     shouldPresentPlaceReviewSearchAfterDishPicker = true
                 }
             )
+            .trustMapMacSheet(width: 560, minHeight: 560)
         }
         .sheet(
             isPresented: Binding(
@@ -155,10 +107,102 @@ struct AddHubView: View {
                         )
                     }
                 }
+                .id("\(activeFlow.title)-\(selectedPlace.id.uuidString)")
+                .trustMapMacSheet(width: TrustMapLayout.formMaxWidth, minHeight: 700)
             }
         }
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
+        }
+    }
+
+    private var phoneHubContent: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            actionCards
+            recentPlacesErrorBanner
+            recentPlacesSection
+        }
+    }
+
+    private var macHubContent: some View {
+        LazyVGrid(
+            columns: [
+                GridItem(.adaptive(minimum: 340, maximum: 520), spacing: 24, alignment: .top)
+            ],
+            alignment: .leading,
+            spacing: 24
+        ) {
+            VStack(alignment: .leading, spacing: 14) {
+                actionCards
+            }
+
+            VStack(alignment: .leading, spacing: 16) {
+                recentPlacesErrorBanner
+                recentPlacesSection
+            }
+        }
+        .trustMapReadableContent(maxWidth: 1080, alignment: .topLeading)
+        .padding(.top, 14)
+    }
+
+    private var actionCards: some View {
+        VStack(spacing: 10) {
+            Button(action: presentPlaceReviewSearch) {
+                AddHubActionCard(
+                    title: "Add Place Review",
+                    subtitle: "Rate a place and share your experience.",
+                    systemImage: "mappin.and.ellipse"
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button(action: presentDishReviewPicker) {
+                AddHubActionCard(
+                    title: "Add Dish Review",
+                    subtitle: "Review a dish from a restaurant you visited.",
+                    systemImage: "fork.knife"
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private var recentPlacesErrorBanner: some View {
+        if let errorMessage = viewModel.errorMessage {
+            InlineErrorBanner(title: "Couldn't load recent places", message: errorMessage) {
+                Task { await viewModel.load() }
+            }
+        }
+    }
+
+    private var recentPlacesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Recent Places")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.primary)
+
+            if viewModel.recentPlaces.isEmpty {
+                Text("Places you've reviewed recently will show up here.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                RecentPlacesCard(
+                    places: viewModel.recentPlaces,
+                    hasPlaceReview: { viewModel.placeReview(for: $0) != nil },
+                    supportsDishReview: viewModel.isEligibleDishPlace(_:),
+                    onPlaceReview: { place in
+                        activeFlow = .placeReview
+                        selectedPlace = place
+                        selectedPlaceReview = viewModel.placeReview(for: place)
+                    },
+                    onDishReview: { place in
+                        activeFlow = .dishReview
+                        selectedPlace = place
+                        selectedPlaceReview = nil
+                    }
+                )
+            }
         }
     }
 

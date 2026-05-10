@@ -69,6 +69,7 @@ struct UserFriendsView: View {
         }
         .listStyle(.insetGrouped)
         .contentMargins(.top, 8, for: .scrollContent)
+        .trustMapReadableContent(maxWidth: 840)
         .refreshable {
             await viewModel.load()
         }

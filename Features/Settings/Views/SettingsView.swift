@@ -20,6 +20,36 @@ struct SettingsView: View {
     }
 
     var body: some View {
+        settingsContent
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .trustMapPhoneTabBarHidden()
+        .task {
+            await viewModel.refreshSettingsState()
+        }
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            await viewModel.refreshSettingsState()
+        }
+    }
+
+    @ViewBuilder
+    private var settingsContent: some View {
+        if TrustMapPlatform.isMacCatalyst {
+            ZStack {
+                Color(uiColor: .systemGroupedBackground)
+                    .ignoresSafeArea()
+
+                settingsForm
+                    .scrollContentBackground(.hidden)
+                    .frame(maxWidth: TrustMapLayout.settingsMaxWidth)
+            }
+        } else {
+            settingsForm
+        }
+    }
+
+    private var settingsForm: some View {
         Form {
             accountSection
             permissionsSection
@@ -27,16 +57,6 @@ struct SettingsView: View {
             mapAndDiscoverySection
             appearanceSection
             aboutSection
-        }
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
-        .task {
-            await viewModel.refreshSettingsState()
-        }
-        .task(id: scenePhase) {
-            guard scenePhase == .active else { return }
-            await viewModel.refreshSettingsState()
         }
     }
 

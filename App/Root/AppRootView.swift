@@ -32,6 +32,7 @@ struct AppRootView: View {
             }
         }
         .preferredColorScheme(preferencesStore.preferredColorScheme)
+        .trustMapMacWindowConfigurator()
         .task {
             if case .launching = sessionStore.state {
                 await sessionStore.bootstrap()

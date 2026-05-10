@@ -58,7 +58,7 @@ struct RemotePhotoView: View {
 
     @MainActor
     private func loadImage() async {
-        let screenScale = UIScreen.main.scale
+        let screenScale = TrustMapPlatform.screenScale
         let normalizedSize = CGSize(
             width: max(targetDisplaySize.width, 1),
             height: max(targetDisplaySize.height, 1)

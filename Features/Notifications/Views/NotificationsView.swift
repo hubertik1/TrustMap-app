@@ -54,6 +54,7 @@ struct NotificationsView: View {
             switch route {
             case .place(let place):
                 PlaceDetailView(container: container, place: place)
+                    .id(place.id)
             case .friends:
                 FriendsView(container: container)
             }
@@ -97,6 +98,7 @@ struct NotificationsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .trustMapReadableContent(maxWidth: 760)
         .refreshable {
             await viewModel.refresh()
         }

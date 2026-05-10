@@ -52,6 +52,7 @@ struct ProfileView: View {
             NavigationStack {
                 ProfileEditorSheet(viewModel: viewModel)
             }
+            .trustMapMacSheet(width: TrustMapLayout.formMaxWidth, minHeight: 700)
         }
     }
 
@@ -206,7 +207,8 @@ struct ProfileView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 4)
-            .padding(.bottom, 132)
+            .padding(.bottom, TrustMapLayout.tabAwareBottomPadding)
+            .trustMapReadableContent(maxWidth: TrustMapLayout.activityContentMaxWidth, alignment: .topLeading)
         }
         .refreshable {
             await viewModel.load()
@@ -351,6 +353,7 @@ private struct ProfileEditorSheet: View {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .padding(.bottom, 40)
+            .trustMapReadableContent(maxWidth: TrustMapLayout.formMaxWidth, alignment: .topLeading)
         }
         .background(Color(uiColor: .systemGroupedBackground))
         .scrollDismissesKeyboard(.interactively)
@@ -360,6 +363,22 @@ private struct ProfileEditorSheet: View {
         .task(id: selectedPhotoItem) {
             await loadPendingAvatarCrop(from: selectedPhotoItem)
         }
+        #if targetEnvironment(macCatalyst)
+        .sheet(item: $pendingAvatarCrop, onDismiss: avatarCropperDidDismiss) { pendingCrop in
+            ProfilePhotoCropperView(
+                image: pendingCrop.image,
+                isPreparingPhoto: isPreparingCroppedAvatar,
+                errorMessage: viewModel.errorMessage,
+                onCancel: cancelAvatarCropping,
+                onUsePhoto: prepareCroppedAvatarPhoto,
+                onCropError: showAvatarCropPreparationError,
+                onDismissError: { viewModel.errorMessage = nil }
+            )
+            .interactiveDismissDisabled(isPreparingCroppedAvatar)
+            .trustMapMacSheet(width: 860, minHeight: 700)
+            .id(pendingCrop.id)
+        }
+        #else
         .fullScreenCover(item: $pendingAvatarCrop, onDismiss: avatarCropperDidDismiss) { pendingCrop in
             ProfilePhotoCropperView(
                 image: pendingCrop.image,
@@ -373,6 +392,7 @@ private struct ProfileEditorSheet: View {
             .interactiveDismissDisabled(isPreparingCroppedAvatar)
             .id(pendingCrop.id)
         }
+        #endif
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button {
@@ -931,6 +951,7 @@ private struct CategoriesView: View {
                     }
                 }
             }
+            .trustMapMacSheet(width: 520, minHeight: 360)
         }
         .confirmationDialog(
             "Delete category?",
@@ -1074,7 +1095,8 @@ private struct CategoriesView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
-            .padding(.bottom, 132)
+            .padding(.bottom, TrustMapLayout.tabAwareBottomPadding)
+            .trustMapReadableContent(maxWidth: TrustMapLayout.activityContentMaxWidth, alignment: .topLeading)
         }
         .refreshable {
             guard !viewModel.isSubmitting else {

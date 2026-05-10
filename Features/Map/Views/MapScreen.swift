@@ -28,7 +28,7 @@ struct MapScreen: View {
 
     var body: some View {
         MapReader { proxy in
-            ZStack {
+            ZStack(alignment: .topLeading) {
                 Map(position: $cameraPosition, selection: $mapSelection) {
                     UserAnnotation()
 
@@ -93,13 +93,20 @@ struct MapScreen: View {
                 if shouldShowMapStatusOverlay {
                     VStack {
                         mapStatusOverlay
+                            .frame(maxWidth: TrustMapPlatform.isMacCatalyst ? TrustMapLayout.mapSearchPanelWidth : nil)
                             .padding(.horizontal, 16)
                             .padding(.top, 12)
 
                         Spacer()
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .transition(.opacity)
                     .accessibilitySortPriority(1)
+                }
+
+                if TrustMapPlatform.isMacCatalyst {
+                    macSearchResultsOverlay
+                    macLocationAccessOverlay
                 }
 
                 if let promptContext = viewModel.promptContext {
@@ -110,24 +117,41 @@ struct MapScreen: View {
                             clearMapSelection()
                         }
 
-                    VStack {
-                        Spacer()
-                        selectionPromptView(
-                            for: promptContext.place,
-                            annotation: selectedAnnotation(for: promptContext.place.id)
-                        )
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, promptBottomInset)
+                    Group {
+                        if TrustMapPlatform.isMacCatalyst {
+                            HStack {
+                                Spacer(minLength: 0)
+                                selectionPromptView(
+                                    for: promptContext.place,
+                                    annotation: selectedAnnotation(for: promptContext.place.id)
+                                )
+                                .frame(maxWidth: TrustMapLayout.mapInspectorWidth)
+                                .padding(.top, 24)
+                                .padding(.trailing, 24)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                            .transition(.opacity.combined(with: .move(edge: .trailing)))
+                        } else {
+                            VStack {
+                                Spacer()
+                                selectionPromptView(
+                                    for: promptContext.place,
+                                    annotation: selectedAnnotation(for: promptContext.place.id)
+                                )
+                                    .padding(.horizontal, 16)
+                                    .padding(.bottom, promptBottomInset)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                     .animation(.easeInOut(duration: 0.2), value: promptContext.id)
                 }
             }
         }
         .navigationTitle("Map")
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $viewModel.searchText, prompt: "Search places")
+        .modifier(PhoneMapSearchModifier(searchText: $viewModel.searchText))
         .onChange(of: viewModel.searchText) { _, _ in
             viewModel.handleSearchTextChange()
         }
@@ -135,32 +159,13 @@ struct MapScreen: View {
             Task { await viewModel.performSearch() }
         }
         .safeAreaInset(edge: .top) {
-            if !viewModel.searchResults.isEmpty {
+            if !TrustMapPlatform.isMacCatalyst && !viewModel.searchResults.isEmpty {
                 searchResultsView
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if let locationMessage = viewModel.locationAccessState.message {
-                HStack(alignment: .center, spacing: 12) {
-                    Image(systemName: "location")
-                        .foregroundStyle(.secondary)
-
-                    Text(locationMessage)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    if viewModel.locationAccessState.showsSettingsAction,
-                       let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-                        Button("Settings") {
-                            openURL(settingsURL)
-                        }
-                        .font(.footnote.weight(.semibold))
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            if !TrustMapPlatform.isMacCatalyst && viewModel.locationAccessState.message != nil {
+                locationAccessBanner
                 .padding()
             }
         }
@@ -189,6 +194,12 @@ struct MapScreen: View {
                 }
                 .accessibilityLabel(viewModel.hasActiveFilters ? "Filters, active" : "Filters")
             }
+
+            if TrustMapPlatform.isMacCatalyst {
+                ToolbarItem(placement: .topBarTrailing) {
+                    macSearchField
+                }
+            }
         }
         .sheet(isPresented: $viewModel.isFilterPresented) {
             MapFilterSheet(
@@ -197,6 +208,7 @@ struct MapScreen: View {
             ) {
                 Task { await viewModel.applyFilters() }
             }
+            .trustMapMacSheet(width: 480, minHeight: 520)
         }
         .sheet(
             isPresented: Binding(
@@ -216,6 +228,8 @@ struct MapScreen: View {
                 NavigationStack {
                     PlaceDetailView(container: container, place: selectedPlace, showsDoneButton: true)
                 }
+                .id(selectedPlace.id)
+                .trustMapMacSheet(width: 780, minHeight: 700)
             }
         }
         .task(id: refreshCenter.globalRevision) {
@@ -250,6 +264,70 @@ struct MapScreen: View {
             .padding(.horizontal)
         }
         .frame(maxHeight: 240)
+    }
+
+    private var macSearchField: some View {
+        MacMapSearchTextField(text: $viewModel.searchText) {
+            Task { await viewModel.performSearch() }
+        }
+        .frame(width: 310, height: 34)
+        .fixedSize()
+    }
+
+    @ViewBuilder
+    private var macSearchResultsOverlay: some View {
+        if !viewModel.searchResults.isEmpty {
+            searchResultsView
+                .frame(width: TrustMapLayout.mapSearchPanelWidth)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(.white.opacity(0.45), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.10), radius: 18, y: 10)
+                .padding(.top, 18)
+                .padding(.leading, 18)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+    }
+
+    @ViewBuilder
+    private var macLocationAccessOverlay: some View {
+        if viewModel.locationAccessState.message != nil {
+            VStack {
+                Spacer()
+
+                locationAccessBanner
+                    .frame(maxWidth: TrustMapLayout.mapSearchPanelWidth)
+                    .padding(.leading, 18)
+                    .padding(.bottom, 18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private var locationAccessBanner: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "location")
+                .foregroundStyle(.secondary)
+
+            Text(viewModel.locationAccessState.message ?? "")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if viewModel.locationAccessState.showsSettingsAction,
+               let settingsURL = TrustMapSystemSettings.appSettingsURL {
+                Button("Settings") {
+                    openURL(settingsURL)
+                }
+                .font(.footnote.weight(.semibold))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var mapStyle: MapStyle {
@@ -490,6 +568,75 @@ struct MapScreen: View {
 
     private func reviewCountText(_ count: Int) -> String {
         count == 1 ? "1 review" : "\(count) reviews"
+    }
+}
+
+private struct PhoneMapSearchModifier: ViewModifier {
+    @Binding var searchText: String
+
+    func body(content: Content) -> some View {
+        if TrustMapPlatform.isMacCatalyst {
+            content
+        } else {
+            content.searchable(text: $searchText, prompt: "Search places")
+        }
+    }
+}
+
+private struct MacMapSearchTextField: UIViewRepresentable {
+    @Binding var text: String
+    let onSubmit: () -> Void
+
+    func makeUIView(context: Context) -> UISearchTextField {
+        let textField = UISearchTextField(frame: .zero)
+        textField.delegate = context.coordinator
+        textField.placeholder = "Search places"
+        textField.returnKeyType = .search
+        textField.autocorrectionType = .no
+        textField.autocapitalizationType = .words
+        textField.clearButtonMode = .whileEditing
+        textField.adjustsFontForContentSizeCategory = true
+        textField.font = UIFont.preferredFont(forTextStyle: .body)
+        textField.backgroundColor = UIColor.secondarySystemFill.withAlphaComponent(0.92)
+        textField.layer.cornerCurve = .continuous
+        textField.layer.cornerRadius = 17
+        textField.clipsToBounds = true
+        textField.addTarget(
+            context.coordinator,
+            action: #selector(Coordinator.textDidChange(_:)),
+            for: .editingChanged
+        )
+        return textField
+    }
+
+    func updateUIView(_ textField: UISearchTextField, context: Context) {
+        if textField.text != text {
+            textField.text = text
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, onSubmit: onSubmit)
+    }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        private var text: Binding<String>
+        private let onSubmit: () -> Void
+
+        init(text: Binding<String>, onSubmit: @escaping () -> Void) {
+            self.text = text
+            self.onSubmit = onSubmit
+        }
+
+        @objc func textDidChange(_ textField: UITextField) {
+            text.wrappedValue = textField.text ?? ""
+        }
+
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            textField.resignFirstResponder()
+            onSubmit()
+            return true
+        }
     }
 }
 

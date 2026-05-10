@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 final class AppContainer: ObservableObject {
     @Published var selectedTab: AppTab = .map
+    @Published var isSettingsPresented = false
 
     let apiClient: APIClient
     let authService: AppleAuthenticationService

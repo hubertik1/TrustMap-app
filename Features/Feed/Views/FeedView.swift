@@ -47,6 +47,7 @@ struct FeedView: View {
         }
         .navigationDestination(item: $selectedPlace) { place in
             PlaceDetailView(container: container, place: place)
+                .id(place.id)
         }
     }
 
@@ -78,7 +79,8 @@ struct FeedView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
-            .padding(.bottom, 132)
+            .padding(.bottom, TrustMapLayout.tabAwareBottomPadding)
+            .trustMapReadableContent(maxWidth: TrustMapLayout.activityContentMaxWidth)
         }
         .refreshable {
             await viewModel.load()

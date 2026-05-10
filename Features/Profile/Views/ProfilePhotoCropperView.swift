@@ -22,7 +22,7 @@ struct ProfilePhotoCropperView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let safeAreaInsets = resolvedSafeAreaInsets(from: proxy.safeAreaInsets)
+            let safeAreaInsets = proxy.safeAreaInsets
             let topInset = max(safeAreaInsets.top, 16)
             let bottomInset = max(safeAreaInsets.bottom, 12)
             let toolbarHeight: CGFloat = 54
@@ -143,21 +143,6 @@ struct ProfilePhotoCropperView: View {
         .frame(minHeight: 44)
     }
 
-    private func resolvedSafeAreaInsets(from geometryInsets: EdgeInsets) -> EdgeInsets {
-        let windowInsets = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first { $0.isKeyWindow }?
-            .safeAreaInsets ?? .zero
-
-        return EdgeInsets(
-            top: max(geometryInsets.top, windowInsets.top),
-            leading: max(geometryInsets.leading, windowInsets.left),
-            bottom: max(geometryInsets.bottom, windowInsets.bottom),
-            trailing: max(geometryInsets.trailing, windowInsets.right)
-        )
-    }
-
     private func cropStage(stageSize: CGSize, cropFrameSize: CGFloat) -> some View {
         ZStack {
             Image(uiImage: image)
@@ -242,7 +227,8 @@ struct ProfilePhotoCropperView: View {
     private func resolvedCropFrameSize(for stageSize: CGSize) -> CGFloat {
         let availableWidth = max(stageSize.width, 1)
         let availableHeight = max(stageSize.height, 1)
-        return max(1, min(availableWidth * 0.84, availableHeight * 0.86))
+        let maxDesktopCropSize: CGFloat = TrustMapPlatform.isMacCatalyst ? 520 : .greatestFiniteMagnitude
+        return max(1, min(availableWidth * 0.84, availableHeight * 0.86, maxDesktopCropSize))
     }
 
     private func baseScale(for cropFrameSize: CGFloat) -> CGFloat {

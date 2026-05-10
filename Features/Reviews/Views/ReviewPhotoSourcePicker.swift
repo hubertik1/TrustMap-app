@@ -30,7 +30,7 @@ struct ReviewPhotoSourcePicker: ViewModifier {
                 }
                 .disabled(isPreparingPhotos)
 
-                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                if showsCameraOption {
                     Button("Camera") {
                         guard !isPreparingPhotos else {
                             return
@@ -68,6 +68,9 @@ struct ReviewPhotoSourcePicker: ViewModifier {
                 }
             }
             .sheet(isPresented: $isCameraPresented) {
+                #if targetEnvironment(macCatalyst)
+                EmptyView()
+                #else
                 ReviewCameraPicker {
                     isCameraPresented = false
                 } onImagePicked: { data in
@@ -79,6 +82,7 @@ struct ReviewPhotoSourcePicker: ViewModifier {
                     isCameraPresented = false
                     onError(AppError.validationFailure("The captured photo couldn't be prepared."))
                 }
+                #endif
             }
             .fileImporter(
                 isPresented: $isFileImporterPresented,
@@ -90,6 +94,14 @@ struct ReviewPhotoSourcePicker: ViewModifier {
 
     private var photoLibrarySelectionLimit: Int? {
         allowsMultipleSelection ? nil : 1
+    }
+
+    private var showsCameraOption: Bool {
+        #if targetEnvironment(macCatalyst)
+        return false
+        #else
+        return UIImagePickerController.isSourceTypeAvailable(.camera)
+        #endif
     }
 
     private var allPhotosFailedMessage: String {
@@ -270,6 +282,7 @@ extension View {
     }
 }
 
+#if !targetEnvironment(macCatalyst)
 private struct ReviewCameraPicker: UIViewControllerRepresentable {
     let onCancel: () -> Void
     let onImagePicked: (Data) -> Void
@@ -315,3 +328,4 @@ private struct ReviewCameraPicker: UIViewControllerRepresentable {
         }
     }
 }
+#endif

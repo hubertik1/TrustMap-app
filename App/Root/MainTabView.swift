@@ -2,6 +2,22 @@ import SwiftUI
 
 struct MainTabView: View {
     @ObservedObject private var container: AppContainer
+
+    init(container: AppContainer) {
+        self.container = container
+    }
+
+    var body: some View {
+        if TrustMapPlatform.isMacCatalyst {
+            MacMainWindowView(container: container)
+        } else {
+            PhoneMainTabView(container: container)
+        }
+    }
+}
+
+private struct PhoneMainTabView: View {
+    @ObservedObject private var container: AppContainer
     @ObservedObject private var notificationBadgeStore: NotificationBadgeStore
     @ObservedObject private var refreshCenter: AppRefreshCenter
     @State private var isShowingNotifications = false
@@ -21,7 +37,7 @@ struct MainTabView: View {
                 notificationToolbarItem
             }
             .tabItem {
-                Label("Map", systemImage: "map")
+                Label(AppTab.map.phoneTitle, systemImage: AppTab.map.systemImage)
             }
             .tag(AppTab.map)
 
@@ -32,7 +48,7 @@ struct MainTabView: View {
                 notificationToolbarItem
             }
             .tabItem {
-                Label("Places", systemImage: "mappin.and.ellipse")
+                Label(AppTab.places.phoneTitle, systemImage: AppTab.places.systemImage)
             }
             .tag(AppTab.places)
 
@@ -43,7 +59,7 @@ struct MainTabView: View {
                 notificationToolbarItem
             }
             .tabItem {
-                Label("Add", systemImage: "plus.circle.fill")
+                Label(AppTab.add.phoneTitle, systemImage: AppTab.add.systemImage)
             }
             .tag(AppTab.add)
 
@@ -54,7 +70,7 @@ struct MainTabView: View {
                 notificationToolbarItem
             }
             .tabItem {
-                Label("Feed", systemImage: "list.bullet.rectangle")
+                Label(AppTab.feed.phoneTitle, systemImage: AppTab.feed.systemImage)
             }
             .tag(AppTab.feed)
 
@@ -65,7 +81,7 @@ struct MainTabView: View {
                 notificationToolbarItem
             }
             .tabItem {
-                Label("Profile", systemImage: "person.crop.circle")
+                Label(AppTab.profile.phoneTitle, systemImage: AppTab.profile.systemImage)
             }
             .tag(AppTab.profile)
         }

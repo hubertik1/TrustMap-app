@@ -95,27 +95,6 @@ final class UserNotificationPermissionService: UserNotificationPermissionServici
     func openSystemNotificationSettings() {
         guard !isPreview else { return }
 
-        guard let fallbackURL = URL(string: UIApplication.openSettingsURLString) else {
-            return
-        }
-
-        let notificationSettingsURL: URL?
-        if #available(iOS 16.0, *) {
-            notificationSettingsURL = URL(string: UIApplication.openNotificationSettingsURLString)
-        } else {
-            notificationSettingsURL = nil
-        }
-
-        guard let settingsURL = notificationSettingsURL else {
-            UIApplication.shared.open(fallbackURL)
-            return
-        }
-
-        UIApplication.shared.open(settingsURL) { success in
-            guard !success else { return }
-            Task { @MainActor in
-                UIApplication.shared.open(fallbackURL)
-            }
-        }
+        TrustMapSystemSettings.openNotificationSettings()
     }
 }

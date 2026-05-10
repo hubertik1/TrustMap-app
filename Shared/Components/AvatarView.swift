@@ -18,6 +18,29 @@ struct AvatarView: View {
     }
 
     var body: some View {
+        #if targetEnvironment(macCatalyst)
+        avatarContent
+            .sheet(isPresented: $isPresentingFullscreenAvatar) {
+                AvatarLightboxView(
+                    name: name,
+                    fallbackAvatar: AnyView(fallbackAvatar),
+                    candidateURLs: fullscreenCandidateURLs
+                )
+                .trustMapMacSheet(width: 720, minHeight: 560)
+            }
+        #else
+        avatarContent
+            .fullScreenCover(isPresented: $isPresentingFullscreenAvatar) {
+                AvatarLightboxView(
+                    name: name,
+                    fallbackAvatar: AnyView(fallbackAvatar),
+                    candidateURLs: fullscreenCandidateURLs
+                )
+            }
+        #endif
+    }
+
+    private var avatarContent: some View {
         Group {
             if let loadedImage {
                 Image(uiImage: loadedImage)
@@ -49,16 +72,6 @@ struct AvatarView: View {
                 isPresentingFullscreenAvatar = true
             }
         )
-        .fullScreenCover(isPresented: $isPresentingFullscreenAvatar) {
-            AvatarLightboxView(
-                name: name,
-                fallbackAvatar: AnyView(
-                    fallbackAvatar
-                        .frame(width: min(UIScreen.main.bounds.width * 0.55, 220), height: min(UIScreen.main.bounds.width * 0.55, 220))
-                ),
-                candidateURLs: fullscreenCandidateURLs
-            )
-        }
     }
 
     private var fallbackAvatar: some View {
@@ -125,7 +138,7 @@ struct AvatarView: View {
                 candidateURLs: previewCandidateURLs,
                 cacheKey: requestCacheKey as NSString,
                 targetDisplaySize: targetSize,
-                screenScale: UIScreen.main.scale
+                screenScale: TrustMapPlatform.screenScale
             )
         } catch is CancellationError {
             return
@@ -174,16 +187,23 @@ private struct AvatarLightboxView: View {
         ZStack(alignment: .topTrailing) {
             Color.black.ignoresSafeArea()
 
-            RemoteURLImageView(
-                candidateURLs: candidateURLs,
-                contentMode: .fit,
-                targetDisplaySize: UIScreen.main.bounds.size
-            ) {
-                VStack(spacing: 20) {
-                    fallbackAvatar
-                    Text(name)
-                        .font(.headline)
-                        .foregroundStyle(.white)
+            GeometryReader { proxy in
+                RemoteURLImageView(
+                    candidateURLs: candidateURLs,
+                    contentMode: .fit,
+                    targetDisplaySize: proxy.size
+                ) {
+                    VStack(spacing: 20) {
+                        fallbackAvatar
+                            .frame(
+                                width: min(proxy.size.width * 0.45, 220),
+                                height: min(proxy.size.width * 0.45, 220)
+                            )
+                        Text(name)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -264,7 +284,7 @@ private struct RemoteURLImageView<Placeholder: View>: View {
                     width: max(targetDisplaySize.width, 1),
                     height: max(targetDisplaySize.height, 1)
                 ),
-                screenScale: UIScreen.main.scale
+                screenScale: TrustMapPlatform.screenScale
             )
         } catch is CancellationError {
             return

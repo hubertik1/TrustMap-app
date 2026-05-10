@@ -120,6 +120,7 @@ struct PlaceDetailView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .trustMapReadableContent(maxWidth: TrustMapLayout.activityContentMaxWidth)
                 .refreshable {
                     await viewModel.load()
                 }
@@ -137,6 +138,7 @@ struct PlaceDetailView: View {
                     existingReview: viewModel.currentUserPlaceReview
                 )
             }
+            .trustMapMacSheet(width: TrustMapLayout.formMaxWidth, minHeight: 700)
         }
         .sheet(isPresented: $viewModel.isPresentingAddDishReview, onDismiss: {
             Task { await viewModel.load() }
@@ -148,6 +150,7 @@ struct PlaceDetailView: View {
                     placeReviewID: viewModel.currentUserPlaceReview?.id
                 )
             }
+            .trustMapMacSheet(width: TrustMapLayout.formMaxWidth, minHeight: 700)
         }
         .sheet(item: $viewModel.editingDishReview, onDismiss: {
             Task { await viewModel.load() }
@@ -159,6 +162,7 @@ struct PlaceDetailView: View {
                     existingReview: review
                 )
             }
+            .trustMapMacSheet(width: TrustMapLayout.formMaxWidth, minHeight: 700)
         }
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()

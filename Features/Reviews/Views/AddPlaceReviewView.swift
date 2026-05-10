@@ -31,12 +31,7 @@ struct AddPlaceReviewView: View {
     }
 
     var body: some View {
-        Form {
-            placeSection
-            reviewSection
-            photosSection
-            deleteSection
-        }
+        reviewFormContainer
         .navigationTitle(viewModel.navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(showsCancelButton)
@@ -78,6 +73,31 @@ struct AddPlaceReviewView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(errorAlertMessage)
+        }
+    }
+
+    @ViewBuilder
+    private var reviewFormContainer: some View {
+        if TrustMapPlatform.isMacCatalyst {
+            ZStack {
+                Color(uiColor: .systemGroupedBackground)
+                    .ignoresSafeArea()
+
+                reviewForm
+                    .scrollContentBackground(.hidden)
+                    .frame(maxWidth: TrustMapLayout.formMaxWidth)
+            }
+        } else {
+            reviewForm
+        }
+    }
+
+    private var reviewForm: some View {
+        Form {
+            placeSection
+            reviewSection
+            photosSection
+            deleteSection
         }
     }
 

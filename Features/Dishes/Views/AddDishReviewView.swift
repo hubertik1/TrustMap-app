@@ -30,6 +30,71 @@ struct AddDishReviewView: View {
     }
 
     var body: some View {
+        reviewFormContainer
+        .navigationTitle(viewModel.navigationTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(showsCancelButton)
+        .toolbar {
+            if showsCancelButton {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+
+            ToolbarItem(placement: .confirmationAction) {
+                if viewModel.isSaving || viewModel.isDeleting {
+                    ProgressView()
+                } else {
+                    Button("Save") {
+                        Task { await viewModel.save() }
+                    }
+                    .disabled(!viewModel.canSave)
+                }
+            }
+        }
+        .task {
+            await viewModel.load()
+        }
+        .onChange(of: viewModel.didSave) { _, didSave in
+            if didSave {
+                dismiss()
+            }
+        }
+        .onChange(of: viewModel.didDelete) { _, didDelete in
+            if didDelete {
+                dismiss()
+            }
+        }
+        .alert(
+            viewModel.lastAction.errorTitle,
+            isPresented: Binding(
+                get: { viewModel.errorMessage != nil },
+                set: { if !$0 { viewModel.errorMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "")
+        }
+    }
+
+    @ViewBuilder
+    private var reviewFormContainer: some View {
+        if TrustMapPlatform.isMacCatalyst {
+            ZStack {
+                Color(uiColor: .systemGroupedBackground)
+                    .ignoresSafeArea()
+
+                reviewForm
+                    .scrollContentBackground(.hidden)
+                    .frame(maxWidth: TrustMapLayout.formMaxWidth)
+            }
+        } else {
+            reviewForm
+        }
+    }
+
+    private var reviewForm: some View {
         Form {
             Section("Place") {
                 Text(viewModel.place.displayName)
@@ -173,51 +238,6 @@ struct AddDishReviewView: View {
                     Text("Danger Zone")
                 }
             }
-        }
-        .navigationTitle(viewModel.navigationTitle)
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(showsCancelButton)
-        .toolbar {
-            if showsCancelButton {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
-
-            ToolbarItem(placement: .confirmationAction) {
-                if viewModel.isSaving || viewModel.isDeleting {
-                    ProgressView()
-                } else {
-                    Button("Save") {
-                        Task { await viewModel.save() }
-                    }
-                    .disabled(!viewModel.canSave)
-                }
-            }
-        }
-        .task {
-            await viewModel.load()
-        }
-        .onChange(of: viewModel.didSave) { _, didSave in
-            if didSave {
-                dismiss()
-            }
-        }
-        .onChange(of: viewModel.didDelete) { _, didDelete in
-            if didDelete {
-                dismiss()
-            }
-        }
-        .alert(
-            viewModel.lastAction.errorTitle,
-            isPresented: Binding(
-                get: { viewModel.errorMessage != nil },
-                set: { if !$0 { viewModel.errorMessage = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(viewModel.errorMessage ?? "")
         }
     }
 

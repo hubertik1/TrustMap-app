@@ -94,12 +94,11 @@ final class UserLocationService: NSObject, UserLocationServicing {
     }
 
     func openSystemLocationSettings() {
-        guard !AppConfiguration.isRunningPreviews,
-              let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
+        guard !AppConfiguration.isRunningPreviews else {
             return
         }
 
-        UIApplication.shared.open(settingsURL)
+        TrustMapSystemSettings.openAppSettings()
     }
 }
 

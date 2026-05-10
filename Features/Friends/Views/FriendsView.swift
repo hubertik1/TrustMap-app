@@ -37,6 +37,7 @@ struct FriendsView: View {
                 }
             }
         }
+        .trustMapReadableContent(maxWidth: 840)
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("Friends")
         .onChange(of: viewModel.searchText) { _, _ in

@@ -106,7 +106,8 @@ struct FriendProfileView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 4)
-            .padding(.bottom, 132)
+            .padding(.bottom, TrustMapLayout.tabAwareBottomPadding)
+            .trustMapReadableContent(maxWidth: TrustMapLayout.activityContentMaxWidth, alignment: .topLeading)
         }
         .refreshable {
             await viewModel.load()
@@ -147,7 +148,8 @@ struct FriendProfileView: View {
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 24)
             .padding(.top, 56)
-            .padding(.bottom, 132)
+            .padding(.bottom, TrustMapLayout.tabAwareBottomPadding)
+            .trustMapReadableContent(maxWidth: 680)
         }
         .refreshable {
             await viewModel.load()

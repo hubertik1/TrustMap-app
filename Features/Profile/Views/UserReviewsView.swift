@@ -125,7 +125,8 @@ struct UserReviewsView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
-            .padding(.bottom, 132)
+            .padding(.bottom, TrustMapLayout.tabAwareBottomPadding)
+            .trustMapReadableContent(maxWidth: TrustMapLayout.activityContentMaxWidth, alignment: .topLeading)
         }
     }
 

@@ -18,20 +18,35 @@ struct PhotoGridView: View {
 
     var body: some View {
         if !assets.isEmpty {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: spacing) {
-                    ForEach(assets.indices, id: \.self) { index in
-                        photoThumbnail(for: assets[index], at: index)
-                    }
+            #if targetEnvironment(macCatalyst)
+            photoStrip
+                .sheet(item: $selectedPhoto) { selectedPhoto in
+                    PhotoLightboxView(
+                        photos: lightboxAssets,
+                        initialPhotoID: selectedPhoto.id
+                    )
+                    .trustMapMacSheet(width: 860, minHeight: 640)
                 }
-                .padding(.vertical, 4)
+            #else
+            photoStrip
+                .fullScreenCover(item: $selectedPhoto) { selectedPhoto in
+                    PhotoLightboxView(
+                        photos: lightboxAssets,
+                        initialPhotoID: selectedPhoto.id
+                    )
+                }
+            #endif
+        }
+    }
+
+    private var photoStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: spacing) {
+                ForEach(assets.indices, id: \.self) { index in
+                    photoThumbnail(for: assets[index], at: index)
+                }
             }
-            .fullScreenCover(item: $selectedPhoto) { selectedPhoto in
-                PhotoLightboxView(
-                    photos: lightboxAssets,
-                    initialPhotoID: selectedPhoto.id
-                )
-            }
+            .padding(.vertical, 4)
         }
     }
 
