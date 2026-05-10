@@ -1,12 +1,12 @@
 import SwiftUI
-import UIKit
 
 struct SettingsView: View {
-    @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
+    private let container: AppContainer
     @StateObject private var viewModel: SettingsViewModel
 
     init(container: AppContainer) {
+        self.container = container
         _viewModel = StateObject(
             wrappedValue: SettingsViewModel(
                 sessionStore: container.sessionStore,
@@ -22,6 +22,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             accountSection
+            permissionsSection
             privacySection
             mapAndDiscoverySection
             appearanceSection
@@ -29,29 +30,65 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .task {
-            await viewModel.refreshAuthorizationStatuses()
+            await viewModel.refreshSettingsState()
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
-            await viewModel.refreshAuthorizationStatuses()
+            await viewModel.refreshSettingsState()
         }
     }
 
     private var accountSection: some View {
         Section("Account") {
-            AccountSummaryRow(
-                displayName: viewModel.currentUser?.displayName ?? "TrustMap Member",
-                avatarURL: viewModel.currentUser?.avatarURL,
-                handle: "@\(viewModel.currentUser?.handle ?? "account")"
-            )
+            if viewModel.currentUser != nil {
+                NavigationLink {
+                    ProfileView(container: container)
+                } label: {
+                    AccountSummaryRow(
+                        displayName: viewModel.accountDisplayName,
+                        avatarURL: viewModel.accountAvatarURL,
+                        handle: viewModel.accountHandleLabel
+                    )
+                }
+                .alignmentGuide(.listRowSeparatorLeading) { dimensions in
+                    dimensions[.leading]
+                }
 
-            LabeledContent("Sign in", value: "Apple")
+                LabeledContent("Sign-in method", value: viewModel.signInMethodLabel)
 
-            Button("Sign Out", role: .destructive) {
-                Task { await viewModel.signOut() }
+                Button("Sign Out", role: .destructive) {
+                    Task { await viewModel.signOut() }
+                }
+                .disabled(viewModel.isSigningOut)
+            } else {
+                LabeledContent("Sign in", value: viewModel.signInMethodLabel)
             }
-            .disabled(viewModel.isSigningOut)
+        }
+    }
+
+    private var permissionsSection: some View {
+        Section("Permissions") {
+            Button {
+                viewModel.openLocationSettings()
+            } label: {
+                NavigationValueRow(
+                    title: "Location access",
+                    value: viewModel.locationAccessLabel
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                Task { await viewModel.handleNotificationAccessTapped() }
+            } label: {
+                NavigationValueRow(
+                    title: "Notifications",
+                    value: viewModel.notificationAccessLabel
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -134,11 +171,6 @@ struct SettingsView: View {
 
     private var mapAndDiscoverySection: some View {
         Section {
-            LabeledContent("Location access", value: viewModel.locationAccessLabel)
-            LabeledContent("Notifications", value: viewModel.notificationAccessLabel)
-
-            notificationSettingsButton
-
             Picker("Default map style", selection: binding(\.defaultMapStyle)) {
                 ForEach(AppMapStylePreference.allCases) { style in
                     Text(style.displayName).tag(style)
@@ -147,39 +179,8 @@ struct SettingsView: View {
             .pickerStyle(.menu)
 
             Toggle("Center on my location", isOn: binding(\.centerOnUserLocationOnLaunch))
-
-            if viewModel.showsOpenSystemSettings {
-                Button("Open iPhone Settings") {
-                    openAppSettings()
-                }
-            }
         } header: {
             Text("Map & Discovery")
-        } footer: {
-            Text("These settings are stored only on this device.")
-        }
-    }
-
-    @ViewBuilder
-    private var notificationSettingsButton: some View {
-        switch viewModel.notificationAuthorizationStatus {
-        case .notDetermined:
-            Button("Enable Notifications") {
-                Task { await viewModel.requestNotificationAuthorization() }
-            }
-
-        case .denied:
-            Button("Open Notification Settings") {
-                viewModel.openNotificationSettings()
-            }
-
-        case .authorized, .provisional, .ephemeral:
-            Button("Manage Notifications") {
-                viewModel.openNotificationSettings()
-            }
-
-        @unknown default:
-            EmptyView()
         }
     }
 
@@ -196,6 +197,8 @@ struct SettingsView: View {
 
     private var aboutSection: some View {
         Section("About") {
+            LabeledContent("Build", value: viewModel.appVersionBuildLabel)
+
             if let privacyPolicyURL = viewModel.privacyPolicyURL {
                 linkRow(title: "Privacy Policy", destination: privacyPolicyURL)
             }
@@ -203,8 +206,6 @@ struct SettingsView: View {
             if let termsOfServiceURL = viewModel.termsOfServiceURL {
                 linkRow(title: "Terms of Service", destination: termsOfServiceURL)
             }
-
-            LabeledContent("Build", value: viewModel.buildSummary)
         }
     }
 
@@ -213,14 +214,6 @@ struct SettingsView: View {
             get: { viewModel[keyPath: keyPath] },
             set: { viewModel[keyPath: keyPath] = $0 }
         )
-    }
-
-    private func openAppSettings() {
-        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
-            return
-        }
-
-        openURL(settingsURL)
     }
 
     private func linkRow(title: String, destination: URL) -> some View {
@@ -233,6 +226,31 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+}
+
+private struct NavigationValueRow: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .foregroundStyle(.primary)
+
+            Spacer(minLength: 12)
+
+            Text(value)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+        .contentShape(Rectangle())
     }
 }
 

@@ -74,9 +74,41 @@ final class SettingsViewModel: ObservableObject {
         currentUser?.supportsPrivacySettings ?? false
     }
 
+    var accountDisplayName: String {
+        let displayName = currentUser?.displayName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return displayName.isEmpty ? "TrustMap Member" : displayName
+    }
+
+    var accountHandleLabel: String {
+        let handle = currentUser?.handle.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !handle.isEmpty else {
+            return "@account"
+        }
+
+        return handle.hasPrefix("@") ? handle : "@\(handle)"
+    }
+
+    var accountAvatarURL: URL? {
+        currentUser?.avatarURL
+    }
+
+    var signInMethodLabel: String {
+        "Apple"
+    }
+
+    var appVersionBuildLabel: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+        return Self.appVersionBuildLabel(version: version, build: build)
+    }
+
     var buildSummary: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        appVersionBuildLabel
+    }
+
+    static func appVersionBuildLabel(version: String?, build: String?) -> String {
+        let version = version?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? "1.0"
+        let build = build?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? "1"
         return "Version \(version) (\(build))"
     }
 
@@ -161,13 +193,35 @@ final class SettingsViewModel: ObservableObject {
         await refreshNotificationAuthorizationStatus()
     }
 
+    func refreshSettingsState() async {
+        syncPrivacySettings(with: sessionStore.currentUser)
+        await refreshAuthorizationStatuses()
+    }
+
     func requestNotificationAuthorization() async {
         _ = await userNotificationPermissionService.requestAuthorizationIfNeeded()
         notificationAuthorizationStatus = userNotificationPermissionService.authorizationStatus
     }
 
+    func openLocationSettings() {
+        userLocationService.openSystemLocationSettings()
+    }
+
     func openNotificationSettings() {
         userNotificationPermissionService.openSystemNotificationSettings()
+    }
+
+    func handleNotificationAccessTapped() async {
+        await refreshNotificationAuthorizationStatus()
+
+        switch notificationAuthorizationStatus {
+        case .notDetermined:
+            await requestNotificationAuthorization()
+        case .authorized, .provisional, .ephemeral, .denied:
+            openNotificationSettings()
+        @unknown default:
+            openNotificationSettings()
+        }
     }
 
     func signOut() async {
@@ -356,5 +410,11 @@ final class SettingsViewModel: ObservableObject {
 private extension AppError {
     var logDescription: String {
         errorDescription ?? "Unknown error"
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
     }
 }

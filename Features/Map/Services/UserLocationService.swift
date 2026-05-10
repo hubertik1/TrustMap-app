@@ -1,5 +1,6 @@
 import CoreLocation
 import Foundation
+import UIKit
 
 @MainActor
 protocol UserLocationServicing: AnyObject {
@@ -11,6 +12,7 @@ protocol UserLocationServicing: AnyObject {
 
     func start()
     func requestCurrentLocation()
+    func openSystemLocationSettings()
 }
 
 @MainActor
@@ -89,6 +91,15 @@ final class UserLocationService: NSObject, UserLocationServicing {
         @unknown default:
             onError?(.locationFailure("TrustMap could not request your current location."))
         }
+    }
+
+    func openSystemLocationSettings() {
+        guard !AppConfiguration.isRunningPreviews,
+              let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
+            return
+        }
+
+        UIApplication.shared.open(settingsURL)
     }
 }
 
