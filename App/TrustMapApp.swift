@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct TrustMapApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var container: AppContainer
 
     init() {

@@ -33,6 +33,9 @@ project.root_object.attributes['TargetAttributes'][target.uuid] = {
   'SystemCapabilities' => {
     'com.apple.SignInWithApple' => {
       'enabled' => 1
+    },
+    'com.apple.Push' => {
+      'enabled' => 1
     }
   }
 }

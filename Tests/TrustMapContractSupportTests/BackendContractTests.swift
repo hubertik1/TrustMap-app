@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 import XCTest
 @testable import TrustMapContractSupport
 
@@ -309,6 +310,286 @@ final class BackendContractTests: XCTestCase {
         let normalized = HandleComponents.normalizedEditableBase(from: "@hubert")
 
         XCTAssertEqual(normalized, "hubert")
+    }
+
+    func testTrustMapNotificationDecodesAllFieldsAndTypes() throws {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let notifications = try decoder.decode([TrustMapNotification].self, from: Data("""
+        [
+          {
+            "id": "A0E72D8D-0D6B-4EB1-9C4E-7E893B797F28",
+            "type": "PlaceReviewAdded",
+            "createdAtUtc": "2026-04-07T12:00:00Z",
+            "readAtUtc": null,
+            "actor": {
+              "id": "C5B43D5F-14FB-4E83-B5A5-0CC4B394B095",
+              "handle": "hubert#1234",
+              "displayName": "Hubert",
+              "avatarUrl": null
+            },
+            "placeId": "9F6E8AA6-9BFA-4E63-BCA3-1ED12E904C7D",
+            "placeName": "Meme Bistro",
+            "placeReviewId": "65F10D68-6B25-4F2E-9F5F-D44B7E7B4EE7",
+            "dishReviewId": null,
+            "dishName": null,
+            "friendRequestId": null,
+            "friendRequestStatus": null,
+            "rating": 5
+          },
+          {
+            "id": "B0E72D8D-0D6B-4EB1-9C4E-7E893B797F28",
+            "type": "DishReviewAdded",
+            "createdAtUtc": "2026-04-07T13:00:00Z",
+            "readAtUtc": "2026-04-07T13:05:00Z",
+            "actor": {
+              "id": "C5B43D5F-14FB-4E83-B5A5-0CC4B394B095",
+              "handle": "hubert#1234",
+              "displayName": "Hubert",
+              "avatarUrl": null
+            },
+            "placeId": "9F6E8AA6-9BFA-4E63-BCA3-1ED12E904C7D",
+            "placeName": "Meme Bistro",
+            "placeReviewId": null,
+            "dishReviewId": "7AD7BF4A-7D7C-4DDE-92CA-A6C4B635C922",
+            "dishName": "Ramen",
+            "friendRequestId": null,
+            "friendRequestStatus": null,
+            "rating": 4
+          },
+          {
+            "id": "C0E72D8D-0D6B-4EB1-9C4E-7E893B797F28",
+            "type": "FriendRequestSent",
+            "createdAtUtc": "2026-04-07T14:00:00Z",
+            "readAtUtc": null,
+            "actor": {
+              "id": "C5B43D5F-14FB-4E83-B5A5-0CC4B394B095",
+              "handle": "hubert#1234",
+              "displayName": "Hubert",
+              "avatarUrl": null
+            },
+            "placeId": null,
+            "placeName": null,
+            "placeReviewId": null,
+            "dishReviewId": null,
+            "dishName": null,
+            "friendRequestId": "6D78503B-757D-4A2E-9215-A79C0F38B52A",
+            "friendRequestStatus": "Pending",
+            "rating": null
+          }
+        ]
+        """.utf8))
+
+        XCTAssertEqual(notifications.map(\.type), [.placeReviewAdded, .dishReviewAdded, .friendRequestSent])
+        XCTAssertTrue(notifications[0].isUnread)
+        XCTAssertEqual(notifications[0].placeName, "Meme Bistro")
+        XCTAssertEqual(notifications[1].dishName, "Ramen")
+        XCTAssertEqual(notifications[1].readAtUtc, iso8601("2026-04-07T13:05:00Z"))
+        XCTAssertEqual(notifications[2].friendRequestStatus, .pending)
+    }
+
+    @MainActor
+    func testNotificationRepositoryFetchUnreadCountMapsCount() async throws {
+        let protocolState = URLProtocolState(responses: [.json(statusCode: 200, body: #"{ "count": 7 }"#)])
+        let (apiClient, sessionProvider) = makeAuthorizedClient(protocolState: protocolState)
+        _ = sessionProvider
+
+        let repository = NotificationRepository(apiClient: apiClient)
+        let count = try await repository.fetchUnreadCount()
+
+        XCTAssertEqual(count, 7)
+        let requests = await protocolState.requests
+        XCTAssertEqual(requests.first?.httpMethod, "GET")
+        XCTAssertEqual(requests.first?.url?.path, "/notifications/unread-count")
+    }
+
+    @MainActor
+    func testNotificationRepositoryMarkAsReadSendsPatchAndAcceptsNoContent() async throws {
+        let notificationID = UUID(uuidString: "A0E72D8D-0D6B-4EB1-9C4E-7E893B797F28")!
+        let protocolState = URLProtocolState(responses: [.json(statusCode: 204, body: "")])
+        let (apiClient, sessionProvider) = makeAuthorizedClient(protocolState: protocolState)
+        _ = sessionProvider
+
+        let repository = NotificationRepository(apiClient: apiClient)
+        try await repository.markAsRead(id: notificationID)
+
+        let requests = await protocolState.requests
+        XCTAssertEqual(requests.first?.httpMethod, "PATCH")
+        XCTAssertEqual(requests.first?.url?.path, "/notifications/\(notificationID.uuidString)/read")
+    }
+
+    @MainActor
+    func testNotificationRepositoryMarkAllAsReadSendsPatchAndAcceptsNoContent() async throws {
+        let protocolState = URLProtocolState(responses: [.json(statusCode: 204, body: "")])
+        let (apiClient, sessionProvider) = makeAuthorizedClient(protocolState: protocolState)
+        _ = sessionProvider
+
+        let repository = NotificationRepository(apiClient: apiClient)
+        try await repository.markAllAsRead()
+
+        let requests = await protocolState.requests
+        XCTAssertEqual(requests.first?.httpMethod, "PATCH")
+        XCTAssertEqual(requests.first?.url?.path, "/notifications/read-all")
+    }
+
+    @MainActor
+    func testNotificationRepositoryFetchNotificationsMapsFields() async throws {
+        let response = """
+        {
+          "items": [
+            {
+              "id": "A0E72D8D-0D6B-4EB1-9C4E-7E893B797F28",
+              "type": "DishReviewAdded",
+              "createdAtUtc": "2026-04-07T13:00:00Z",
+              "readAtUtc": null,
+              "actor": {
+                "id": "C5B43D5F-14FB-4E83-B5A5-0CC4B394B095",
+                "handle": "hubert#1234",
+                "displayName": "Hubert",
+                "avatarUrl": null
+              },
+              "placeId": "9F6E8AA6-9BFA-4E63-BCA3-1ED12E904C7D",
+              "placeName": "Meme Bistro",
+              "placeReviewId": null,
+              "dishReviewId": "7AD7BF4A-7D7C-4DDE-92CA-A6C4B635C922",
+              "dishName": "Ramen",
+              "friendRequestId": null,
+              "friendRequestStatus": null,
+              "rating": 4
+            }
+          ],
+          "nextCursorUtc": "2026-04-07T12:00:00Z"
+        }
+        """
+
+        let before = iso8601("2026-04-08T12:00:00Z")
+        let protocolState = URLProtocolState(responses: [.json(statusCode: 200, body: response)])
+        let (apiClient, sessionProvider) = makeAuthorizedClient(protocolState: protocolState)
+        _ = sessionProvider
+
+        let repository = NotificationRepository(apiClient: apiClient)
+        let notifications = try await repository.fetchNotifications(before: before, take: 25)
+
+        XCTAssertEqual(notifications.count, 1)
+        XCTAssertEqual(notifications[0].type, .dishReviewAdded)
+        XCTAssertEqual(notifications[0].actor.handle, "hubert#1234")
+        XCTAssertEqual(notifications[0].placeName, "Meme Bistro")
+        XCTAssertEqual(notifications[0].dishName, "Ramen")
+        XCTAssertEqual(notifications[0].rating, 4)
+
+        let requests = await protocolState.requests
+        XCTAssertEqual(requests.first?.httpMethod, "GET")
+        XCTAssertEqual(requests.first?.url?.path, "/notifications")
+
+        let components = try XCTUnwrap(URLComponents(url: try XCTUnwrap(requests.first?.url), resolvingAgainstBaseURL: false))
+        XCTAssertEqual(components.queryItems?.first(where: { $0.name == "take" })?.value, "25")
+        XCTAssertNotNil(components.queryItems?.first(where: { $0.name == "beforeUtc" })?.value)
+    }
+
+    func testNotificationTitleUsesHandleBase() {
+        let notification = TrustMapNotification(
+            id: UUID(),
+            type: .placeReviewAdded,
+            createdAtUtc: Date(),
+            readAtUtc: nil,
+            actor: UserSummary(
+                id: UUID(),
+                handle: "hubert#1234",
+                displayName: "Hubert",
+                avatarURLString: nil
+            ),
+            placeId: UUID(),
+            placeName: "Meme Bistro",
+            placeReviewId: UUID(),
+            dishReviewId: nil,
+            dishName: nil,
+            friendRequestId: nil,
+            friendRequestStatus: nil,
+            rating: 5
+        )
+
+        XCTAssertEqual(notification.actorHandleBase, "hubert")
+        XCTAssertEqual(notification.title, "@hubert added a place review")
+        XCTAssertEqual(notification.subtitle, "Meme Bistro • 5★")
+
+        let dishNotification = TrustMapNotification(
+            id: UUID(),
+            type: .dishReviewAdded,
+            createdAtUtc: Date(),
+            readAtUtc: nil,
+            actor: UserSummary(
+                id: UUID(),
+                handle: "hubert#1234",
+                displayName: "Hubert",
+                avatarURLString: nil
+            ),
+            placeId: UUID(),
+            placeName: "Meme Bistro",
+            placeReviewId: nil,
+            dishReviewId: UUID(),
+            dishName: "Ramen",
+            friendRequestId: nil,
+            friendRequestStatus: nil,
+            rating: 4
+        )
+
+        XCTAssertEqual(dishNotification.title, "@hubert added a dish review")
+        XCTAssertEqual(dishNotification.subtitle, "Ramen at Meme Bistro • 4★")
+    }
+
+    func testNotificationAuthorizationStatusLabels() {
+        XCTAssertEqual(UNAuthorizationStatus.authorized.trustMapAccessLabel, "On")
+        XCTAssertEqual(UNAuthorizationStatus.denied.trustMapAccessLabel, "Off")
+        XCTAssertEqual(UNAuthorizationStatus.notDetermined.trustMapAccessLabel, "Not Requested")
+        XCTAssertEqual(UNAuthorizationStatus.provisional.trustMapAccessLabel, "Quiet")
+        #if os(iOS)
+        XCTAssertEqual(UNAuthorizationStatus.ephemeral.trustMapAccessLabel, "Temporary")
+        #endif
+    }
+
+    func testAPNsDeviceTokenHexStringUsesLowercasePaddedHex() {
+        XCTAssertEqual(Data([0x00, 0xab, 0xff]).trustMapAPNsDeviceTokenHexString, "00abff")
+    }
+
+    @MainActor
+    func testPushDeviceTokenRepositoryRegistersDeviceToken() async throws {
+        let protocolState = URLProtocolState(responses: [.json(statusCode: 204, body: "")])
+        let (apiClient, sessionProvider) = makeAuthorizedClient(protocolState: protocolState)
+        _ = sessionProvider
+
+        let repository = PushDeviceTokenRepository(apiClient: apiClient)
+        try await repository.registerDeviceToken(" 00ABFF ")
+
+        let requests = await protocolState.requests
+        XCTAssertEqual(requests.first?.httpMethod, "POST")
+        XCTAssertEqual(requests.first?.url?.path, "/me/device-tokens")
+
+        let requestBodies = await protocolState.requestBodies
+        let bodyData = try XCTUnwrap(requestBodies.first ?? nil)
+        let payload = try JSONDecoder().decode(PushDeviceTokenPayloadProbe.self, from: bodyData)
+        XCTAssertEqual(payload.token, "00abff")
+        XCTAssertEqual(payload.platform, "ios")
+        XCTAssertEqual(payload.environment, "development")
+    }
+
+    @MainActor
+    func testPushDeviceTokenRepositoryUnregisterCurrentDeviceTokenAcceptsNoContent() async throws {
+        let protocolState = URLProtocolState(responses: [
+            .json(statusCode: 204, body: ""),
+            .json(statusCode: 204, body: "")
+        ])
+        let (apiClient, sessionProvider) = makeAuthorizedClient(protocolState: protocolState)
+        _ = sessionProvider
+
+        let repository = PushDeviceTokenRepository(apiClient: apiClient)
+        try await repository.registerDeviceToken("00abff")
+        try await repository.unregisterCurrentDeviceToken()
+
+        let requests = await protocolState.requests
+        XCTAssertEqual(requests.count, 2)
+        XCTAssertEqual(requests.last?.httpMethod, "DELETE")
+        XCTAssertEqual(requests.last?.url?.path, "/me/device-tokens/00abff")
     }
 
     @MainActor
@@ -861,6 +1142,12 @@ private struct PrivacySettingsPayloadProbe: Decodable {
     let friendListVisibility: String
     let profileVisibility: String
     let profilePictureVisibility: String
+}
+
+private struct PushDeviceTokenPayloadProbe: Decodable {
+    let token: String
+    let platform: String
+    let environment: String
 }
 
 private final class MockURLProtocol: URLProtocol, @unchecked Sendable {

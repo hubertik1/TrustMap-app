@@ -13,7 +13,8 @@ struct SettingsView: View {
                 preferencesStore: container.preferencesStore,
                 refreshCenter: container.refreshCenter,
                 userRepository: container.userRepository,
-                userLocationService: container.userLocationService
+                userLocationService: container.userLocationService,
+                userNotificationPermissionService: container.userNotificationPermissionService
             )
         )
     }
@@ -29,11 +30,11 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            viewModel.refreshLocationAuthorizationStatus()
+            await viewModel.refreshAuthorizationStatuses()
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
-            viewModel.refreshLocationAuthorizationStatus()
+            await viewModel.refreshAuthorizationStatuses()
         }
     }
 
@@ -134,6 +135,9 @@ struct SettingsView: View {
     private var mapAndDiscoverySection: some View {
         Section {
             LabeledContent("Location access", value: viewModel.locationAccessLabel)
+            LabeledContent("Notifications", value: viewModel.notificationAccessLabel)
+
+            notificationSettingsButton
 
             Picker("Default map style", selection: binding(\.defaultMapStyle)) {
                 ForEach(AppMapStylePreference.allCases) { style in
@@ -153,6 +157,29 @@ struct SettingsView: View {
             Text("Map & Discovery")
         } footer: {
             Text("These settings are stored only on this device.")
+        }
+    }
+
+    @ViewBuilder
+    private var notificationSettingsButton: some View {
+        switch viewModel.notificationAuthorizationStatus {
+        case .notDetermined:
+            Button("Enable Notifications") {
+                Task { await viewModel.requestNotificationAuthorization() }
+            }
+
+        case .denied:
+            Button("Open Notification Settings") {
+                viewModel.openNotificationSettings()
+            }
+
+        case .authorized, .provisional, .ephemeral:
+            Button("Manage Notifications") {
+                viewModel.openNotificationSettings()
+            }
+
+        @unknown default:
+            EmptyView()
         }
     }
 

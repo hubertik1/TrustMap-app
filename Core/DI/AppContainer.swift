@@ -20,6 +20,12 @@ final class AppContainer: ObservableObject {
     let placeReviewRepository: PlaceReviewRepository
     let dishReviewRepository: DishReviewRepository
     let feedRepository: FeedRepository
+    let notificationRepository: NotificationRepository
+    let notificationBadgeStore: NotificationBadgeStore
+    let userNotificationPermissionService: UserNotificationPermissionService
+    let pushDeviceTokenRepository: PushDeviceTokenRepository
+    let pushDeviceTokenManager: PushDeviceTokenManager
+    let notificationPermissionCoordinator: NotificationPermissionCoordinator
     let mapSearchService: MapSearchService
     let userLocationService: UserLocationService
 
@@ -46,6 +52,12 @@ final class AppContainer: ObservableObject {
         let placeReviewRepository = PlaceReviewRepository(apiClient: apiClient, photoRepository: photoRepository)
         let dishReviewRepository = DishReviewRepository(apiClient: apiClient, photoRepository: photoRepository)
         let feedRepository = FeedRepository(apiClient: apiClient)
+        let notificationRepository = NotificationRepository(apiClient: apiClient)
+        let userNotificationPermissionService = UserNotificationPermissionService(isPreview: preview)
+        let notificationBadgeStore = NotificationBadgeStore(
+            notificationRepository: notificationRepository,
+            userNotificationPermissionService: userNotificationPermissionService
+        )
         let mapRepository = MapRepository(apiClient: apiClient)
         let mapSearchService = MapSearchService()
         let userLocationService = UserLocationService()
@@ -56,8 +68,28 @@ final class AppContainer: ObservableObject {
             userRepository: userRepository,
             tokenStore: tokenStore
         )
+        let pushDeviceTokenRepository = PushDeviceTokenRepository(apiClient: apiClient)
+        let pushDeviceTokenManager = PushDeviceTokenManager(
+            preferencesStore: preferencesStore,
+            repository: pushDeviceTokenRepository,
+            sessionStore: sessionStore
+        )
+        let notificationPermissionCoordinator = NotificationPermissionCoordinator(
+            preferencesStore: preferencesStore,
+            sessionStore: sessionStore,
+            userNotificationPermissionService: userNotificationPermissionService,
+            pushDeviceTokenManager: pushDeviceTokenManager,
+            isPreview: preview
+        )
 
         apiClient.sessionProvider = sessionStore
+        sessionStore.onWillSignOut = { [weak pushDeviceTokenManager] in
+            await pushDeviceTokenManager?.unregisterCurrentDeviceTokenForSignedInUser()
+        }
+
+        if !preview {
+            PushDeviceTokenBridge.shared.configure(handler: pushDeviceTokenManager)
+        }
 
         self.apiClient = apiClient
         self.authService = authService
@@ -75,6 +107,12 @@ final class AppContainer: ObservableObject {
         self.placeReviewRepository = placeReviewRepository
         self.dishReviewRepository = dishReviewRepository
         self.feedRepository = feedRepository
+        self.notificationRepository = notificationRepository
+        self.notificationBadgeStore = notificationBadgeStore
+        self.userNotificationPermissionService = userNotificationPermissionService
+        self.pushDeviceTokenRepository = pushDeviceTokenRepository
+        self.pushDeviceTokenManager = pushDeviceTokenManager
+        self.notificationPermissionCoordinator = notificationPermissionCoordinator
         self.mapSearchService = mapSearchService
         self.userLocationService = userLocationService
 

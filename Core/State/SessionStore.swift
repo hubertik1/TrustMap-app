@@ -11,6 +11,7 @@ final class SessionStore: ObservableObject, APISessionProviding {
 
     @Published private(set) var state: State = .launching
     @Published var alertMessage: String?
+    var onWillSignOut: (() async -> Void)?
 
     private let authService: AuthServicing
     private let authRepository: AuthRepository
@@ -125,6 +126,7 @@ final class SessionStore: ObservableObject, APISessionProviding {
 
     func signOut(allDevices: Bool = false) async {
         let refreshToken = storedTokens?.refreshToken
+        await onWillSignOut?()
         await authRepository.logout(refreshToken: refreshToken, allDevices: allDevices)
         clearSessionState()
         state = .signedOut

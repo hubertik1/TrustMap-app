@@ -40,6 +40,18 @@ struct AppRootView: View {
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             await sessionStore.handleSceneDidBecomeActive()
+            await container.notificationPermissionCoordinator.handleAppDidBecomeActive()
+            guard signedInUserID != nil else { return }
+            await container.notificationBadgeStore.loadUnreadCount()
+        }
+        .task(id: signedInUserID) {
+            if signedInUserID == nil {
+                container.notificationBadgeStore.reset()
+            } else {
+                container.notificationPermissionCoordinator.requestOnboardingNotificationPermissionIfNeeded()
+                container.pushDeviceTokenManager.uploadCurrentDeviceTokenIfPossible()
+                await container.notificationBadgeStore.loadUnreadCount()
+            }
         }
         .alert(
             "TrustMap",
@@ -52,6 +64,10 @@ struct AppRootView: View {
         } message: {
             Text(sessionStore.alertMessage ?? "")
         }
+    }
+
+    private var signedInUserID: UUID? {
+        sessionStore.currentUser?.id
     }
 }
 

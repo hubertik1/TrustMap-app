@@ -2,6 +2,7 @@ import Combine
 import CoreLocation
 import Foundation
 import OSLog
+import UserNotifications
 
 @MainActor
 final class SettingsViewModel: ObservableObject {
@@ -10,10 +11,12 @@ final class SettingsViewModel: ObservableObject {
     private let refreshCenter: AppRefreshCenter
     private let userRepository: UserProfileRepository
     private let userLocationService: UserLocationServicing
+    private let userNotificationPermissionService: UserNotificationPermissionServicing
     private let logger = Logger(subsystem: "TrustMap", category: "SettingsPrivacy")
     private var cancellables = Set<AnyCancellable>()
 
     @Published private(set) var locationAuthorizationStatus: CLAuthorizationStatus
+    @Published private(set) var notificationAuthorizationStatus: UNAuthorizationStatus
     @Published private(set) var isSigningOut = false
     @Published private(set) var isUpdatingPrivacy = false
     @Published private(set) var reviewVisibility: VisibilityStatus = .friendsOnly
@@ -27,15 +30,22 @@ final class SettingsViewModel: ObservableObject {
         preferencesStore: AppPreferencesStore,
         refreshCenter: AppRefreshCenter,
         userRepository: UserProfileRepository,
-        userLocationService: UserLocationServicing
+        userLocationService: UserLocationServicing,
+        userNotificationPermissionService: UserNotificationPermissionServicing
     ) {
         self.sessionStore = sessionStore
         self.preferencesStore = preferencesStore
         self.refreshCenter = refreshCenter
         self.userRepository = userRepository
         self.userLocationService = userLocationService
+        self.userNotificationPermissionService = userNotificationPermissionService
         self.locationAuthorizationStatus = userLocationService.authorizationStatus
+        self.notificationAuthorizationStatus = userNotificationPermissionService.authorizationStatus
         syncPrivacySettings(with: sessionStore.currentUser)
+
+        self.userNotificationPermissionService.onAuthorizationChange = { [weak self] status in
+            self?.notificationAuthorizationStatus = status
+        }
 
         sessionStore.objectWillChange
             .sink { [weak self] _ in
@@ -110,6 +120,10 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
+    var notificationAccessLabel: String {
+        notificationAuthorizationStatus.trustMapAccessLabel
+    }
+
     var showsOpenSystemSettings: Bool {
         switch locationAuthorizationStatus {
         case .denied, .restricted:
@@ -119,6 +133,10 @@ final class SettingsViewModel: ObservableObject {
         @unknown default:
             return false
         }
+    }
+
+    var showsOpenNotificationSettings: Bool {
+        notificationAuthorizationStatus.trustMapShowsOpenNotificationSettings
     }
 
     var privacyPolicyURL: URL? {
@@ -131,6 +149,25 @@ final class SettingsViewModel: ObservableObject {
 
     func refreshLocationAuthorizationStatus() {
         locationAuthorizationStatus = userLocationService.authorizationStatus
+    }
+
+    func refreshNotificationAuthorizationStatus() async {
+        await userNotificationPermissionService.refreshAuthorizationStatus()
+        notificationAuthorizationStatus = userNotificationPermissionService.authorizationStatus
+    }
+
+    func refreshAuthorizationStatuses() async {
+        refreshLocationAuthorizationStatus()
+        await refreshNotificationAuthorizationStatus()
+    }
+
+    func requestNotificationAuthorization() async {
+        _ = await userNotificationPermissionService.requestAuthorizationIfNeeded()
+        notificationAuthorizationStatus = userNotificationPermissionService.authorizationStatus
+    }
+
+    func openNotificationSettings() {
+        userNotificationPermissionService.openSystemNotificationSettings()
     }
 
     func signOut() async {

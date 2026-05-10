@@ -79,6 +79,26 @@ final class AppPreferencesStore: ObservableObject {
         }
     }
 
+    @Published var hasRequestedNotificationAuthorization: Bool {
+        didSet {
+            userDefaults.set(hasRequestedNotificationAuthorization, forKey: Keys.hasRequestedNotificationAuthorization)
+        }
+    }
+
+    @Published var currentAPNsDeviceToken: String? {
+        didSet {
+            let normalizedToken = currentAPNsDeviceToken?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+
+            if let normalizedToken, !normalizedToken.isEmpty {
+                userDefaults.set(normalizedToken, forKey: Keys.currentAPNsDeviceToken)
+            } else {
+                userDefaults.removeObject(forKey: Keys.currentAPNsDeviceToken)
+            }
+        }
+    }
+
     var preferredColorScheme: ColorScheme? {
         appearance.preferredColorScheme
     }
@@ -91,6 +111,8 @@ final class AppPreferencesStore: ObservableObject {
         static let defaultMapStyle = "app.preferences.defaultMapStyle"
         static let centerOnUserLocationOnLaunch = "app.preferences.centerOnUserLocationOnLaunch"
         static let appearance = "app.preferences.appearance"
+        static let hasRequestedNotificationAuthorization = "app.preferences.hasRequestedNotificationAuthorization"
+        static let currentAPNsDeviceToken = "app.preferences.currentAPNsDeviceToken"
     }
 
     init(userDefaults: UserDefaults = .standard) {
@@ -112,5 +134,9 @@ final class AppPreferencesStore: ObservableObject {
         self.appearance = AppAppearancePreference(
             rawValue: userDefaults.string(forKey: Keys.appearance) ?? ""
         ) ?? .system
+        self.hasRequestedNotificationAuthorization = userDefaults.bool(
+            forKey: Keys.hasRequestedNotificationAuthorization
+        )
+        self.currentAPNsDeviceToken = userDefaults.string(forKey: Keys.currentAPNsDeviceToken)
     }
 }
