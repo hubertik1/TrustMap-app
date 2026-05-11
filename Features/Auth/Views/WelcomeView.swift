@@ -91,7 +91,6 @@ struct WelcomeView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
         }
-        .trustMapMacWindowConfigurator()
     }
 
     @ViewBuilder

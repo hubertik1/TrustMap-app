@@ -15,12 +15,6 @@ struct MacMainWindowView: View {
     var body: some View {
         NavigationSplitView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("TrustMap")
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 16)
-                    .padding(.bottom, 10)
-
                 VStack(spacing: 6) {
                     sidebarButton(for: .map)
                     sidebarButton(for: .places)
@@ -29,6 +23,7 @@ struct MacMainWindowView: View {
                     sidebarButton(for: .profile)
                 }
                 .padding(.horizontal, 10)
+                .padding(.top, 16)
 
                 Spacer(minLength: 0)
             }
@@ -44,7 +39,6 @@ struct MacMainWindowView: View {
             }
             .id(container.selectedTab)
         }
-        .trustMapMacWindowConfigurator()
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {

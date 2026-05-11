@@ -27,8 +27,10 @@ struct MapScreen: View {
     }
 
     var body: some View {
-        MapReader { proxy in
-            ZStack(alignment: .topLeading) {
+        GeometryReader { geometry in
+            if isRenderableMapSize(geometry.size) {
+                MapReader { proxy in
+                    ZStack(alignment: .topLeading) {
                 Map(position: $cameraPosition, selection: $mapSelection) {
                     UserAnnotation()
 
@@ -147,6 +149,10 @@ struct MapScreen: View {
                     }
                     .animation(.easeInOut(duration: 0.2), value: promptContext.id)
                 }
+                    }
+                }
+            } else {
+                Color(uiColor: .systemBackground)
             }
         }
         .navigationTitle("Map")
@@ -238,6 +244,10 @@ struct MapScreen: View {
         }
     }
 
+    private func isRenderableMapSize(_ size: CGSize) -> Bool {
+        size.width > 2 && size.height > 2
+    }
+
     private var searchResultsView: some View {
         ScrollView {
             LazyVStack(spacing: 8) {
@@ -286,7 +296,8 @@ struct MapScreen: View {
                 }
                 .shadow(color: .black.opacity(0.10), radius: 18, y: 10)
                 .padding(.top, 18)
-                .padding(.leading, 18)
+                .padding(.trailing, 12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }

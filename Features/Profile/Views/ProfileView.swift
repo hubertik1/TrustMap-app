@@ -208,7 +208,10 @@ struct ProfileView: View {
             .padding(.horizontal, 16)
             .padding(.top, 4)
             .padding(.bottom, TrustMapLayout.tabAwareBottomPadding)
-            .trustMapReadableContent(maxWidth: TrustMapLayout.activityContentMaxWidth, alignment: .topLeading)
+            .trustMapReadableContent(
+                maxWidth: TrustMapLayout.activityContentMaxWidth,
+                alignment: TrustMapPlatform.isMacCatalyst ? .top : .topLeading
+            )
         }
         .refreshable {
             await viewModel.load()

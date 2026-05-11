@@ -10,7 +10,7 @@ struct TrustMapApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup("TrustMap") {
             AppRootView(container: container)
         }
         .commands {

@@ -125,46 +125,61 @@ struct AddHubView: View {
     }
 
     private var macHubContent: some View {
-        LazyVGrid(
-            columns: [
-                GridItem(.adaptive(minimum: 340, maximum: 520), spacing: 24, alignment: .top)
-            ],
-            alignment: .leading,
-            spacing: 24
-        ) {
-            VStack(alignment: .leading, spacing: 14) {
-                actionCards
-            }
+        VStack(alignment: .leading, spacing: 24) {
+            macActionCards
 
             VStack(alignment: .leading, spacing: 16) {
                 recentPlacesErrorBanner
                 recentPlacesSection
             }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .trustMapReadableContent(maxWidth: 1080, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .padding(.top, 14)
     }
 
     private var actionCards: some View {
         VStack(spacing: 10) {
-            Button(action: presentPlaceReviewSearch) {
-                AddHubActionCard(
-                    title: "Add Place Review",
-                    subtitle: "Rate a place and share your experience.",
-                    systemImage: "mappin.and.ellipse"
-                )
-            }
-            .buttonStyle(.plain)
-
-            Button(action: presentDishReviewPicker) {
-                AddHubActionCard(
-                    title: "Add Dish Review",
-                    subtitle: "Review a dish from a restaurant you visited.",
-                    systemImage: "fork.knife"
-                )
-            }
-            .buttonStyle(.plain)
+            placeReviewActionButton
+            dishReviewActionButton
         }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var macActionCards: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 16) {
+                placeReviewActionButton
+                dishReviewActionButton
+            }
+
+            actionCards
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var placeReviewActionButton: some View {
+        Button(action: presentPlaceReviewSearch) {
+            AddHubActionCard(
+                title: "Add Place Review",
+                subtitle: "Rate a place and share your experience.",
+                systemImage: "mappin.and.ellipse"
+            )
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+    }
+
+    private var dishReviewActionButton: some View {
+        Button(action: presentDishReviewPicker) {
+            AddHubActionCard(
+                title: "Add Dish Review",
+                subtitle: "Review a dish from a restaurant you visited.",
+                systemImage: "fork.knife"
+            )
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder

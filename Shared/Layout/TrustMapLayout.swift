@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 enum TrustMapLayout {
+    static let macWindowTitle = "TrustMap"
     static let macSidebarMinWidth: CGFloat = 240
     static let macSidebarIdealWidth: CGFloat = 260
     static let macSidebarMaxWidth: CGFloat = 280
@@ -52,7 +53,7 @@ private struct TrustMapMacWindowConfiguratorModifier: ViewModifier {
     func body(content: Content) -> some View {
         if TrustMapPlatform.isMacCatalyst {
             content
-                .background(MacWindowSizeConfigurator(minSize: minSize))
+                .background(MacWindowChromeConfigurator(minSize: minSize, title: TrustMapLayout.macWindowTitle))
         } else {
             content
         }
@@ -91,32 +92,84 @@ extension View {
 }
 
 #if targetEnvironment(macCatalyst)
-private struct MacWindowSizeConfigurator: UIViewRepresentable {
-    let minSize: CGSize
+private struct MacWindowChromeConfigurator: UIViewRepresentable {
+    let minSize: CGSize?
+    let title: String
+
+    init(minSize: CGSize? = TrustMapLayout.macMinimumWindowSize, title: String) {
+        self.minSize = minSize
+        self.title = title
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: .zero)
-        configureWhenAttached(view)
+        configureWhenAttached(view, coordinator: context.coordinator)
         return view
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {
-        configureWhenAttached(uiView)
+        configureWhenAttached(uiView, coordinator: context.coordinator)
     }
 
-    private func configureWhenAttached(_ view: UIView) {
+    private func configureWhenAttached(_ view: UIView, coordinator: Coordinator) {
         DispatchQueue.main.async {
-            guard let scene = view.window?.windowScene else {
+            guard applyConfiguration(to: view.window?.windowScene, coordinator: coordinator) else {
+                scheduleRetry(for: view, coordinator: coordinator)
                 return
             }
+        }
+    }
 
+    private func scheduleRetry(for view: UIView, coordinator: Coordinator) {
+        guard !coordinator.isRetryScheduled, coordinator.retryCount < 4 else { return }
+
+        coordinator.isRetryScheduled = true
+        coordinator.retryCount += 1
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            coordinator.isRetryScheduled = false
+            configureWhenAttached(view, coordinator: coordinator)
+        }
+    }
+
+    @discardableResult
+    private func applyConfiguration(to scene: UIWindowScene?, coordinator: Coordinator) -> Bool {
+        guard let scene else { return false }
+
+        if let minSize {
             scene.sizeRestrictions?.minimumSize = minSize
         }
+
+        if scene.title != title {
+            scene.title = title
+        }
+
+        if scene.titlebar?.titleVisibility != .hidden {
+            scene.titlebar?.titleVisibility = .hidden
+        }
+
+        coordinator.retryCount = 0
+        return true
+    }
+
+    final class Coordinator {
+        var isRetryScheduled = false
+        var retryCount = 0
     }
 }
 #else
-private struct MacWindowSizeConfigurator: View {
-    let minSize: CGSize
+private struct MacWindowChromeConfigurator: View {
+    let minSize: CGSize?
+    let title: String
+
+    init(minSize: CGSize? = TrustMapLayout.macMinimumWindowSize, title: String) {
+        self.minSize = minSize
+        self.title = title
+    }
 
     var body: some View {
         EmptyView()
