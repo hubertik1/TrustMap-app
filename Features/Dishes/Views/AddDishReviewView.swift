@@ -177,14 +177,14 @@ struct AddDishReviewView: View {
                     viewModel.errorMessage = AppError.wrap(error).errorDescription
                 }
 
-                if !viewModel.existingPhotos.isEmpty {
+                if !visibleExistingPhotos.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Current Photos")
                             .font(.subheadline.weight(.medium))
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
-                                ForEach(viewModel.existingPhotos) { photo in
+                                ForEach(visibleExistingPhotos) { photo in
                                     existingPhotoThumbnail(photo)
                                 }
                             }
@@ -225,10 +225,14 @@ struct AddDishReviewView: View {
         }
     }
 
-    private var photoButtonTitle: String {
-        let hasActivePhoto = viewModel.selectedPhoto != nil || viewModel.existingPhotos.contains { photo in
+    private var visibleExistingPhotos: [PhotoAsset] {
+        viewModel.existingPhotos.filter { photo in
             !viewModel.isExistingPhotoMarkedForRemoval(photo)
         }
+    }
+
+    private var photoButtonTitle: String {
+        let hasActivePhoto = viewModel.selectedPhoto != nil || !visibleExistingPhotos.isEmpty
         return hasActivePhoto ? "Replace Photo" : "Add Photo"
     }
 
@@ -246,15 +250,7 @@ struct AddDishReviewView: View {
                 .frame(width: 96, height: 96)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay {
-                    if viewModel.isExistingPhotoMarkedForRemoval(photo) {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(.black.opacity(0.45))
-                            .overlay(
-                                Label("Will Delete", systemImage: "trash")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.white)
-                            )
-                    } else if viewModel.selectedPhoto != nil {
+                    if viewModel.selectedPhoto != nil {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(.black.opacity(0.36))
                             .overlay(
@@ -268,7 +264,7 @@ struct AddDishReviewView: View {
             Button {
                 viewModel.toggleExistingPhotoRemoval(photo)
             } label: {
-                Image(systemName: viewModel.isExistingPhotoMarkedForRemoval(photo) ? "arrow.uturn.backward.circle.fill" : "trash.circle.fill")
+                Image(systemName: "trash.circle.fill")
                     .font(.title3)
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(.white, .red)
