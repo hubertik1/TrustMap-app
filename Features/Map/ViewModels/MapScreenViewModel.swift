@@ -30,6 +30,7 @@ final class MapScreenViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isFilterPresented = false
     @Published private(set) var hasLoadedMapPlaces = false
+    @Published private(set) var hasVisibleAnnotationsInCurrentViewport = false
     @Published private(set) var locationAccessState: UserLocationAccessState = .idle
 
     var requestedCameraRegionToken = UUID()
@@ -47,6 +48,9 @@ final class MapScreenViewModel: ObservableObject {
     private let userLocationService: UserLocationServicing
     private var promptPresentationTask: Task<Void, Never>?
     private var latestMapReloadRequestID = UUID()
+    private var cachedPinsByPlaceId: [UUID: MapPin] = [:]
+    private var loadedBounds: [MapBounds] = []
+    private var mapReloadTask: Task<Void, Never>?
     private var hasStartedLocationFlow = false
     private var shouldCenterOnNextLocationUpdate = true
     private var searchTask: Task<Void, Never>?
@@ -83,13 +87,19 @@ final class MapScreenViewModel: ObservableObject {
     deinit {
         searchTask?.cancel()
         promptPresentationTask?.cancel()
+        mapReloadTask?.cancel()
     }
 
-    func load() async {
+    func load(resetPinCache: Bool = false) async {
         errorMessage = nil
         isLoading = true
         await loadCategories()
-        await reloadMapPlaces()
+
+        if resetPinCache {
+            clearPinCache()
+        }
+
+        await reloadMapPinsForCurrentRegion(force: true)
         isLoading = false
     }
 
@@ -98,7 +108,7 @@ final class MapScreenViewModel: ObservableObject {
     }
 
     func applyFilters() async {
-        await reloadMapPlaces()
+        rebuildAnnotations()
     }
 
     func handleSearchTextChange() {
@@ -130,14 +140,50 @@ final class MapScreenViewModel: ObservableObject {
         userLocationService.requestCurrentLocation()
     }
 
-    func selectPlace(withID placeID: UUID) {
+    func selectPlace(withID placeID: UUID) async {
         if let annotation = annotations.first(where: { $0.place.id == placeID }) {
-            droppedPinPlace = nil
-            startPromptFlow(
-                for: annotation.place,
-                coordinate: annotation.place.coordinate,
-                selectedAnnotationID: annotation.id
-            )
+            do {
+                let placeDetails = try await placeRepository.fetchPlaceDetails(id: placeID)
+                droppedPinPlace = nil
+                startPromptFlow(
+                    for: placeDetails.place,
+                    coordinate: placeDetails.place.coordinate,
+                    selectedAnnotationID: annotation.id
+                )
+            } catch {
+                logger.error("Unable to load selected map place: \(error.localizedDescription, privacy: .public)")
+                errorMessage = AppError.wrap(error).errorDescription
+            }
+        }
+    }
+
+    func refreshPin(placeID: UUID) async {
+        mapReloadTask?.cancel()
+        latestMapReloadRequestID = UUID()
+
+        do {
+            if let pin = try await mapRepository.fetchMapPin(placeId: placeID) {
+                cachedPinsByPlaceId[placeID] = pin
+            } else {
+                cachedPinsByPlaceId.removeValue(forKey: placeID)
+            }
+
+            rebuildAnnotations()
+            if let region {
+                scheduleMapPinsFetchIfNeeded(for: region)
+            }
+            errorMessage = nil
+        } catch {
+            if Self.isNotFoundResponse(error) {
+                cachedPinsByPlaceId.removeValue(forKey: placeID)
+                rebuildAnnotations()
+                errorMessage = nil
+                await reloadMapPinsForCurrentRegion(force: true)
+                return
+            }
+
+            logger.error("Unable to refresh map pin: \(error.localizedDescription, privacy: .public)")
+            await reloadMapPinsForCurrentRegion(force: true)
         }
     }
 
@@ -160,7 +206,7 @@ final class MapScreenViewModel: ObservableObject {
                 coordinate: searchRegion.center,
                 selectedAnnotationID: nil
             )
-            await reloadMapPlaces()
+            await loadPinsIfNeeded(for: searchRegion, debounce: false)
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
@@ -172,7 +218,6 @@ final class MapScreenViewModel: ObservableObject {
             let place = try await placeRepository.createOrGetPlace(from: resolvedResult)
             droppedPinPlace = place
             startPromptFlow(for: place, coordinate: coordinate, selectedAnnotationID: nil)
-            await reloadMapPlaces()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
@@ -188,7 +233,6 @@ final class MapScreenViewModel: ObservableObject {
             let place = try await placeRepository.createOrGetPlace(from: resolvedResult)
             droppedPinPlace = nil
             startPromptFlow(for: place, coordinate: coordinate, selectedAnnotationID: nil)
-            await reloadMapPlaces()
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
@@ -206,42 +250,186 @@ final class MapScreenViewModel: ObservableObject {
 
     func handleCameraChangeDidEnd(_ region: MKCoordinateRegion) {
         self.region = region
-        Task { await reloadMapPlaces() }
+        rebuildAnnotations()
+        scheduleMapPinsFetchIfNeeded(for: region)
     }
 
     func clearRequestedCameraRegion() {
         requestedCameraRegion = nil
     }
 
-    private func reloadMapPlaces() async {
+    private func reloadMapPinsForCurrentRegion(force: Bool) async {
+        guard let region else {
+            if cachedPinsByPlaceId.isEmpty {
+                hasLoadedMapPlaces = false
+            }
+            return
+        }
+
+        let viewportBounds = mapBounds(from: region)
+        guard force || shouldFetchPins(for: viewportBounds) else {
+            mapReloadTask?.cancel()
+            mapReloadTask = nil
+            latestMapReloadRequestID = UUID()
+            rebuildAnnotations()
+            return
+        }
+
+        mapReloadTask?.cancel()
         let requestID = UUID()
         latestMapReloadRequestID = requestID
 
-        do {
-            let bounds = mapBounds(from: region)
-            let places = try await mapRepository.fetchMapPlaces(
-                north: bounds?.north,
-                south: bounds?.south,
-                east: bounds?.east,
-                west: bounds?.west,
-                categoryID: filterState.selectedCategory.categoryID,
-                take: 250
+        await fetchMapPins(
+            in: expandedBounds(from: region),
+            requestID: requestID
+        )
+    }
+
+    private func loadPinsIfNeeded(for region: MKCoordinateRegion, debounce: Bool) async {
+        let viewportBounds = mapBounds(from: region)
+        guard shouldFetchPins(for: viewportBounds) else {
+            mapReloadTask?.cancel()
+            mapReloadTask = nil
+            latestMapReloadRequestID = UUID()
+            rebuildAnnotations()
+            return
+        }
+
+        if debounce {
+            scheduleMapPinsFetchIfNeeded(for: region)
+        } else {
+            mapReloadTask?.cancel()
+            let requestID = UUID()
+            latestMapReloadRequestID = requestID
+            await fetchMapPins(
+                in: expandedBounds(from: region),
+                requestID: requestID
             )
+        }
+    }
+
+    private func scheduleMapPinsFetchIfNeeded(for region: MKCoordinateRegion) {
+        let viewportBounds = mapBounds(from: region)
+        guard shouldFetchPins(for: viewportBounds) else {
+            mapReloadTask?.cancel()
+            mapReloadTask = nil
+            latestMapReloadRequestID = UUID()
+            return
+        }
+
+        let requestBounds = expandedBounds(from: region)
+        let requestID = UUID()
+        latestMapReloadRequestID = requestID
+        mapReloadTask?.cancel()
+        mapReloadTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+
+            await self?.fetchMapPins(
+                in: requestBounds,
+                requestID: requestID
+            )
+        }
+    }
+
+    private func fetchMapPins(in requestBounds: MapBounds, requestID: UUID) async {
+        isLoading = true
+
+        do {
+            let pins = try await fetchPins(in: requestBounds)
 
             guard latestMapReloadRequestID == requestID else {
                 return
             }
 
-            annotations = makeAnnotations(from: places)
+            mergeFetchedPins(pins, fetchedBounds: requestBounds)
+            loadedBounds = MapBoundsCoverage.appending(requestBounds, to: loadedBounds)
+            rebuildAnnotations()
             hasLoadedMapPlaces = true
             errorMessage = nil
         } catch {
             guard latestMapReloadRequestID == requestID else {
                 return
             }
-            logger.error("Unable to load map places: \(error.localizedDescription, privacy: .public)")
+            guard !Self.isCancellation(error) else {
+                return
+            }
+            logger.error("Unable to load map pins: \(error.localizedDescription, privacy: .public)")
             errorMessage = AppError.wrap(error).errorDescription
         }
+
+        if latestMapReloadRequestID == requestID {
+            isLoading = false
+        }
+    }
+
+    private func fetchPins(in requestBounds: MapBounds) async throws -> [MapPin] {
+        do {
+            return try await mapRepository.fetchMapPins(
+                north: requestBounds.north,
+                south: requestBounds.south,
+                east: requestBounds.east,
+                west: requestBounds.west
+            )
+        } catch {
+            guard Self.isNotFoundResponse(error) else {
+                throw error
+            }
+
+            logger.notice("Map pins endpoint not found. Falling back to legacy map places endpoint.")
+            let places = try await mapRepository.fetchMapPlaces(
+                north: requestBounds.north,
+                south: requestBounds.south,
+                east: requestBounds.east,
+                west: requestBounds.west,
+                take: 250
+            )
+            return makePins(fromLegacyMapPlaces: places)
+        }
+    }
+
+    private func makePins(fromLegacyMapPlaces places: [MapPlace]) -> [MapPin] {
+        places.map { place in
+            MapPin(
+                placeId: place.placeId,
+                displayName: place.displayName,
+                latitude: place.latitude,
+                longitude: place.longitude,
+                averageRating: place.averagePlaceRating,
+                reviewCount: place.visiblePlaceReviewCount + place.visibleDishReviewCount,
+                contributorCount: place.contributorCount,
+                categoryIds: categoryIDs(for: place.categoryNames),
+                isReviewedByCurrentUser: place.isReviewedByCurrentUser,
+                latestActivityAtUtc: place.latestActivityAtUtc
+            )
+        }
+    }
+
+    private func categoryIDs(for categoryNames: [String]) -> [UUID] {
+        var optionIDsByKey: [String: UUID] = [:]
+        for option in availableCategoryOptions {
+            guard let categoryID = option.categoryID,
+                  let key = DefaultCategoryCatalog.canonicalKey(for: option.title) else {
+                continue
+            }
+
+            optionIDsByKey[key] = optionIDsByKey[key] ?? categoryID
+        }
+
+        var categoryIDs: [UUID] = []
+        var seenIDs = Set<UUID>()
+
+        for categoryName in categoryNames {
+            guard let key = DefaultCategoryCatalog.canonicalKey(for: categoryName),
+                  let categoryID = optionIDsByKey[key],
+                  seenIDs.insert(categoryID).inserted else {
+                continue
+            }
+
+            categoryIDs.append(categoryID)
+        }
+
+        return categoryIDs
     }
 
     private func loadCategories() async {
@@ -271,37 +459,38 @@ final class MapScreenViewModel: ObservableObject {
         }
     }
 
-    private func makeAnnotations(from places: [MapPlace]) -> [MapPlaceAnnotation] {
-        let visiblePlaces = places.filter { mapPlace in
-            let matchesOwnership: Bool
-            switch filterState.selectedOwnershipFilter {
-            case .all:
-                matchesOwnership = true
-            case .mine:
-                matchesOwnership = mapPlace.createdByUserId == sessionStore.currentUser?.id
-            }
+    private func rebuildAnnotations() {
+        let snapshot = MapPinAnnotationBuilder.makeSnapshot(
+            from: cachedPinsByPlaceId.values,
+            filterState: filterState,
+            viewportBounds: region.map { mapBounds(from: $0) }
+        )
+        annotations = snapshot.annotations
+        hasVisibleAnnotationsInCurrentViewport = snapshot.hasVisibleAnnotationsInCurrentViewport
+    }
 
-            guard matchesOwnership else {
-                return false
-            }
-
-            guard let average = mapPlace.averagePlaceRating else {
-                return filterState.minimumRating <= 1
-            }
-
-            return filterState.ratingRange.contains(Int(round(average)))
+    private func mergeFetchedPins(_ pins: [MapPin], fetchedBounds: MapBounds) {
+        let fetchedPlaceIds = Set(pins.map(\.placeId))
+        for (placeID, cachedPin) in cachedPinsByPlaceId where fetchedBounds.contains(cachedPin.coordinate) && !fetchedPlaceIds.contains(placeID) {
+            cachedPinsByPlaceId.removeValue(forKey: placeID)
         }
 
-        return visiblePlaces.map {
-            MapPlaceAnnotation(
-                id: $0.placeId,
-                place: $0.place,
-                averageRating: $0.averagePlaceRating ?? 0,
-                reviewCount: $0.visiblePlaceReviewCount + $0.visibleDishReviewCount,
-                contributorCount: $0.contributorCount,
-                recentContributors: $0.recentContributors
-            )
+        for pin in pins {
+            cachedPinsByPlaceId[pin.placeId] = pin
         }
+    }
+
+    private func clearPinCache() {
+        mapReloadTask?.cancel()
+        cachedPinsByPlaceId = [:]
+        loadedBounds = []
+        annotations = []
+        hasVisibleAnnotationsInCurrentViewport = false
+        hasLoadedMapPlaces = false
+    }
+
+    private func shouldFetchPins(for viewportBounds: MapBounds) -> Bool {
+        MapBoundsCoverage.shouldFetchPins(for: viewportBounds, loadedBounds: loadedBounds)
     }
 
     private func startPromptFlow(for place: Place, coordinate: CLLocationCoordinate2D, selectedAnnotationID: UUID?) {
@@ -323,6 +512,8 @@ final class MapScreenViewModel: ObservableObject {
         region = targetRegion
         requestedCameraRegion = targetRegion
         requestedCameraRegionToken = UUID()
+        rebuildAnnotations()
+        scheduleMapPinsFetchIfNeeded(for: targetRegion)
         schedulePromptPresentation(for: context, delayMilliseconds: 520)
     }
 
@@ -351,19 +542,28 @@ final class MapScreenViewModel: ObservableObject {
         }
     }
 
-    private func mapBounds(from region: MKCoordinateRegion?) -> (north: Double, south: Double, east: Double, west: Double)? {
-        guard let region else { return nil }
-        // Query a slightly larger area than the exact viewport so annotations
-        // near the visible edge do not flicker in and out while the map moves.
-        let paddingMultiplier = 0.7
-        let halfLat = region.span.latitudeDelta * paddingMultiplier
-        let halfLon = region.span.longitudeDelta * paddingMultiplier
+    private func mapBounds(from region: MKCoordinateRegion) -> MapBounds {
+        let halfLat = region.span.latitudeDelta / 2
+        let halfLon = region.span.longitudeDelta / 2
 
-        return (
-            north: region.center.latitude + halfLat,
-            south: region.center.latitude - halfLat,
-            east: region.center.longitude + halfLon,
-            west: region.center.longitude - halfLon
+        return MapBounds(
+            north: min(90, region.center.latitude + halfLat),
+            south: max(-90, region.center.latitude - halfLat),
+            east: min(180, region.center.longitude + halfLon),
+            west: max(-180, region.center.longitude - halfLon)
+        )
+    }
+
+    private func expandedBounds(from region: MKCoordinateRegion) -> MapBounds {
+        let expansionMultiplier = 2.0
+        let halfLat = region.span.latitudeDelta * expansionMultiplier / 2
+        let halfLon = region.span.longitudeDelta * expansionMultiplier / 2
+
+        return MapBounds(
+            north: min(90, region.center.latitude + halfLat),
+            south: max(-90, region.center.latitude - halfLat),
+            east: min(180, region.center.longitude + halfLon),
+            west: max(-180, region.center.longitude - halfLon)
         )
     }
 
@@ -392,6 +592,8 @@ final class MapScreenViewModel: ObservableObject {
         region = userRegion
         requestedCameraRegion = userRegion
         requestedCameraRegionToken = UUID()
+        rebuildAnnotations()
+        scheduleMapPinsFetchIfNeeded(for: userRegion)
         shouldCenterOnNextLocationUpdate = false
     }
 
@@ -414,6 +616,23 @@ final class MapScreenViewModel: ObservableObject {
 
     private func isRegion(_ region: MKCoordinateRegion, centeredOn coordinate: CLLocationCoordinate2D) -> Bool {
         region.center.isClose(to: coordinate)
+    }
+
+    private static func isNotFoundResponse(_ error: Error) -> Bool {
+        guard case .validationFailure(let message) = AppError.wrap(error) else {
+            return false
+        }
+
+        return message.localizedCaseInsensitiveContains("not found")
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError {
+            return true
+        }
+
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
     }
 }
 

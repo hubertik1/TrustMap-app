@@ -199,7 +199,7 @@ final class AddDishReviewViewModel: ObservableObject {
             if let updatedReview = self.existingReview {
                 populateForm(with: updatedReview)
             }
-            refreshCenter.invalidateAll()
+            refreshCenter.invalidateMapPin(placeID: place.id)
             didSave = true
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
@@ -222,7 +222,7 @@ final class AddDishReviewViewModel: ObservableObject {
             let review = try await dishReviewRepository.fetchReview(id: reviewID)
             try await dishReviewRepository.deleteReview(review)
             existingReview = nil
-            refreshCenter.invalidateAll()
+            refreshCenter.invalidateMapPin(placeID: place.id)
             didDelete = true
         } catch {
             errorMessage = AppError.wrap(error).errorDescription

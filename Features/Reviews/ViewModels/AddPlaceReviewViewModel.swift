@@ -220,7 +220,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
                 }
             }
 
-            refreshCenter.invalidateAll()
+            refreshCenter.invalidateMapPin(placeID: place.id)
             didSave = true
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
@@ -242,7 +242,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
 
             try await placeReviewRepository.deleteReview(review)
             existingReview = nil
-            refreshCenter.invalidateAll()
+            refreshCenter.invalidateMapPin(placeID: place.id)
             didDelete = true
         } catch {
             errorMessage = AppError.wrap(error).errorDescription

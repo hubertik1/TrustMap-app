@@ -200,13 +200,13 @@ final class ProfileViewModel: ObservableObject {
 
     func deletePlaceReview(_ review: PlaceReview) async throws {
         try await placeReviewRepository.deleteReview(review)
-        refreshCenter.invalidateAll()
+        refreshCenter.invalidateMapPin(placeID: review.placeId)
         await load()
     }
 
     func deleteDishReview(_ review: DishReview) async throws {
         try await dishReviewRepository.deleteReview(review)
-        refreshCenter.invalidateAll()
+        refreshCenter.invalidateMapPin(placeID: review.placeId)
         await load()
     }
 

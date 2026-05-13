@@ -357,3 +357,24 @@ struct MapPlace: Identifiable, Codable, Hashable, Sendable {
         )
     }
 }
+
+struct MapPin: Identifiable, Codable, Hashable, Sendable {
+    let placeId: UUID
+    let displayName: String?
+    let latitude: Double
+    let longitude: Double
+    let averageRating: Double?
+    let reviewCount: Int
+    let contributorCount: Int
+    let categoryIds: [UUID]
+    let isReviewedByCurrentUser: Bool
+    let latestActivityAtUtc: Date?
+
+    var id: UUID {
+        placeId
+    }
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+}

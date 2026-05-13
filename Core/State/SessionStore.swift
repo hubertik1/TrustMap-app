@@ -182,13 +182,30 @@ final class SessionStore: ObservableObject, APISessionProviding {
 
 @MainActor
 final class AppRefreshCenter: ObservableObject {
-    @Published private(set) var globalRevision = 0
+    struct MapPinRefresh: Equatable {
+        let id = UUID()
+        let placeID: UUID
+    }
 
-    func invalidateAll() {
+    @Published private(set) var globalRevision = 0
+    @Published private(set) var mapRevision = 0
+    @Published private(set) var mapPinRefresh: MapPinRefresh?
+
+    func invalidateAll(refreshMap: Bool = true) {
         globalRevision &+= 1
+        if refreshMap {
+            mapRevision &+= 1
+        }
+    }
+
+    func invalidateMapPin(placeID: UUID) {
+        mapPinRefresh = MapPinRefresh(placeID: placeID)
+        invalidateAll(refreshMap: false)
     }
 
     func reset() {
         globalRevision = 0
+        mapRevision = 0
+        mapPinRefresh = nil
     }
 }

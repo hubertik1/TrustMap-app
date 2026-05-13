@@ -234,4 +234,33 @@ final class MapRepository {
             )
         )
     }
+
+    func fetchMapPins(
+        north: Double,
+        south: Double,
+        east: Double,
+        west: Double
+    ) async throws -> [MapPin] {
+        try await apiClient.send(
+            APIRequest<[MapPin]>(
+                method: .get,
+                path: "map/pins",
+                queryItems: [
+                    URLQueryItem(name: "north", value: String(north)),
+                    URLQueryItem(name: "south", value: String(south)),
+                    URLQueryItem(name: "east", value: String(east)),
+                    URLQueryItem(name: "west", value: String(west))
+                ]
+            )
+        )
+    }
+
+    func fetchMapPin(placeId: UUID) async throws -> MapPin? {
+        try await apiClient.send(
+            APIRequest<MapPin?>(
+                method: .get,
+                path: "map/pins/\(placeId.uuidString)"
+            )
+        )
+    }
 }

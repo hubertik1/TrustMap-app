@@ -59,7 +59,7 @@ struct MapScreen: View {
 
                     Task {
                         if let placeID = selection.value {
-                            viewModel.selectPlace(withID: placeID)
+                            await viewModel.selectPlace(withID: placeID)
                         } else if let feature = selection.feature {
                             await viewModel.selectMapFeature(
                                 title: feature.title,
@@ -82,10 +82,16 @@ struct MapScreen: View {
                 .simultaneousGesture(longPressGesture(proxy: proxy))
                 .ignoresSafeArea(edges: .bottom)
 
-                if viewModel.isLoading && viewModel.annotations.isEmpty {
+                if MapStatusOverlayVisibility.shouldShowFullScreenLoading(
+                    isLoading: viewModel.isLoading,
+                    hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleAnnotationsInCurrentViewport
+                ) {
                     LoadingStateView(title: "Loading your map")
                         .background(.thinMaterial)
-                } else if let errorMessage = viewModel.errorMessage, viewModel.annotations.isEmpty {
+                } else if MapStatusOverlayVisibility.shouldShowFullScreenError(
+                    errorMessage: viewModel.errorMessage,
+                    hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleAnnotationsInCurrentViewport
+                ), let errorMessage = viewModel.errorMessage {
                     ErrorStateView(message: errorMessage) {
                         Task { await viewModel.load() }
                     }
@@ -225,10 +231,7 @@ struct MapScreen: View {
                         clearMapSelection()
                     }
                 }
-            ),
-            onDismiss: {
-                Task { await viewModel.load() }
-            }
+            )
         ) {
             if let selectedPlace = viewModel.selectedPlace {
                 NavigationStack {
@@ -238,9 +241,15 @@ struct MapScreen: View {
                 .trustMapMacSheet(width: 780, minHeight: 700)
             }
         }
-        .task(id: refreshCenter.globalRevision) {
+        .task(id: refreshCenter.mapRevision) {
             viewModel.startLocationFlowIfNeeded()
-            await viewModel.load()
+            await viewModel.load(resetPinCache: true)
+        }
+        .onChange(of: refreshCenter.mapPinRefresh) { _, refresh in
+            guard let refresh else { return }
+            Task {
+                await viewModel.refreshPin(placeID: refresh.placeID)
+            }
         }
     }
 
@@ -355,30 +364,24 @@ struct MapScreen: View {
     }
 
     private var shouldShowMapStatusOverlay: Bool {
-        if viewModel.promptContext != nil || viewModel.droppedPinPlace != nil {
-            return false
-        }
-
-        if !viewModel.searchResults.isEmpty {
-            return false
-        }
-
-        if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return false
-        }
-
-        if let errorMessage = viewModel.errorMessage {
-            return !errorMessage.isEmpty && !viewModel.annotations.isEmpty
-        }
-
-        return viewModel.hasLoadedMapPlaces
-            && !viewModel.isLoading
-            && viewModel.annotations.isEmpty
+        MapStatusOverlayVisibility.shouldShowStatusOverlay(
+            isPromptPresented: viewModel.promptContext != nil,
+            isDroppedPinPresented: viewModel.droppedPinPlace != nil,
+            hasSearchResults: !viewModel.searchResults.isEmpty,
+            searchText: viewModel.searchText,
+            errorMessage: viewModel.errorMessage,
+            hasLoadedMapPlaces: viewModel.hasLoadedMapPlaces,
+            isLoading: viewModel.isLoading,
+            hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleAnnotationsInCurrentViewport
+        )
     }
 
     @ViewBuilder
     private var mapStatusOverlay: some View {
-        if let errorMessage = viewModel.errorMessage, !viewModel.annotations.isEmpty {
+        if MapStatusOverlayVisibility.shouldShowRefreshErrorBanner(
+            errorMessage: viewModel.errorMessage,
+            hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleAnnotationsInCurrentViewport
+        ), let errorMessage = viewModel.errorMessage {
             InlineErrorBanner(title: "Couldn't refresh map", message: errorMessage) {
                 Task { await viewModel.load() }
             }
@@ -433,7 +436,9 @@ struct MapScreen: View {
 
             Button {
                 mapSelection = nil
-                viewModel.selectPlace(withID: annotation.id)
+                Task {
+                    await viewModel.selectPlace(withID: annotation.id)
+                }
             } label: {
                 ZStack {
                     if isSelected {

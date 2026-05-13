@@ -99,8 +99,11 @@
 		92D582C788C8303EE19C00A1 /* PlaceDetailVisualSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A56F284358AD6E31A5F64B /* PlaceDetailVisualSystem.swift */; };
 		9780D07B065407156A0DFD26 /* MyPlaceReviewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A73C0D0024CB1BDB2A7EE57 /* MyPlaceReviewsView.swift */; };
 		A0F3001B7607D7AC470A4785 /* TrustMapPlatform.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA76FB78B70F5CE21D01038 /* TrustMapPlatform.swift */; };
+		A11111111111111111111111 /* MapBounds.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22222222222222222222222 /* MapBounds.swift */; };
 		A1F78F17B77AEDC5CE600E92 /* ReviewCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1458E008F36EB4CF4A31C0F /* ReviewCardView.swift */; };
 		A2DEAA8BBD6F30256FC364B7 /* MacMainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 375CD38974C3AC158B712D79 /* MacMainWindowView.swift */; };
+		A33333333333333333333333 /* MapPinAnnotationSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A44444444444444444444444 /* MapPinAnnotationSnapshot.swift */; };
+		A55555555555555555555555 /* MapStatusOverlayVisibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A66666666666666666666666 /* MapStatusOverlayVisibility.swift */; };
 		AA1637309742A428C21D5B0A /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ADC0373B7FF09460149CA1F /* AppConfiguration.swift */; };
 		AABB1C9FAD155AAC74C6A162 /* MyDishReviewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CBADED53273D6B4ADA0A5B2 /* MyDishReviewsView.swift */; };
 		AF191185D8DE7FA0D2171596 /* PlaceCategoryOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C575B526184259D4F75A387 /* PlaceCategoryOption.swift */; };
@@ -222,7 +225,10 @@
 		9BB81976BAA7CC5AA6C5B9E5 /* FriendRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FriendRepository.swift; path = Features/Friends/Services/FriendRepository.swift; sourceTree = "<group>"; };
 		9EFD5B2F27F96643F3D203E8 /* PreviewAppFactory.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PreviewAppFactory.swift; path = Shared/Preview/PreviewAppFactory.swift; sourceTree = "<group>"; };
 		A1BFAEE63C356FB6011708D3 /* FriendProfileViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FriendProfileViewModel.swift; path = Features/Profile/ViewModels/FriendProfileViewModel.swift; sourceTree = "<group>"; };
+		A22222222222222222222222 /* MapBounds.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MapBounds.swift; path = Features/Map/Models/MapBounds.swift; sourceTree = "<group>"; };
+		A44444444444444444444444 /* MapPinAnnotationSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MapPinAnnotationSnapshot.swift; path = Features/Map/Models/MapPinAnnotationSnapshot.swift; sourceTree = "<group>"; };
 		A598068A6E5A005470784345 /* NotificationPermissionCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationPermissionCoordinator.swift; path = Features/Notifications/Services/NotificationPermissionCoordinator.swift; sourceTree = "<group>"; };
+		A66666666666666666666666 /* MapStatusOverlayVisibility.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MapStatusOverlayVisibility.swift; path = Features/Map/Models/MapStatusOverlayVisibility.swift; sourceTree = "<group>"; };
 		AABE36AAFD1CC62047B20D86 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
 		AB25508C0403A427317BD821 /* PlaceListRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaceListRowView.swift; path = Features/Places/Views/PlaceListRowView.swift; sourceTree = "<group>"; };
 		AB3C50C62FB6BDDE189A9FFF /* Friendship.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Friendship.swift; path = Features/Friends/Models/Friendship.swift; sourceTree = "<group>"; };
@@ -753,8 +759,11 @@
 			isa = PBXGroup;
 			children = (
 				2661A354A4F81ED8A24D77FD /* FilterPerson.swift */,
+				A22222222222222222222222 /* MapBounds.swift */,
 				D54AA0841CFF96D25A1BD4B5 /* MapFilterState.swift */,
+				A44444444444444444444444 /* MapPinAnnotationSnapshot.swift */,
 				95FCA67F524294514B3BE696 /* MapPlaceAnnotation.swift */,
+				A66666666666666666666666 /* MapStatusOverlayVisibility.swift */,
 				D1C07F287FF044671DFA322E /* PeopleFilterMode.swift */,
 				8A0E81940E03EB175A92B3DF /* PlaceSearchResult.swift */,
 				661B133B4F251DC1B3A28731 /* UserLocationAccessState.swift */,
@@ -1082,7 +1091,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastSwiftUpdateCheck = 2630;
-				LastUpgradeCheck = 2640;
+				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					9AFAA84365C05A8CCEAB0508 = {
 						ProvisioningStyle = Automatic;
@@ -1193,8 +1202,11 @@
 				041D4AA5BEAD29B11752F359 /* FriendsView.swift in Sources */,
 				E703BB990ACADF3B36B92FB8 /* UserFriendsView.swift in Sources */,
 				6389FDB00CEDF4F389A8EFEA /* FilterPerson.swift in Sources */,
+				A11111111111111111111111 /* MapBounds.swift in Sources */,
 				28A658B9CF12D4CAAD45D4D2 /* MapFilterState.swift in Sources */,
+				A33333333333333333333333 /* MapPinAnnotationSnapshot.swift in Sources */,
 				5381FAE67D4F77139426AA54 /* MapPlaceAnnotation.swift in Sources */,
+				A55555555555555555555555 /* MapStatusOverlayVisibility.swift in Sources */,
 				79A865205A31ADD0EC8C8A81 /* PeopleFilterMode.swift in Sources */,
 				D0DCC15D38B19FFDA8A39F6A /* PlaceSearchResult.swift in Sources */,
 				4C1EC81B870538DDE9FCB3BF /* UserLocationAccessState.swift in Sources */,
@@ -1300,6 +1312,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 22U6378M24;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -1340,7 +1353,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Resources/Preview Content\"";
-				DEVELOPMENT_TEAM = 22U6378M24;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -1371,7 +1383,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Resources/Preview Content\"";
-				DEVELOPMENT_TEAM = 22U6378M24;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -1429,6 +1440,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 22U6378M24;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;

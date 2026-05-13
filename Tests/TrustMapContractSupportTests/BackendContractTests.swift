@@ -878,6 +878,36 @@ final class BackendContractTests: XCTestCase {
         XCTAssertFalse(mapPlaces[1].isReviewedByCurrentUser)
     }
 
+    func testMapPinDecodesLightweightMapPinContract() throws {
+        let placeId = UUID(uuidString: "F00D0000-0000-4000-8000-000000000001")!
+        let categoryId = UUID(uuidString: "D53A109F-9617-4A0A-B95A-5AD277A30764")!
+        let pin = try JSONDecoder().decode(MapPin.self, from: Data("""
+        {
+          "placeId": "\(placeId.uuidString.lowercased())",
+          "displayName": "Cafe Central",
+          "latitude": 52.2297,
+          "longitude": 21.0122,
+          "averageRating": 4.5,
+          "reviewCount": 3,
+          "contributorCount": 2,
+          "categoryIds": ["\(categoryId.uuidString.lowercased())"],
+          "isReviewedByCurrentUser": true,
+          "latestActivityAtUtc": null
+        }
+        """.utf8))
+
+        XCTAssertEqual(pin.placeId, placeId)
+        XCTAssertEqual(pin.displayName, "Cafe Central")
+        XCTAssertEqual(pin.latitude, 52.2297)
+        XCTAssertEqual(pin.longitude, 21.0122)
+        XCTAssertEqual(pin.averageRating, 4.5)
+        XCTAssertEqual(pin.reviewCount, 3)
+        XCTAssertEqual(pin.contributorCount, 2)
+        XCTAssertEqual(pin.categoryIds, [categoryId])
+        XCTAssertTrue(pin.isReviewedByCurrentUser)
+        XCTAssertNil(pin.latestActivityAtUtc)
+    }
+
     func testPlaceListSearchMatchesBackendSearchTextAndTokens() {
         let item = PlaceListItem(
             id: UUID(uuidString: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD")!,
