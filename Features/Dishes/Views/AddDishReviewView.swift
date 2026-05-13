@@ -193,24 +193,7 @@ struct AddDishReviewView: View {
                 }
 
                 if let image = viewModel.selectedPreviewImage {
-                    ZStack(alignment: .topTrailing) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(height: 220)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-                        Button {
-                            viewModel.removeSelectedPhoto()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title3)
-                                .symbolRenderingMode(.palette)
-                                .foregroundStyle(.white, .black.opacity(0.65))
-                        }
-                        .buttonStyle(.plain)
-                        .padding(10)
-                    }
+                    selectedPhotoThumbnail(image)
                 }
             }
 
@@ -289,6 +272,27 @@ struct AddDishReviewView: View {
                     .font(.title3)
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(.white, .red)
+            }
+            .buttonStyle(.plain)
+            .padding(6)
+        }
+    }
+
+    private func selectedPhotoThumbnail(_ image: UIImage) -> some View {
+        ZStack(alignment: .topTrailing) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            Button {
+                viewModel.removeSelectedPhoto()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title3)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .black.opacity(0.65))
             }
             .buttonStyle(.plain)
             .padding(6)
