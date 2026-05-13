@@ -223,6 +223,8 @@ struct AddDishReviewView: View {
                 }
             }
         }
+        .scrollDismissesKeyboard(.interactively)
+        .trustMapDismissKeyboardOnTap()
     }
 
     private var visibleExistingPhotos: [PhotoAsset] {

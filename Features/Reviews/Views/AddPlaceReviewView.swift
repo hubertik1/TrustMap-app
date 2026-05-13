@@ -99,6 +99,8 @@ struct AddPlaceReviewView: View {
             photosSection
             deleteSection
         }
+        .scrollDismissesKeyboard(.interactively)
+        .trustMapDismissKeyboardOnTap()
     }
 
     private var isShowingError: Binding<Bool> {

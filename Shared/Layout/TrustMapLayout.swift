@@ -70,6 +70,12 @@ private struct TrustMapPhoneTabBarHiddenModifier: ViewModifier {
     }
 }
 
+private struct TrustMapDismissKeyboardOnTapModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content.background(KeyboardDismissTapInstaller())
+    }
+}
+
 extension View {
     func trustMapReadableContent(
         maxWidth: CGFloat = TrustMapLayout.readableContentMaxWidth,
@@ -88,6 +94,102 @@ extension View {
 
     func trustMapPhoneTabBarHidden() -> some View {
         modifier(TrustMapPhoneTabBarHiddenModifier())
+    }
+
+    func trustMapDismissKeyboardOnTap() -> some View {
+        modifier(TrustMapDismissKeyboardOnTapModifier())
+    }
+}
+
+private struct KeyboardDismissTapInstaller: UIViewRepresentable {
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> InstallerView {
+        let view = InstallerView()
+        view.onWindowChange = { window in
+            context.coordinator.install(in: window)
+        }
+        return view
+    }
+
+    func updateUIView(_ uiView: InstallerView, context: Context) {
+        uiView.onWindowChange = { window in
+            context.coordinator.install(in: window)
+        }
+        context.coordinator.install(in: uiView.window)
+    }
+
+    static func dismantleUIView(_ uiView: InstallerView, coordinator: Coordinator) {
+        uiView.onWindowChange = nil
+        coordinator.uninstall()
+    }
+
+    final class InstallerView: UIView {
+        var onWindowChange: ((UIWindow?) -> Void)?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            onWindowChange?(window)
+        }
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        private weak var installedWindow: UIWindow?
+        private weak var tapRecognizer: UITapGestureRecognizer?
+
+        func install(in window: UIWindow?) {
+            guard installedWindow !== window else { return }
+
+            uninstall()
+
+            guard let window else { return }
+
+            let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+            tapRecognizer.cancelsTouchesInView = false
+            tapRecognizer.delegate = self
+            window.addGestureRecognizer(tapRecognizer)
+
+            installedWindow = window
+            self.tapRecognizer = tapRecognizer
+        }
+
+        func uninstall() {
+            if let tapRecognizer, let installedWindow {
+                installedWindow.removeGestureRecognizer(tapRecognizer)
+            }
+
+            installedWindow = nil
+            tapRecognizer = nil
+        }
+
+        @objc private func handleTap(_ recognizer: UITapGestureRecognizer) {
+            guard recognizer.state == .ended else { return }
+            installedWindow?.endEditing(true)
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard let view = touch.view else { return true }
+            return !view.isTextInputOrDescendant
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+    }
+}
+
+private extension UIView {
+    var isTextInputOrDescendant: Bool {
+        if self is UITextField || self is UITextView {
+            return true
+        }
+
+        return superview?.isTextInputOrDescendant ?? false
     }
 }
 
