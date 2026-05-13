@@ -12,7 +12,6 @@ final class UserProfileRepository {
         let handle: String
         let displayName: String
         let bio: String?
-        let avatarUrl: String?
     }
 
     private struct UpdateMePrivacyPayload: Encodable {
@@ -20,12 +19,6 @@ final class UserProfileRepository {
         let friendListVisibility: VisibilityStatus
         let profileVisibility: VisibilityStatus
         let profilePictureVisibility: VisibilityStatus
-    }
-
-    private enum AvatarAction: String {
-        case keep = "Keep"
-        case remove = "Remove"
-        case replace = "Replace"
     }
 
     private let apiClient: APIClient
@@ -47,57 +40,33 @@ final class UserProfileRepository {
         handle: String,
         displayName: String,
         bio: String?,
-        existingAvatarURL: String?,
         avatarUpdate: AvatarUpdate = .keepExisting
     ) async throws -> User {
         let normalizedHandle = handle.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedBio = bio?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-        let normalizedExistingAvatarURL = existingAvatarURL?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+
+        let updatedProfile = try await patchProfile(
+            handle: normalizedHandle,
+            displayName: normalizedDisplayName,
+            bio: normalizedBio
+        )
 
         switch avatarUpdate {
         case .keepExisting:
-            let payload = UpdateMePayload(
-                handle: normalizedHandle,
-                displayName: normalizedDisplayName,
-                bio: normalizedBio,
-                avatarUrl: normalizedExistingAvatarURL
-            )
-
-            return try await apiClient.send(
-                APIRequest<User>(
-                    method: .patch,
-                    path: "me",
-                    body: .json(AnyEncodable(payload))
-                )
-            )
+            return updatedProfile
 
         case .remove:
-            let multipart = MultipartFormData(
-                fields: [
-                    "handle": normalizedHandle,
-                    "displayName": normalizedDisplayName,
-                    "bio": normalizedBio ?? "",
-                    "avatarAction": AvatarAction.remove.rawValue
-                ]
-            )
-
             return try await apiClient.send(
                 APIRequest<User>(
-                    method: .patch,
-                    path: "me",
-                    body: .multipart(multipart)
+                    method: .delete,
+                    path: "me/avatar"
                 )
             )
 
         case .replace(let imageData):
             let multipart = MultipartFormData(
-                fields: [
-                    "handle": normalizedHandle,
-                    "displayName": normalizedDisplayName,
-                    "bio": normalizedBio ?? "",
-                    "avatarAction": AvatarAction.replace.rawValue
-                ],
+                fields: [:],
                 file: .init(
                     fieldName: "avatar",
                     fileName: "avatar.jpg",
@@ -108,12 +77,32 @@ final class UserProfileRepository {
 
             return try await apiClient.send(
                 APIRequest<User>(
-                    method: .patch,
-                    path: "me",
+                    method: .put,
+                    path: "me/avatar",
                     body: .multipart(multipart)
                 )
             )
         }
+    }
+
+    private func patchProfile(
+        handle: String,
+        displayName: String,
+        bio: String?
+    ) async throws -> User {
+        let payload = UpdateMePayload(
+            handle: handle,
+            displayName: displayName,
+            bio: bio
+        )
+
+        return try await apiClient.send(
+            APIRequest<User>(
+                method: .patch,
+                path: "me",
+                body: .json(AnyEncodable(payload))
+            )
+        )
     }
 
     func fetchUser(id: UUID) async throws -> User {

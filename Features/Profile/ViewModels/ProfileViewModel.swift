@@ -263,7 +263,6 @@ final class ProfileViewModel: ObservableObject {
                 handle: handle,
                 displayName: normalizedEditedDisplayName,
                 bio: normalizedEditedBio,
-                existingAvatarURL: currentUser.avatarURLString,
                 avatarUpdate: avatarUpdate(comparedTo: currentUser)
             )
             let resolvedUser = await refreshedUser(afterSaving: updatedUser)
