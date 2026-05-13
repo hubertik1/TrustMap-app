@@ -154,9 +154,9 @@ struct MyDishReviewsView: View {
                         countryCode: "US"
                     ),
                     photos: [
-                        PhotoAsset(url: "/uploads/reviews/sample-dish-1.jpg"),
-                        PhotoAsset(url: "/uploads/reviews/sample-dish-2.jpg"),
-                        PhotoAsset(url: "/uploads/reviews/sample-dish-3.jpg")
+                        PhotoAsset(url: "/media/photos/20000000-0000-4000-8000-000000000001"),
+                        PhotoAsset(url: "/media/photos/20000000-0000-4000-8000-000000000002"),
+                        PhotoAsset(url: "/media/photos/20000000-0000-4000-8000-000000000003")
                     ]
                 ),
                 DishReview(

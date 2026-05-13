@@ -717,13 +717,13 @@ final class BackendContractTests: XCTestCase {
                     body: """
                     {
                       "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                      "url": "/uploads/reviews/photo-1.jpg",
+                      "url": "/media/photos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
                       "contentType": "image/jpeg",
                       "sizeBytes": 12345,
                       "width": 1440,
                       "height": 1080,
-                      "mediumUrl": "/uploads/reviews/photo-1-medium.jpg",
-                      "thumbnailUrl": "/uploads/reviews/photo-1-thumb.jpg",
+                      "mediumUrl": "/media/photos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/variants/medium",
+                      "thumbnailUrl": "/media/photos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/variants/thumbnail",
                       "createdAtUtc": "2026-04-08T12:00:00Z"
                     }
                     """
@@ -741,9 +741,9 @@ final class BackendContractTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(asset.url, "/uploads/reviews/photo-1.jpg")
-        XCTAssertEqual(asset.mediumURLString, "/uploads/reviews/photo-1-medium.jpg")
-        XCTAssertEqual(asset.thumbnailURLString, "/uploads/reviews/photo-1-thumb.jpg")
+        XCTAssertEqual(asset.url, "/media/photos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+        XCTAssertEqual(asset.mediumURLString, "/media/photos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/variants/medium")
+        XCTAssertEqual(asset.thumbnailURLString, "/media/photos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/variants/thumbnail")
         XCTAssertEqual(asset.createdAt, iso8601("2026-04-08T12:00:00Z"))
     }
 
@@ -790,25 +790,25 @@ final class BackendContractTests: XCTestCase {
     func testPhotoAssetResolvesRelativeBackendURL() {
         let asset = PhotoAsset(
             id: UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!,
-            url: "/uploads/reviews/photo-1.jpg"
+            url: "/media/photos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
         )
 
-        XCTAssertEqual(asset.resolvedURL?.absoluteString, "http://127.0.0.1:5104/uploads/reviews/photo-1.jpg")
+        XCTAssertEqual(asset.resolvedURL?.absoluteString, "http://127.0.0.1:5104/media/photos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
     }
 
     func testPhotoAssetFallsBackToOriginalWhenPreferredVariantIsMissing() {
         let asset = PhotoAsset(
             id: UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!,
-            url: "/uploads/reviews/photo-1.jpg",
+            url: "/media/photos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
             thumbnailURLString: nil,
-            mediumURLString: "/uploads/reviews/photo-1-medium.jpg"
+            mediumURLString: "/media/photos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/variants/medium"
         )
 
         XCTAssertEqual(
             asset.resolvedURLs(for: .thumbnail).map(\.absoluteString),
             [
-                "http://127.0.0.1:5104/uploads/reviews/photo-1-medium.jpg",
-                "http://127.0.0.1:5104/uploads/reviews/photo-1.jpg"
+                "http://127.0.0.1:5104/media/photos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/variants/medium",
+                "http://127.0.0.1:5104/media/photos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
             ]
         )
     }

@@ -147,9 +147,9 @@ struct MyPlaceReviewsView: View {
                         categoryNames: ["Cafes"]
                     ),
                     photos: [
-                        PhotoAsset(url: "/uploads/reviews/sample-place-1.jpg"),
-                        PhotoAsset(url: "/uploads/reviews/sample-place-2.jpg"),
-                        PhotoAsset(url: "/uploads/reviews/sample-place-3.jpg")
+                        PhotoAsset(url: "/media/photos/10000000-0000-4000-8000-000000000001"),
+                        PhotoAsset(url: "/media/photos/10000000-0000-4000-8000-000000000002"),
+                        PhotoAsset(url: "/media/photos/10000000-0000-4000-8000-000000000003")
                     ]
                 ),
                 PlaceReview(

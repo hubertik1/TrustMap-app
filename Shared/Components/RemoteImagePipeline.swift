@@ -9,6 +9,7 @@ final class RemoteImagePipeline {
     private let session: URLSession
     private let memoryCache = NSCache<NSString, UIImage>()
     private var inFlightRequests: [NSString: Task<UIImage, Error>] = [:]
+    weak var sessionProvider: (any APISessionProviding)?
 
     private init() {
         let configuration = URLSessionConfiguration.default
@@ -42,27 +43,62 @@ final class RemoteImagePipeline {
             Int((targetDisplaySize.width * screenScale).rounded(.up)),
             Int((targetDisplaySize.height * screenScale).rounded(.up))
         )
+        let backendBaseURL = AppConfiguration.apiBaseURL
+        let accessToken = sessionProvider?.currentAccessToken
 
         let task = Task(priority: .userInitiated) { [session] in
             try await Self.fetchImage(
                 with: session,
                 candidateURLs: candidateURLs,
-                maxPixelSize: max(maxPixelSize, 1)
+                maxPixelSize: max(maxPixelSize, 1),
+                backendBaseURL: backendBaseURL,
+                accessToken: accessToken
             )
         }
 
         inFlightRequests[cacheKey] = task
         defer { inFlightRequests.removeValue(forKey: cacheKey) }
 
-        let image = try await task.value
+        let image: UIImage
+        do {
+            image = try await task.value
+        } catch RemoteImagePipelineError.unauthorized {
+            guard let sessionProvider else {
+                throw AppError.invalidSession
+            }
+
+            do {
+                let refreshedAccessToken = try await sessionProvider.refreshSession()
+                image = try await Self.fetchImage(
+                    with: session,
+                    candidateURLs: candidateURLs,
+                    maxPixelSize: max(maxPixelSize, 1),
+                    backendBaseURL: backendBaseURL,
+                    accessToken: refreshedAccessToken
+                )
+            } catch RemoteImagePipelineError.unauthorized {
+                await sessionProvider.handleUnauthorizedSession()
+                throw AppError.invalidSession
+            }
+        }
+
         memoryCache.setObject(image, forKey: cacheKey, cost: image.memoryCost)
         return image
+    }
+
+    func clearCache() {
+        memoryCache.removeAllObjects()
+        session.configuration.urlCache?.removeAllCachedResponses()
+        inFlightRequests.values.forEach { $0.cancel() }
+        inFlightRequests.removeAll()
     }
 
     private static func fetchImage(
         with session: URLSession,
         candidateURLs: [URL],
-        maxPixelSize: Int
+        maxPixelSize: Int,
+        backendBaseURL: URL,
+        accessToken: String?
     ) async throws -> UIImage {
         var lastError: Error?
 
@@ -70,11 +106,20 @@ final class RemoteImagePipeline {
             do {
                 var request = URLRequest(url: url)
                 request.cachePolicy = .useProtocolCachePolicy
+                if let accessToken,
+                   !accessToken.isEmpty,
+                   isBackendURL(url, backendBaseURL: backendBaseURL) {
+                    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+                }
 
                 let (data, response) = try await session.data(for: request)
                 guard let httpResponse = response as? HTTPURLResponse else {
                     lastError = AppError.underlying("The photo response was invalid.")
                     continue
+                }
+
+                if httpResponse.statusCode == 401 {
+                    throw RemoteImagePipelineError.unauthorized
                 }
 
                 guard (200..<300).contains(httpResponse.statusCode) else {
@@ -101,6 +146,17 @@ final class RemoteImagePipeline {
         throw lastError ?? AppError.underlying("Unable to load the selected photo.")
     }
 
+    private static func isBackendURL(_ url: URL, backendBaseURL: URL) -> Bool {
+        guard let urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let backendComponents = URLComponents(url: backendBaseURL, resolvingAgainstBaseURL: false) else {
+            return false
+        }
+
+        return urlComponents.scheme?.lowercased() == backendComponents.scheme?.lowercased()
+            && urlComponents.host?.lowercased() == backendComponents.host?.lowercased()
+            && urlComponents.port == backendComponents.port
+    }
+
     private static func downsampledImage(from data: Data, maxPixelSize: Int) -> UIImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
             return nil
@@ -120,6 +176,10 @@ final class RemoteImagePipeline {
 
         return UIImage(cgImage: image)
     }
+}
+
+private enum RemoteImagePipelineError: Error {
+    case unauthorized
 }
 
 extension UIImage {
