@@ -158,6 +158,7 @@ struct AddDishReviewView: View {
                     Label(photoButtonTitle, systemImage: "photo.on.rectangle.angled")
                 }
                 .accessibilityLabel(photoAccessibilityLabel)
+                .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                 .reviewPhotoSourcePicker(
                     isPresented: $isPhotoSourceDialogPresented,
                     title: photoButtonTitle,

@@ -182,6 +182,7 @@ struct AddPlaceReviewView: View {
                 Label("Add Photos", systemImage: "photo.on.rectangle.angled")
             }
             .accessibilityLabel("Add photos")
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
             .reviewPhotoSourcePicker(
                 isPresented: $isPhotoSourceDialogPresented,
                 title: "Add Photos",

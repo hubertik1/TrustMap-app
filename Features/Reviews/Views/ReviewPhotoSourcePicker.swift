@@ -14,43 +14,21 @@ struct ReviewPhotoSourcePicker: ViewModifier {
     @State private var isPhotoLibraryPresented = false
     @State private var isCameraPresented = false
     @State private var isFileImporterPresented = false
+    @State private var pendingSource: ReviewPhotoSource?
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var isPreparingPhotos = false
 
     func body(content: Content) -> some View {
         content
-            .confirmationDialog(title, isPresented: $isSourceDialogPresented) {
-                Button("Photo Library") {
-                    guard !isPreparingPhotos else {
-                        return
-                    }
-
-                    selectedPhotoItems = []
-                    isPhotoLibraryPresented = true
-                }
-                .disabled(isPreparingPhotos)
-
-                if showsCameraOption {
-                    Button("Camera") {
-                        guard !isPreparingPhotos else {
-                            return
-                        }
-
-                        isCameraPresented = true
-                    }
-                    .disabled(isPreparingPhotos)
-                }
-
-                Button("Files") {
-                    guard !isPreparingPhotos else {
-                        return
-                    }
-
-                    isFileImporterPresented = true
-                }
-                .disabled(isPreparingPhotos)
+            .popover(isPresented: $isSourceDialogPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .bottom) {
+                ReviewPhotoSourcePickerPopover(
+                    showsCameraOption: showsCameraOption,
+                    isPreparingPhotos: isPreparingPhotos,
+                    onSourceSelected: selectSource
+                )
+                .presentationCompactAdaptation(.popover)
+                .onDisappear(perform: presentPendingSource)
             }
-            .presentationBackground(Color(uiColor: .systemGroupedBackground))
             .photosPicker(
                 isPresented: $isPhotoLibraryPresented,
                 selection: $selectedPhotoItems,
@@ -108,6 +86,34 @@ struct ReviewPhotoSourcePicker: ViewModifier {
         allowsMultipleSelection
             ? "The selected photos couldn't be prepared."
             : "The selected photo couldn't be prepared."
+    }
+
+    private func selectSource(_ source: ReviewPhotoSource) {
+        guard !isPreparingPhotos else {
+            return
+        }
+
+        pendingSource = source
+        isSourceDialogPresented = false
+    }
+
+    private func presentPendingSource() {
+        guard !isPreparingPhotos, let pendingSource else {
+            self.pendingSource = nil
+            return
+        }
+
+        self.pendingSource = nil
+
+        switch pendingSource {
+        case .photoLibrary:
+            selectedPhotoItems = []
+            isPhotoLibraryPresented = true
+        case .camera:
+            isCameraPresented = true
+        case .files:
+            isFileImporterPresented = true
+        }
     }
 
     @MainActor
@@ -259,6 +265,82 @@ struct ReviewPhotoSourcePicker: ViewModifier {
 
         let nsError = error as NSError
         return nsError.domain == NSCocoaErrorDomain && nsError.code == NSUserCancelledError
+    }
+}
+
+private enum ReviewPhotoSource: Hashable {
+    case photoLibrary
+    case camera
+    case files
+
+    var title: String {
+        switch self {
+        case .photoLibrary:
+            "Photo Library"
+        case .camera:
+            "Camera"
+        case .files:
+            "Files"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .photoLibrary:
+            "photo.on.rectangle"
+        case .camera:
+            "camera"
+        case .files:
+            "folder"
+        }
+    }
+}
+
+private struct ReviewPhotoSourcePickerPopover: View {
+    let showsCameraOption: Bool
+    let isPreparingPhotos: Bool
+    let onSourceSelected: (ReviewPhotoSource) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(sources.enumerated()), id: \.element) { index, source in
+                sourceRow(source)
+
+                if index < sources.count - 1 {
+                    Divider()
+                }
+            }
+        }
+        .frame(width: 300)
+    }
+
+    private var sources: [ReviewPhotoSource] {
+        if showsCameraOption {
+            [.photoLibrary, .camera, .files]
+        } else {
+            [.photoLibrary, .files]
+        }
+    }
+
+    private func sourceRow(_ source: ReviewPhotoSource) -> some View {
+        Button {
+            onSourceSelected(source)
+        } label: {
+            Label {
+                Text(source.title)
+                    .foregroundStyle(.primary)
+            } icon: {
+                Image(systemName: source.systemImage)
+                    .foregroundStyle(.tint)
+                    .frame(width: 24)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 18)
+            .frame(height: 52)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isPreparingPhotos)
     }
 }
 
