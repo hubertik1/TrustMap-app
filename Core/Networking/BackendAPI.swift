@@ -272,6 +272,8 @@ final class APIClient {
             return .invalidSession
         case 403:
             return .authFailed(message)
+        case 429:
+            return .rateLimited(message)
         default:
             return .underlying(message)
         }

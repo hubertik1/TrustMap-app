@@ -7,6 +7,7 @@ enum AppError: LocalizedError {
     case invalidPlaceSelection
     case locationFailure(String)
     case persistenceFailure(String)
+    case rateLimited(String)
     case syncFailure(String)
     case validationFailure(String)
     case underlying(String)
@@ -24,6 +25,8 @@ enum AppError: LocalizedError {
         case .locationFailure(let message):
             return message
         case .persistenceFailure(let message):
+            return message
+        case .rateLimited(let message):
             return message
         case .syncFailure(let message):
             return message
@@ -44,6 +47,7 @@ enum AppError: LocalizedError {
              .invalidPlaceSelection,
              .locationFailure,
              .persistenceFailure,
+             .rateLimited,
              .validationFailure,
              .underlying:
             return false
