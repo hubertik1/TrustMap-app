@@ -574,6 +574,22 @@ final class BackendContractTests: XCTestCase {
     }
 
     @MainActor
+    func testPushDeviceTokenRepositoryUsesProductionAPNsEnvironmentForProdConfiguration() async throws {
+        setenv("TRUSTMAP_ENVIRONMENT_NAME", "Prod", 1)
+        let protocolState = URLProtocolState(responses: [.json(statusCode: 204, body: "")])
+        let (apiClient, sessionProvider) = makeAuthorizedClient(protocolState: protocolState)
+        _ = sessionProvider
+
+        let repository = PushDeviceTokenRepository(apiClient: apiClient)
+        try await repository.registerDeviceToken("00abff")
+
+        let requestBodies = await protocolState.requestBodies
+        let bodyData = try XCTUnwrap(requestBodies.first ?? nil)
+        let payload = try JSONDecoder().decode(PushDeviceTokenPayloadProbe.self, from: bodyData)
+        XCTAssertEqual(payload.environment, "production")
+    }
+
+    @MainActor
     func testPushDeviceTokenRepositoryUnregisterCurrentDeviceTokenAcceptsNoContent() async throws {
         let protocolState = URLProtocolState(responses: [
             .json(statusCode: 204, body: ""),

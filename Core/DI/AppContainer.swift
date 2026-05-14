@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 
 @MainActor
 final class AppContainer: ObservableObject {
@@ -29,6 +29,8 @@ final class AppContainer: ObservableObject {
     let notificationPermissionCoordinator: NotificationPermissionCoordinator
     let mapSearchService: MapSearchService
     let userLocationService: UserLocationService
+
+    private var remoteNotificationResponseObserver: NSObjectProtocol?
 
     init(preview: Bool = false) {
         let apiClient = APIClient(baseURL: AppConfiguration.apiBaseURL)
@@ -92,6 +94,16 @@ final class AppContainer: ObservableObject {
 
         if !preview {
             PushDeviceTokenBridge.shared.configure(handler: pushDeviceTokenManager)
+            remoteNotificationResponseObserver = NotificationCenter.default.addObserver(
+                forName: .trustMapRemoteNotificationResponseReceived,
+                object: nil,
+                queue: .main
+            ) { [weak notificationBadgeStore, weak refreshCenter] _ in
+                Task { @MainActor in
+                    refreshCenter?.invalidateAll(refreshMap: false)
+                    await notificationBadgeStore?.loadUnreadCount()
+                }
+            }
         }
 
         self.apiClient = apiClient
@@ -123,4 +135,5 @@ final class AppContainer: ObservableObject {
             sessionStore.setPreviewState(.signedOut)
         }
     }
+
 }
