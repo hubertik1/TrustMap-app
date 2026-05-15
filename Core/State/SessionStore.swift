@@ -12,6 +12,7 @@ final class SessionStore: ObservableObject, APISessionProviding {
     @Published private(set) var state: State = .launching
     @Published var alertMessage: String?
     var onWillSignOut: (() async -> Void)?
+    var onDidClearSession: (() -> Void)?
 
     private let authService: AuthServicing
     private let authRepository: AuthRepository
@@ -132,6 +133,21 @@ final class SessionStore: ObservableObject, APISessionProviding {
         state = .signedOut
     }
 
+    func deleteCurrentAccount() async throws {
+        do {
+            try await userRepository.deleteCurrentAccount()
+        } catch AppError.invalidSession {
+            clearSessionState()
+            alertMessage = AppError.invalidSession.errorDescription
+            state = .signedOut
+            return
+        }
+
+        clearSessionState()
+        alertMessage = "Your account has been deleted."
+        state = .signedOut
+    }
+
     func handleSceneDidBecomeActive() async {
         guard storedTokens != nil,
               let appleUserID = authService.lastAppleUserID() else {
@@ -177,6 +193,7 @@ final class SessionStore: ObservableObject, APISessionProviding {
         tokenStore.clear()
         authService.persistLastAppleUserID(nil)
         refreshCenter.reset()
+        onDidClearSession?()
     }
 }
 

@@ -138,6 +138,16 @@ final class UserProfileRepository {
         )
     }
 
+    func deleteCurrentAccount() async throws {
+        _ = try await apiClient.send(
+            APIRequest<EmptyResponse>(
+                method: .delete,
+                path: "me",
+                acceptedStatusCodes: [204]
+            )
+        )
+    }
+
     func searchUsers(query: String, take: Int = 20) async throws -> [UserSearchResult] {
         let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty else {

@@ -18,12 +18,14 @@ final class SettingsViewModel: ObservableObject {
     @Published private(set) var locationAuthorizationStatus: CLAuthorizationStatus
     @Published private(set) var notificationAuthorizationStatus: UNAuthorizationStatus
     @Published private(set) var isSigningOut = false
+    @Published private(set) var isDeletingAccount = false
     @Published private(set) var isUpdatingPrivacy = false
     @Published private(set) var reviewVisibility: VisibilityStatus = .friendsOnly
     @Published private(set) var friendListVisibility: VisibilityStatus = .friendsOnly
     @Published private(set) var profileVisibility: VisibilityStatus = .public
     @Published private(set) var profilePictureVisibility: VisibilityStatus = .public
     @Published var privacyErrorMessage: String?
+    @Published var accountDeletionErrorMessage: String?
 
     init(
         sessionStore: SessionStore,
@@ -229,6 +231,21 @@ final class SettingsViewModel: ObservableObject {
         isSigningOut = true
         defer { isSigningOut = false }
         await sessionStore.signOut()
+    }
+
+    func deleteAccount() async {
+        guard !isDeletingAccount else { return }
+        isDeletingAccount = true
+        accountDeletionErrorMessage = nil
+        defer { isDeletingAccount = false }
+
+        do {
+            try await sessionStore.deleteCurrentAccount()
+        } catch {
+            let wrappedError = AppError.wrap(error)
+            logger.error("Account deletion failed: \(wrappedError.logDescription, privacy: .public)")
+            accountDeletionErrorMessage = "Couldn’t delete your account. Please check your connection and try again."
+        }
     }
 
     func setReviewVisibility(_ value: VisibilityStatus) {

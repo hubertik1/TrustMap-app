@@ -160,6 +160,20 @@ final class BackendContractTests: XCTestCase {
         XCTAssertEqual(payload.profilePictureVisibility, "FriendsOfFriends")
     }
 
+    @MainActor
+    func testUserProfileRepositoryDeleteCurrentAccountSendsDeleteMe() async throws {
+        let protocolState = URLProtocolState(responses: [.json(statusCode: 204, body: "")])
+        let (apiClient, sessionProvider) = makeAuthorizedClient(protocolState: protocolState)
+        _ = sessionProvider
+        let repository = UserProfileRepository(apiClient: apiClient)
+
+        try await repository.deleteCurrentAccount()
+
+        let requests = await protocolState.requests
+        XCTAssertEqual(requests.first?.httpMethod, "DELETE")
+        XCTAssertEqual(requests.first?.url?.path, "/me")
+    }
+
     func testVisibilityStatusDecodesFriendsOfFriends() throws {
         let status = try JSONDecoder().decode(VisibilityStatus.self, from: Data(#""FriendsOfFriends""#.utf8))
 

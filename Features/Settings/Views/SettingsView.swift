@@ -4,6 +4,7 @@ struct SettingsView: View {
     @Environment(\.scenePhase) private var scenePhase
     private let container: AppContainer
     @StateObject private var viewModel: SettingsViewModel
+    @State private var showsDeleteAccountConfirmation = false
 
     init(container: AppContainer) {
         self.container = container
@@ -30,6 +31,14 @@ struct SettingsView: View {
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             await viewModel.refreshSettingsState()
+        }
+        .alert("Delete Account?", isPresented: $showsDeleteAccountConfirmation) {
+            Button("Delete Account", role: .destructive) {
+                Task { await viewModel.deleteAccount() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently removes your profile, reviews, photos, friends, and private custom places that no one else uses. This can’t be undone.")
         }
     }
 
@@ -81,7 +90,27 @@ struct SettingsView: View {
                 Button("Sign Out", role: .destructive) {
                     Task { await viewModel.signOut() }
                 }
-                .disabled(viewModel.isSigningOut)
+                .disabled(viewModel.isSigningOut || viewModel.isDeletingAccount)
+
+                Button(role: .destructive) {
+                    showsDeleteAccountConfirmation = true
+                } label: {
+                    if viewModel.isDeletingAccount {
+                        HStack {
+                            ProgressView()
+                            Text("Deleting Account")
+                        }
+                    } else {
+                        Text("Delete Account")
+                    }
+                }
+                .disabled(viewModel.isSigningOut || viewModel.isDeletingAccount)
+
+                if let accountDeletionErrorMessage = viewModel.accountDeletionErrorMessage {
+                    Text(accountDeletionErrorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
             } else {
                 LabeledContent("Sign in", value: viewModel.signInMethodLabel)
             }

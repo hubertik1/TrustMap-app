@@ -88,8 +88,10 @@ final class AppContainer: ObservableObject {
         apiClient.sessionProvider = sessionStore
         RemoteImagePipeline.shared.sessionProvider = sessionStore
         sessionStore.onWillSignOut = { [weak pushDeviceTokenManager] in
-            RemoteImagePipeline.shared.clearCache()
             await pushDeviceTokenManager?.unregisterCurrentDeviceTokenForSignedInUser()
+        }
+        sessionStore.onDidClearSession = {
+            RemoteImagePipeline.shared.clearCache()
         }
 
         if !preview {
