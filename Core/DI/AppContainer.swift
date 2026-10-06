@@ -14,6 +14,7 @@ final class AppContainer: ObservableObject {
     let sessionStore: SessionStore
     let userRepository: UserProfileRepository
     let friendRepository: FriendRepository
+    let safetyRepository: SafetyRepository
     let placeRepository: PlaceRepository
     let categoryRepository: CategoryRepository
     let mapRepository: MapRepository
@@ -49,6 +50,7 @@ final class AppContainer: ObservableObject {
         let tokenStore = KeychainTokenStore()
         let userRepository = UserProfileRepository(apiClient: apiClient)
         let friendRepository = FriendRepository(apiClient: apiClient)
+        let safetyRepository = SafetyRepository(apiClient: apiClient, refreshCenter: refreshCenter)
         let placeRepository = PlaceRepository(apiClient: apiClient)
         let categoryRepository = CategoryRepository(apiClient: apiClient)
         let photoRepository = PhotoRepository(apiClient: apiClient)
@@ -92,6 +94,10 @@ final class AppContainer: ObservableObject {
         }
         sessionStore.onDidClearSession = {
             RemoteImagePipeline.shared.clearCache()
+            safetyRepository.reset()
+        }
+        safetyRepository.onBlocksChanged = { [weak notificationBadgeStore] in
+            await notificationBadgeStore?.loadUnreadCount()
         }
 
         if !preview {
@@ -117,6 +123,7 @@ final class AppContainer: ObservableObject {
         self.sessionStore = sessionStore
         self.userRepository = userRepository
         self.friendRepository = friendRepository
+        self.safetyRepository = safetyRepository
         self.placeRepository = placeRepository
         self.categoryRepository = categoryRepository
         self.mapRepository = mapRepository

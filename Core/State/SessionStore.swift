@@ -205,6 +205,7 @@ final class AppRefreshCenter: ObservableObject {
     }
 
     @Published private(set) var globalRevision = 0
+    @Published private(set) var safetyRevision = 0
     @Published private(set) var mapRevision = 0
     @Published private(set) var mapPinRefresh: MapPinRefresh?
 
@@ -213,6 +214,13 @@ final class AppRefreshCenter: ObservableObject {
         if refreshMap {
             mapRevision &+= 1
         }
+    }
+
+    func invalidateSafety() {
+        // Recreate navigation/view models to immediately discard content that
+        // may have been loaded before the block, including open photo sheets.
+        safetyRevision &+= 1
+        invalidateAll()
     }
 
     func invalidateMapPin(placeID: UUID) {

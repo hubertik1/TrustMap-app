@@ -16,6 +16,7 @@ let package = Package(
         .target(
             name: "TrustMapContractSupport",
             path: ".",
+            exclude: ["Resources"],
             sources: [
                 "Core/Networking/BackendAPI.swift",
                 "Core/State/AppConfiguration.swift",

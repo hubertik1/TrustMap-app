@@ -5,39 +5,49 @@ struct ReviewCardView: View {
     let authorName: String
     let authorAvatarURL: URL?
     let photos: [PhotoAsset]
-    var isEditable = false
+    var safetyRepository: SafetyRepository?
+    var onEdit: (() -> Void)?
+    let onAuthorTap: () -> Void
 
     var body: some View {
         PlaceDetailReviewCard(
             rating: Double(review.ratingOverall),
-            showsChevron: isEditable
+            showsChevron: onEdit != nil,
+            onEdit: onEdit
         ) {
-            AvatarView(
-                name: authorName,
-                avatarURL: authorAvatarURL,
-                size: PlaceDetailVisualSystem.Metrics.leadingVisualSize
-            )
+            ReviewEditButton(action: onEdit) {
+                AvatarView(
+                    name: authorName,
+                    avatarURL: authorAvatarURL,
+                    size: PlaceDetailVisualSystem.Metrics.leadingVisualSize
+                )
+            }
         } content: {
-            VStack(alignment: .leading, spacing: PlaceDetailVisualSystem.Metrics.textSpacing) {
-                Text(authorName)
-                    .font(PlaceDetailVisualSystem.Typography.cardTitle)
-                    .foregroundStyle(PlaceDetailVisualSystem.Colors.primary)
+            ReviewAuthorButton(
+                name: authorName,
+                date: review.createdAt,
+                font: PlaceDetailVisualSystem.Typography.cardTitle,
+                nameColor: PlaceDetailVisualSystem.Colors.primary,
+                action: onAuthorTap
+            )
 
-                Text(review.createdAt.placeDetailTimestampText)
-                    .font(PlaceDetailVisualSystem.Typography.meta)
-                    .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
-            }
+            if !review.reviewText.isEmpty || !review.descriptionText.isEmpty {
+                ReviewEditButton(action: onEdit) {
+                    VStack(alignment: .leading, spacing: PlaceDetailVisualSystem.Metrics.contentSpacing) {
+                        if !review.reviewText.isEmpty {
+                            Text(review.reviewText)
+                                .font(PlaceDetailVisualSystem.Typography.secondary)
+                                .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
+                        }
 
-            if !review.reviewText.isEmpty {
-                Text(review.reviewText)
-                    .font(PlaceDetailVisualSystem.Typography.secondary)
-                    .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
-            }
-
-            if !review.descriptionText.isEmpty {
-                Text(review.descriptionText)
-                    .font(PlaceDetailVisualSystem.Typography.body)
-                    .foregroundStyle(PlaceDetailVisualSystem.Colors.primary)
+                        if !review.descriptionText.isEmpty {
+                            Text(review.descriptionText)
+                                .font(PlaceDetailVisualSystem.Typography.body)
+                                .foregroundStyle(PlaceDetailVisualSystem.Colors.primary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
 
             if !photos.isEmpty {
@@ -50,5 +60,6 @@ struct ReviewCardView: View {
                 )
             }
         }
+        .modifier(ReviewReportModifier(reviewID: review.id, reviewType: "placeReview", repository: safetyRepository))
     }
 }

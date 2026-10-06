@@ -12,6 +12,9 @@ This repository contains the SwiftUI client. The companion backend lives in the 
 - Place reviews with ratings, notes, photos and visibility controls.
 - Dish reviews linked to places and optional place reviews.
 - Friend search, friend requests and friend profile views.
+- Block users from their profiles; unblock in Settings → Privacy → Blocked Users.
+- Report place and dish reviews without entering text by touching and holding a review inside place details.
+- Open the author's profile by tapping their name on a place or dish review.
 - Feed of visible friend activity.
 - Profile management, avatar upload and privacy settings.
 - Push notification registration and in-app notification views.
@@ -209,6 +212,8 @@ The app expects the backend to provide:
 - String enum values in JSON payloads.
 
 See the backend documentation for API and deployment details.
+
+Blocking and reporting require the companion server's `AddBlockingAndReporting` migration. Reports are stored on the server; its default mode prepares private `.eml` files for moderation without automatic email delivery. See `TrustMap-server/docs/blocking-and-reporting.md` for configuration.
 
 ## Local Files Not Committed
 

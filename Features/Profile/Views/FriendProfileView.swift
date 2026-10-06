@@ -44,6 +44,13 @@ struct FriendProfileView: View {
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let user = viewModel.user, !user.isMe {
+                ToolbarItem(placement: .primaryAction) {
+                    BlockUserButton(user: user.summary, repository: container.safetyRepository)
+                }
+            }
+        }
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
         }

@@ -206,17 +206,20 @@ struct PlaceDetailEmptyStateCard: View {
 struct PlaceDetailReviewCard<LeadingVisual: View, Content: View>: View {
     let rating: Double
     var showsChevron = false
+    private let onEdit: (() -> Void)?
     private let leadingVisual: LeadingVisual
     private let content: Content
 
     init(
         rating: Double,
         showsChevron: Bool = false,
+        onEdit: (() -> Void)? = nil,
         @ViewBuilder leadingVisual: () -> LeadingVisual,
         @ViewBuilder content: () -> Content
     ) {
         self.rating = rating
         self.showsChevron = showsChevron
+        self.onEdit = onEdit
         self.leadingVisual = leadingVisual()
         self.content = content()
     }
@@ -235,22 +238,24 @@ struct PlaceDetailReviewCard<LeadingVisual: View, Content: View>: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                HStack(alignment: .top, spacing: PlaceDetailVisualSystem.Metrics.ratingAccessorySpacing) {
-                    RatingBadgeView(rating: rating)
+                ReviewEditButton(action: onEdit) {
+                    HStack(alignment: .top, spacing: PlaceDetailVisualSystem.Metrics.ratingAccessorySpacing) {
+                        RatingBadgeView(rating: rating)
 
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
-                        .frame(width: PlaceDetailVisualSystem.Metrics.chevronWidth)
-                        .frame(maxHeight: .infinity, alignment: .center)
-                        .opacity(showsChevron ? 1 : 0)
-                        .accessibilityHidden(!showsChevron)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
+                            .frame(width: PlaceDetailVisualSystem.Metrics.chevronWidth)
+                            .frame(maxHeight: .infinity, alignment: .center)
+                            .opacity(showsChevron ? 1 : 0)
+                            .accessibilityHidden(!showsChevron)
+                    }
+                    .frame(
+                        minWidth: PlaceDetailVisualSystem.Metrics.trailingAccessoryMinWidth,
+                        maxHeight: .infinity,
+                        alignment: .trailing
+                    )
                 }
-                .frame(
-                    minWidth: PlaceDetailVisualSystem.Metrics.trailingAccessoryMinWidth,
-                    maxHeight: .infinity,
-                    alignment: .trailing
-                )
             }
         }
     }

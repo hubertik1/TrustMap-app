@@ -6,11 +6,13 @@ struct AppRootView: View {
     @ObservedObject private var container: AppContainer
     @ObservedObject private var preferencesStore: AppPreferencesStore
     @ObservedObject private var sessionStore: SessionStore
+    @ObservedObject private var refreshCenter: AppRefreshCenter
 
     init(container: AppContainer) {
         self.container = container
         self.preferencesStore = container.preferencesStore
         self.sessionStore = container.sessionStore
+        self.refreshCenter = container.refreshCenter
     }
 
     var body: some View {
@@ -29,6 +31,7 @@ struct AppRootView: View {
 
             case .signedIn:
                 MainTabView(container: container)
+                    .id(refreshCenter.safetyRevision)
             }
         }
         .preferredColorScheme(preferencesStore.preferredColorScheme)
@@ -43,12 +46,14 @@ struct AppRootView: View {
             await sessionStore.handleSceneDidBecomeActive()
             await container.notificationPermissionCoordinator.handleAppDidBecomeActive()
             guard signedInUserID != nil else { return }
+            await container.safetyRepository.synchronizeBlocks()
             await container.notificationBadgeStore.loadUnreadCount()
         }
         .task(id: signedInUserID) {
             if signedInUserID == nil {
                 container.notificationBadgeStore.reset()
             } else {
+                await container.safetyRepository.synchronizeBlocks()
                 container.notificationPermissionCoordinator.requestOnboardingNotificationPermissionIfNeeded()
                 container.pushDeviceTokenManager.uploadCurrentDeviceTokenIfPossible()
                 await container.notificationBadgeStore.loadUnreadCount()

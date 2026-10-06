@@ -5,6 +5,7 @@ struct PlaceDetailView: View {
     @ObservedObject private var container: AppContainer
     @ObservedObject private var refreshCenter: AppRefreshCenter
     @StateObject private var viewModel: PlaceDetailViewModel
+    @State private var selectedReviewAuthor: UserSummary?
     private let showsDoneButton: Bool
 
     init(container: AppContainer, place: Place, showsDoneButton: Bool = false) {
@@ -128,6 +129,13 @@ struct PlaceDetailView: View {
         }
         .navigationTitle(viewModel.place.displayName)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $selectedReviewAuthor) { author in
+            if author.id == viewModel.currentUserID {
+                ProfileView(container: container)
+            } else {
+                FriendProfileView(container: container, userID: author.id, initialUser: author)
+            }
+        }
         .sheet(isPresented: $viewModel.isPresentingAddPlaceReview, onDismiss: {
             Task { await viewModel.load() }
         }) {
@@ -282,49 +290,27 @@ struct PlaceDetailView: View {
         viewModel.currentUserPlaceReview == nil ? "Add place review" : "Edit place review"
     }
 
-    @ViewBuilder
     private func placeReviewRow(for review: PlaceReview) -> some View {
-        let row = ReviewCardView(
-                                    review: review,
-                                    authorName: viewModel.authorName(for: review.authorUserId),
-                                    authorAvatarURL: review.author.avatarURL,
-                                    photos: review.photos,
-                                    isEditable: review.authorUserId == viewModel.currentUserID
-                                )
-
-        if review.authorUserId == viewModel.currentUserID {
-            Button {
-                viewModel.beginPlaceReviewFlow()
-            } label: {
-                row
-            }
-            .buttonStyle(.plain)
-            .contentShape(Rectangle())
-        } else {
-            row
-        }
+        ReviewCardView(
+            review: review,
+            authorName: viewModel.authorName(for: review.authorUserId),
+            authorAvatarURL: review.author.avatarURL,
+            photos: review.photos,
+            safetyRepository: review.authorUserId == viewModel.currentUserID ? nil : container.safetyRepository,
+            onEdit: review.authorUserId == viewModel.currentUserID ? { viewModel.beginPlaceReviewFlow() } : nil,
+            onAuthorTap: { selectedReviewAuthor = review.author }
+        )
     }
 
-    @ViewBuilder
     private func dishReviewRow(for review: DishReview) -> some View {
-        let row = DishReviewRowView(
+        DishReviewRowView(
             review: review,
             authorName: viewModel.authorName(for: review.authorUserId),
             photos: review.photos,
-            isEditable: viewModel.canEdit(review)
+            safetyRepository: viewModel.canEdit(review) ? nil : container.safetyRepository,
+            onEdit: viewModel.canEdit(review) ? { viewModel.beginEditing(review) } : nil,
+            onAuthorTap: { selectedReviewAuthor = review.author }
         )
-
-        if viewModel.canEdit(review) {
-            Button {
-                viewModel.beginEditing(review)
-            } label: {
-                row
-            }
-            .buttonStyle(.plain)
-            .contentShape(Rectangle())
-        } else {
-            row
-        }
     }
 }
 

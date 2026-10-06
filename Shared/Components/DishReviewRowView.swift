@@ -4,39 +4,50 @@ struct DishReviewRowView: View {
     let review: DishReview
     let authorName: String
     let photos: [PhotoAsset]
-    var isEditable = false
+    var safetyRepository: SafetyRepository?
+    var onEdit: (() -> Void)?
+    let onAuthorTap: () -> Void
 
     var body: some View {
         PlaceDetailReviewCard(
             rating: Double(review.dishRating),
-            showsChevron: isEditable
+            showsChevron: onEdit != nil,
+            onEdit: onEdit
         ) {
             leadingVisual
         } content: {
             VStack(alignment: .leading, spacing: PlaceDetailVisualSystem.Metrics.textSpacing) {
-                Text(review.dishName)
-                    .font(PlaceDetailVisualSystem.Typography.cardTitle)
-                    .foregroundStyle(PlaceDetailVisualSystem.Colors.primary)
+                ReviewEditButton(action: onEdit) {
+                    Text(review.dishName)
+                        .font(PlaceDetailVisualSystem.Typography.cardTitle)
+                        .foregroundStyle(PlaceDetailVisualSystem.Colors.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
 
-                Text(authorName)
-                    .font(PlaceDetailVisualSystem.Typography.secondary)
-                    .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
-
-                Text(review.createdAt.placeDetailTimestampText)
-                    .font(PlaceDetailVisualSystem.Typography.meta)
-                    .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
+                ReviewAuthorButton(
+                    name: authorName,
+                    date: review.createdAt,
+                    font: PlaceDetailVisualSystem.Typography.secondary,
+                    nameColor: PlaceDetailVisualSystem.Colors.secondary,
+                    action: onAuthorTap
+                )
             }
 
             if !review.dishReviewText.isEmpty {
-                Text(review.dishReviewText)
-                    .font(PlaceDetailVisualSystem.Typography.body)
-                    .foregroundStyle(PlaceDetailVisualSystem.Colors.primary)
+                ReviewEditButton(action: onEdit) {
+                    Text(review.dishReviewText)
+                        .font(PlaceDetailVisualSystem.Typography.body)
+                        .foregroundStyle(PlaceDetailVisualSystem.Colors.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
 
             if let price = review.price {
-                Text(price, format: .currency(code: review.currencyCode ?? Locale.current.currency?.identifier ?? "USD"))
-                    .font(PlaceDetailVisualSystem.Typography.meta)
-                    .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
+                ReviewEditButton(action: onEdit) {
+                    Text(price, format: .currency(code: review.currencyCode ?? Locale.current.currency?.identifier ?? "USD"))
+                        .font(PlaceDetailVisualSystem.Typography.meta)
+                        .foregroundStyle(PlaceDetailVisualSystem.Colors.tertiary)
+                }
             }
 
             if !trailingPhotos.isEmpty {
@@ -50,6 +61,7 @@ struct DishReviewRowView: View {
                 )
             }
         }
+        .modifier(ReviewReportModifier(reviewID: review.id, reviewType: "dishReview", repository: safetyRepository))
     }
 
     @ViewBuilder

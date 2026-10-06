@@ -188,6 +188,12 @@ struct SettingsView: View {
                     .font(.footnote)
                     .foregroundStyle(.red)
             }
+
+            NavigationLink {
+                BlockedUsersView(repository: container.safetyRepository)
+            } label: {
+                Text("Blocked Users")
+            }
         } header: {
             Text("Privacy")
         }
