@@ -248,6 +248,14 @@ private struct WelcomeCTASection: View {
             .frame(height: 56)
             .disabled(isSigningIn || isPreviewEnvironment)
 
+            if isSigningIn {
+                ProgressView("Signing in…")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .accessibilityLabel("Signing in. Waiting for the server.")
+            }
+
             if isPreviewEnvironment {
                 Text("Sign in with Apple is unavailable in SwiftUI previews. Run TrustMap in the Simulator or on a device to test authentication.")
                     .font(.footnote)

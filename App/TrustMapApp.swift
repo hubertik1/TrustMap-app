@@ -13,8 +13,8 @@ struct TrustMapApp: App {
         WindowGroup("TrustMap") {
             AppRootView(container: container)
         }
+        #if targetEnvironment(macCatalyst)
         .commands {
-            #if targetEnvironment(macCatalyst)
             SidebarCommands()
 
             CommandMenu("Navigate") {
@@ -57,7 +57,7 @@ struct TrustMapApp: App {
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }
-            #endif
         }
+        #endif
     }
 }
