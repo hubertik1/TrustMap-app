@@ -119,54 +119,37 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
 
     var body: some View {
         HStack(spacing: 0) {
-            NavigationLink {
-                friendsDestination()
-            } label: {
-                ProfileStatColumn(
-                    valueText: friendsStat.value,
-                    label: friendsStat.title,
-                    pendingRequestCount: pendingRequestCount,
-                    accessibilityLabel: friendsAccessibilityLabel,
-                    accessibilityHint: canNavigateToFriends ? "Opens friends" : "Opens friend list privacy status"
-                )
-            }
-            .buttonStyle(ProfileStatNavigationButtonStyle())
-
+            stat(canNavigate: canNavigateToFriends, value: friendsStat.value, title: friendsStat.title,
+                 pendingRequests: pendingRequestCount, label: friendsAccessibilityLabel,
+                 hint: "Opens friends", destination: friendsDestination)
             ProfileStatDivider()
-
-            NavigationLink {
-                placesDestination()
-            } label: {
-                ProfileStatColumn(
-                    valueText: placesStat.value,
-                    label: placesStat.title,
-                    accessibilityLabel: placesStat.isPrivate ? "Rated places private" : "\(placesStat.value) rated places",
-                    accessibilityHint: placesStat.isPrivate ? "Opens review privacy status" : "Opens places"
-                )
-            }
-            .buttonStyle(ProfileStatNavigationButtonStyle())
-
+            stat(canNavigate: !placesStat.isPrivate, value: placesStat.value, title: placesStat.title,
+                 label: "\(placesStat.value) rated places", hint: "Opens places", destination: placesDestination)
             ProfileStatDivider()
+            stat(canNavigate: !dishesStat.isPrivate, value: dishesStat.value, title: dishesStat.title,
+                 label: "\(dishesStat.value) reviewed dishes", hint: "Opens dishes", destination: dishesDestination)
+        }
+    }
 
+    @ViewBuilder
+    private func stat<Destination: View>(canNavigate: Bool, value: String, title: String,
+                                         pendingRequests: Int = 0, label: String, hint: String,
+                                         @ViewBuilder destination: () -> Destination) -> some View {
+        if canNavigate {
             NavigationLink {
-                dishesDestination()
+                destination()
             } label: {
-                ProfileStatColumn(
-                    valueText: dishesStat.value,
-                    label: dishesStat.title,
-                    accessibilityLabel: dishesStat.isPrivate ? "Reviewed dishes private" : "\(dishesStat.value) reviewed dishes",
-                    accessibilityHint: dishesStat.isPrivate ? "Opens review privacy status" : "Opens dishes"
-                )
+                ProfileStatColumn(valueText: value, label: title, pendingRequestCount: pendingRequests,
+                                  accessibilityLabel: label, accessibilityHint: hint)
             }
             .buttonStyle(ProfileStatNavigationButtonStyle())
+        } else {
+            ProfileStatColumn(valueText: value, label: title, pendingRequestCount: pendingRequests,
+                              accessibilityLabel: label, accessibilityHint: "")
         }
     }
 
     private var friendsAccessibilityLabel: String {
-        if friendsStat.isPrivate {
-            return "Friend list private"
-        }
-
         if pendingRequestCount == 1 {
             return "\(friendsStat.value) friends, 1 pending request"
         }
@@ -239,7 +222,6 @@ private struct ProfileStatColumn: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
-        .accessibilityAddTraits(.isButton)
     }
 }
 

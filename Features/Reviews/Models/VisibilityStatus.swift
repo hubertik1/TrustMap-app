@@ -10,9 +10,7 @@ enum VisibilityStatus: String, Codable, CaseIterable, Identifiable {
         [.public, .friendsOfFriends, .friendsOnly, .onlyMe]
     }
 
-    static let reviewPrivacyOptions: [VisibilityStatus] = [.public, .friendsOfFriends, .friendsOnly]
-    static let friendListPrivacyOptions: [VisibilityStatus] = [.public, .friendsOfFriends, .friendsOnly, .onlyMe]
-    static let profilePrivacyOptions: [VisibilityStatus] = [.public, .friendsOfFriends, .friendsOnly]
+    static let friendListPrivacyOptions: [VisibilityStatus] = [.onlyMe, .friendsOnly]
     static let profilePicturePrivacyOptions: [VisibilityStatus] = [.public, .friendsOfFriends, .friendsOnly]
 
     var id: String { rawValue }
@@ -83,11 +81,6 @@ enum VisibilityStatus: String, Codable, CaseIterable, Identifiable {
     }
 
     var selectableValue: VisibilityStatus {
-        switch self {
-        case .onlyMe:
-            return .friendsOnly
-        case .friendsOnly, .friendsOfFriends, .public:
-            return self
-        }
+        .friendsOnly
     }
 }

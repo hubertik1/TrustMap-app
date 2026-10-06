@@ -94,10 +94,6 @@ final class SettingsViewModel: ObservableObject {
         currentUser?.avatarURL
     }
 
-    var signInMethodLabel: String {
-        "Apple"
-    }
-
     var appVersionBuildLabel: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
@@ -248,16 +244,8 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
-    func setReviewVisibility(_ value: VisibilityStatus) {
-        updatePrivacy(reviewVisibility: value)
-    }
-
     func setFriendListVisibility(_ value: VisibilityStatus) {
         updatePrivacy(friendListVisibility: value)
-    }
-
-    func setProfileVisibility(_ value: VisibilityStatus) {
-        updatePrivacy(profileVisibility: value)
     }
 
     func setProfilePictureVisibility(_ value: VisibilityStatus) {
@@ -404,9 +392,9 @@ final class SettingsViewModel: ObservableObject {
 
     private func syncPrivacySettings(with user: User?) {
         applyPrivacySettings(
-            reviewVisibility: user?.reviewVisibility ?? .friendsOnly,
-            friendListVisibility: user?.friendListVisibility ?? .friendsOnly,
-            profileVisibility: user?.profileVisibility ?? .public,
+            reviewVisibility: .friendsOnly,
+            friendListVisibility: user?.friendListVisibility == .onlyMe ? .onlyMe : .friendsOnly,
+            profileVisibility: .public,
             profilePictureVisibility: user?.profilePictureVisibility ?? .public
         )
     }

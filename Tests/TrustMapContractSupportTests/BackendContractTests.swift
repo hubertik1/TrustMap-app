@@ -256,13 +256,20 @@ final class BackendContractTests: XCTestCase {
         XCTAssertTrue(user.supportsPrivacySettings)
     }
 
-    func testProfileStatDisplayShowsPrivateReviewStats() {
+    func testFriendsListPrivacyOffersOnlyMeAndFriends() {
+        XCTAssertEqual(VisibilityStatus.friendListPrivacyOptions, [.onlyMe, .friendsOnly])
+        let friends = ProfileStatDisplay.friends(count: 7, canViewFriends: false)
+        XCTAssertEqual(friends.value, "7")
+        XCTAssertTrue(friends.isPrivate)
+    }
+
+    func testProfileStatDisplayShowsCountsWithoutReviewAccess() {
         let places = ProfileStatDisplay.places(count: 12, canViewReviews: false)
         let dishes = ProfileStatDisplay.dishes(count: 8, canViewReviews: false)
 
-        XCTAssertEqual(places.value, "Private")
+        XCTAssertEqual(places.value, "12")
         XCTAssertTrue(places.isPrivate)
-        XCTAssertEqual(dishes.value, "Private")
+        XCTAssertEqual(dishes.value, "8")
         XCTAssertTrue(dishes.isPrivate)
     }
 

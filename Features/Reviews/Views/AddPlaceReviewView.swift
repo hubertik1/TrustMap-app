@@ -173,12 +173,6 @@ struct AddPlaceReviewView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-
-            Picker("Visibility", selection: $viewModel.visibility) {
-                ForEach(VisibilityStatus.allCases) { status in
-                    Text(status.displayName).tag(status)
-                }
-            }
         }
     }
 

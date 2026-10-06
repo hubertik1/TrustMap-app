@@ -5,6 +5,7 @@ struct SettingsView: View {
     private let container: AppContainer
     @StateObject private var viewModel: SettingsViewModel
     @State private var showsDeleteAccountConfirmation = false
+    @State private var showsSignOutConfirmation = false
 
     init(container: AppContainer) {
         self.container = container
@@ -32,14 +33,6 @@ struct SettingsView: View {
             guard scenePhase == .active else { return }
             await viewModel.refreshSettingsState()
         }
-        .alert("Delete Account?", isPresented: $showsDeleteAccountConfirmation) {
-            Button("Delete Account", role: .destructive) {
-                Task { await viewModel.deleteAccount() }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This permanently removes your profile, reviews, photos, friends, and private custom places that no one else uses. This can’t be undone.")
-        }
     }
 
     @ViewBuilder
@@ -66,6 +59,7 @@ struct SettingsView: View {
             mapAndDiscoverySection
             appearanceSection
             aboutSection
+            accountActionsSection
         }
     }
 
@@ -84,13 +78,25 @@ struct SettingsView: View {
                 .alignmentGuide(.listRowSeparatorLeading) { dimensions in
                     dimensions[.leading]
                 }
+            }
+        }
+    }
 
-                LabeledContent("Sign-in method", value: viewModel.signInMethodLabel)
-
+    private var accountActionsSection: some View {
+        Section("Account Management") {
+            if viewModel.currentUser != nil {
                 Button("Sign Out", role: .destructive) {
-                    Task { await viewModel.signOut() }
+                    showsSignOutConfirmation = true
                 }
                 .disabled(viewModel.isSigningOut || viewModel.isDeletingAccount)
+                .confirmationDialog("Sign Out?", isPresented: $showsSignOutConfirmation, titleVisibility: .visible) {
+                    Button("Sign Out", role: .destructive) {
+                        Task { await viewModel.signOut() }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Are you sure you want to sign out?")
+                }
 
                 Button(role: .destructive) {
                     showsDeleteAccountConfirmation = true
@@ -105,14 +111,20 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(viewModel.isSigningOut || viewModel.isDeletingAccount)
+                .confirmationDialog("Delete Account?", isPresented: $showsDeleteAccountConfirmation, titleVisibility: .visible) {
+                    Button("Delete Account", role: .destructive) {
+                        Task { await viewModel.deleteAccount() }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This permanently removes your profile, reviews, photos, friends, and private custom places that no one else uses. This can’t be undone.")
+                }
 
                 if let accountDeletionErrorMessage = viewModel.accountDeletionErrorMessage {
                     Text(accountDeletionErrorMessage)
                         .font(.footnote)
                         .foregroundStyle(.red)
                 }
-            } else {
-                LabeledContent("Sign in", value: viewModel.signInMethodLabel)
             }
         }
     }
@@ -143,33 +155,11 @@ struct SettingsView: View {
 
     private var privacySection: some View {
         Section {
-            Picker("Reviews", selection: privacyBinding(
-                get: { viewModel.reviewVisibility },
-                set: { viewModel.setReviewVisibility($0) }
-            )) {
-                ForEach(VisibilityStatus.reviewPrivacyOptions) { status in
-                    Text(status.displayName).tag(status)
-                }
-            }
-            .pickerStyle(.menu)
-            .disabled(isPrivacyControlDisabled)
-
             Picker("Friends list", selection: privacyBinding(
                 get: { viewModel.friendListVisibility },
                 set: { viewModel.setFriendListVisibility($0) }
             )) {
                 ForEach(VisibilityStatus.friendListPrivacyOptions) { status in
-                    Text(status.displayName).tag(status)
-                }
-            }
-            .pickerStyle(.menu)
-            .disabled(isPrivacyControlDisabled)
-
-            Picker("Profile", selection: privacyBinding(
-                get: { viewModel.profileVisibility },
-                set: { viewModel.setProfileVisibility($0) }
-            )) {
-                ForEach(VisibilityStatus.profilePrivacyOptions) { status in
                     Text(status.displayName).tag(status)
                 }
             }
