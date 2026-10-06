@@ -67,6 +67,7 @@ struct APIRequest<Response: Decodable> {
     var requiresAuthorization = true
     var retriesAfterUnauthorized = true
     var acceptedStatusCodes: Set<Int> = [200]
+    var emptyResponse: Response? = nil
 }
 
 struct MultipartFormData: Sendable {
@@ -189,6 +190,9 @@ final class APIClient {
         }
 
         if request.acceptedStatusCodes.contains(httpResponse.statusCode) {
+            if data.isEmpty, let emptyResponse = request.emptyResponse {
+                return emptyResponse
+            }
             return try decode(Response.self, from: data)
         }
 

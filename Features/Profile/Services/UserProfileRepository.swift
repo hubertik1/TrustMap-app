@@ -2,6 +2,11 @@ import Foundation
 
 @MainActor
 final class UserProfileRepository {
+    struct AccountDeletionResult: Decodable {
+        let requiresManualAppleRevocation: Bool
+        let cleanupPending: Bool
+    }
+
     enum AvatarUpdate {
         case keepExisting
         case remove
@@ -138,12 +143,15 @@ final class UserProfileRepository {
         )
     }
 
-    func deleteCurrentAccount() async throws {
-        _ = try await apiClient.send(
-            APIRequest<EmptyResponse>(
+    func deleteCurrentAccount() async throws -> AccountDeletionResult {
+        try await apiClient.send(
+            APIRequest<AccountDeletionResult>(
                 method: .delete,
                 path: "me",
-                acceptedStatusCodes: [204]
+                queryItems: [URLQueryItem(name: "includeResult", value: "true")],
+                acceptedStatusCodes: [200, 204],
+                // An older backend deletes the account but returns no revocation status.
+                emptyResponse: AccountDeletionResult(requiresManualAppleRevocation: true, cleanupPending: true)
             )
         )
     }

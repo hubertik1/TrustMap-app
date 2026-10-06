@@ -134,8 +134,9 @@ final class SessionStore: ObservableObject, APISessionProviding {
     }
 
     func deleteCurrentAccount() async throws {
+        let result: UserProfileRepository.AccountDeletionResult
         do {
-            try await userRepository.deleteCurrentAccount()
+            result = try await userRepository.deleteCurrentAccount()
         } catch AppError.invalidSession {
             clearSessionState()
             alertMessage = AppError.invalidSession.errorDescription
@@ -144,7 +145,14 @@ final class SessionStore: ObservableObject, APISessionProviding {
         }
 
         clearSessionState()
-        alertMessage = "Your account has been deleted."
+        var message = "Your account has been deleted."
+        if result.cleanupPending {
+            message += " Remaining cleanup will finish automatically in the background."
+        }
+        if result.requiresManualAppleRevocation {
+            message += " To disconnect Sign in with Apple, open Settings > your name > Sign in with Apple > TrustMap, then tap Delete and confirm."
+        }
+        alertMessage = message
         state = .signedOut
     }
 

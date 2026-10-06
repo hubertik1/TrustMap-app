@@ -167,11 +167,37 @@ final class BackendContractTests: XCTestCase {
         _ = sessionProvider
         let repository = UserProfileRepository(apiClient: apiClient)
 
-        try await repository.deleteCurrentAccount()
+        let result = try await repository.deleteCurrentAccount()
+
+        XCTAssertTrue(result.requiresManualAppleRevocation)
+        XCTAssertTrue(result.cleanupPending)
 
         let requests = await protocolState.requests
         XCTAssertEqual(requests.first?.httpMethod, "DELETE")
         XCTAssertEqual(requests.first?.url?.path, "/me")
+        XCTAssertEqual(requests.first?.url?.query, "includeResult=true")
+    }
+
+    @MainActor
+    func testAccountDeletionDecodesPendingAutomaticCleanup() async throws {
+        let state = URLProtocolState(responses: [.json(statusCode: 200, body:
+            #"{"requiresManualAppleRevocation":false,"cleanupPending":true}"#)])
+        let (client, session) = makeAuthorizedClient(protocolState: state)
+        _ = session
+        let result = try await UserProfileRepository(apiClient: client).deleteCurrentAccount()
+        XCTAssertFalse(result.requiresManualAppleRevocation)
+        XCTAssertTrue(result.cleanupPending)
+    }
+
+    @MainActor
+    func testAccountDeletionDecodesManualAppleRevocation() async throws {
+        let state = URLProtocolState(responses: [.json(statusCode: 200, body:
+            #"{"requiresManualAppleRevocation":true,"cleanupPending":false}"#)])
+        let (client, session) = makeAuthorizedClient(protocolState: state)
+        _ = session
+        let result = try await UserProfileRepository(apiClient: client).deleteCurrentAccount()
+        XCTAssertTrue(result.requiresManualAppleRevocation)
+        XCTAssertFalse(result.cleanupPending)
     }
 
     func testVisibilityStatusDecodesFriendsOfFriends() throws {
