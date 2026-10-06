@@ -80,7 +80,8 @@ struct MapScreen: View {
                     viewModel.clearRequestedCameraRegion()
                 }
                 .simultaneousGesture(longPressGesture(proxy: proxy))
-                .ignoresSafeArea(edges: .bottom)
+                // Keep the map behind the floating phone navigation and search controls.
+                .ignoresSafeArea(edges: TrustMapPlatform.isMacCatalyst ? .bottom : .all)
 
                 if MapStatusOverlayVisibility.shouldShowFullScreenLoading(
                     isLoading: viewModel.isLoading,
@@ -594,7 +595,15 @@ private struct PhoneMapSearchModifier: ViewModifier {
         if TrustMapPlatform.isMacCatalyst {
             content
         } else {
-            content.searchable(text: $searchText, prompt: "Search places")
+            content
+                .searchable(
+                    text: $searchText,
+                    placement: .navigationBarDrawer(displayMode: .always),
+                    prompt: "Search places"
+                )
+                // Hide the full-width navigation material and its separator while
+                // retaining the system backgrounds on individual controls.
+                .toolbarBackground(.hidden, for: .navigationBar)
         }
     }
 }
