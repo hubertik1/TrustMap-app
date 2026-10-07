@@ -24,6 +24,7 @@ enum AppConfiguration {
     static let networkTimeout: TimeInterval = 30
     static let preferredHandleMaxLength = 32
     static let privacyPolicyInfoKey = "TrustMapPrivacyPolicyURL"
+    static let supportInfoKey = "TrustMapSupportURL"
     static let termsOfServiceInfoKey = "TrustMapTermsOfServiceURL"
     static let environmentInfoKey = "TrustMapEnvironmentName"
     static let apiBaseURLInfoKey = "TrustMapAPIBaseURL"
@@ -70,6 +71,13 @@ enum AppConfiguration {
         configuredURL(
             environmentKey: "TRUSTMAP_TERMS_OF_SERVICE_URL",
             infoDictionaryKey: termsOfServiceInfoKey
+        )
+    }
+
+    static var supportURL: URL? {
+        configuredURL(
+            environmentKey: "TRUSTMAP_SUPPORT_URL",
+            infoDictionaryKey: supportInfoKey
         )
     }
 

@@ -81,6 +81,10 @@ The Xcode project includes two shared schemes:
 
 The app's deployment target is configured in `Config/Base.xcconfig`.
 
+## Public Website Links
+
+Both build schemes include the Privacy Policy (`https://trustmap.hubertik.com/privacy`) and Support (`https://trustmap.hubertik.com/support`) links from `Config/Base.xcconfig`, expanded into their Info.plist files. They appear below Sign in with Apple and in Settings > About. Runtime overrides are available through `TRUSTMAP_PRIVACY_POLICY_URL` and `TRUSTMAP_SUPPORT_URL`.
+
 ## Local Development
 
 ### 1. Start The Backend

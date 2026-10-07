@@ -248,6 +248,10 @@ struct SettingsView: View {
                 linkRow(title: "Privacy Policy", destination: privacyPolicyURL)
             }
 
+            if let supportURL = viewModel.supportURL {
+                linkRow(title: "Support", destination: supportURL)
+            }
+
             if let termsOfServiceURL = viewModel.termsOfServiceURL {
                 linkRow(title: "Terms of Service", destination: termsOfServiceURL)
             }

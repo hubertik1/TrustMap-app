@@ -248,6 +248,20 @@ private struct WelcomeCTASection: View {
             .frame(height: 56)
             .disabled(isSigningIn || isPreviewEnvironment)
 
+            HStack(spacing: 24) {
+                if let privacyPolicyURL = AppConfiguration.privacyPolicyURL {
+                    Link("Privacy Policy", destination: privacyPolicyURL)
+                        .frame(minHeight: 44)
+                }
+                if let supportURL = AppConfiguration.supportURL {
+                    Link("Support", destination: supportURL)
+                        .frame(minHeight: 44)
+                }
+            }
+            .font(.footnote)
+            .tint(.secondary)
+            .frame(maxWidth: .infinity)
+
             if isSigningIn {
                 ProgressView("Signing in…")
                     .font(.footnote)

@@ -54,6 +54,10 @@
 	<string>$(API_BASE_URL)</string>
 	<key>TrustMapEnvironmentName</key>
 	<string>$(TRUSTMAP_ENVIRONMENT_NAME)</string>
+	<key>TrustMapPrivacyPolicyURL</key>
+	<string>$(PRIVACY_POLICY_URL)</string>
+	<key>TrustMapSupportURL</key>
+	<string>$(SUPPORT_URL)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

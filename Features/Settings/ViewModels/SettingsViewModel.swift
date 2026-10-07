@@ -173,6 +173,10 @@ final class SettingsViewModel: ObservableObject {
         AppConfiguration.privacyPolicyURL
     }
 
+    var supportURL: URL? {
+        AppConfiguration.supportURL
+    }
+
     var termsOfServiceURL: URL? {
         AppConfiguration.termsOfServiceURL
     }
