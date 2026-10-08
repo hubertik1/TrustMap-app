@@ -154,7 +154,9 @@ final class MapSearchService {
         return PlaceSearchResult(
             name: displayName,
             subtitle: address.isEmpty ? L10n.selectedFromMap : address,
-            coordinate: coordinate
+            coordinate: coordinate,
+            city: placemark?.locality,
+            countryCode: placemark?.isoCountryCode
         )
     }
 }

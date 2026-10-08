@@ -84,7 +84,7 @@ final class DishReviewRepository {
             rating: draft.dishRating,
             body: draft.dishReviewText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
             priceAmount: draft.price.map { Decimal($0) },
-            currencyCode: draft.price == nil ? nil : Locale.current.currency?.identifier
+            currencyCode: draft.price == nil ? nil : draft.currencyCode
         )
 
         guard !payload.dishName.isEmpty else {
@@ -128,7 +128,7 @@ final class DishReviewRepository {
             rating: draft.dishRating,
             body: draft.dishReviewText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
             priceAmount: draft.price.map { Decimal($0) },
-            currencyCode: draft.price == nil ? nil : Locale.current.currency?.identifier
+            currencyCode: draft.price == nil ? nil : draft.currencyCode
         )
 
         guard !payload.dishName.isEmpty else {

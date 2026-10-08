@@ -8,6 +8,7 @@ struct DishReviewDraft: Sendable {
     let dishRating: Int
     let dishReviewText: String
     let price: Double?
+    let currencyCode: String?
     let photoData: Data?
     let photoIDsToDelete: [UUID]
     let selectedCategoryId: UUID?

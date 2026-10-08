@@ -125,8 +125,22 @@ struct AddDishReviewView: View {
 
                 TextField(L10n.shortReviewOptional, text: $viewModel.dishReviewText, axis: .vertical)
                     .lineLimit(3...5)
-                TextField(L10n.price, text: $viewModel.priceText)
-                    .keyboardType(.decimalPad)
+                HStack {
+                    TextField(L10n.price, text: $viewModel.priceText)
+                        .keyboardType(.decimalPad)
+                        .accessibilityLabel(L10n.price)
+                        .accessibilityHint(viewModel.priceCurrency.code)
+
+                    if viewModel.isResolvingCurrency {
+                        ProgressView()
+                    } else {
+                        Text(viewModel.priceCurrency.symbol)
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel(viewModel.priceCurrency.code)
+                    }
+                }
+                .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                .alignmentGuide(.listRowSeparatorTrailing) { dimensions in dimensions.width }
 
                 Picker(L10n.category, selection: $viewModel.selectedCategoryId) {
                     if viewModel.availableCategories.isEmpty {

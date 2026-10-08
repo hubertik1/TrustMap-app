@@ -21,6 +21,8 @@ final class AddDishReviewViewModel: ObservableObject {
     @Published var dishRating = 0
     @Published var dishReviewText = ""
     @Published var priceText = ""
+    @Published private(set) var priceCurrency: DishReviewCurrency
+    @Published private(set) var isResolvingCurrency: Bool
     @Published var visibility: VisibilityStatus = .friendsOnly
     @Published private(set) var selectedPhoto: SelectedPhotoUpload?
     @Published private(set) var availableCategories: [CustomCategory] = []
@@ -55,6 +57,12 @@ final class AddDishReviewViewModel: ObservableObject {
         existingPhotoData: Data? = nil
     ) {
         self.place = place
+        self.priceCurrency = DishReviewCurrency(
+            countryCode: place.countryCode,
+            existingCurrencyCode: existingReview?.currencyCode
+        )
+        self.isResolvingCurrency = DishReviewCurrency.locale(for: place.countryCode) == nil
+            && DishReviewCurrency.normalizedCode(existingReview?.currencyCode) == nil
         self.placeReviewID = placeReviewID
         self.dishReviewRepository = dishReviewRepository
         self.categoryRepository = categoryRepository
@@ -91,10 +99,13 @@ final class AddDishReviewViewModel: ObservableObject {
     var canSave: Bool {
         !isSaving
             && !isDeleting
+            && !isResolvingCurrency
             && isFormValid
     }
 
     func load() async {
+        await resolveCurrencyIfNeeded()
+
         if availableCategories.isEmpty {
             do {
                 let categories = try await categoryRepository.fetchMyCategories()
@@ -142,6 +153,8 @@ final class AddDishReviewViewModel: ObservableObject {
     }
 
     func save() async {
+        guard !isResolvingCurrency else { return }
+
         let trimmedDishName = dishName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedDishName.isEmpty else {
             errorMessage = AppError.validationFailure(L10n.enterADishName).errorDescription
@@ -184,6 +197,7 @@ final class AddDishReviewViewModel: ObservableObject {
                 dishRating: dishRating,
                 dishReviewText: dishReviewText,
                 price: price,
+                currencyCode: currencyCodeForSave,
                 photoData: selectedPhotoData,
                 photoIDsToDelete: Array(photoIDsToDelete),
                 selectedCategoryId: selectedCategoryId
@@ -247,6 +261,20 @@ final class AddDishReviewViewModel: ObservableObject {
         }
     }
 
+    private func resolveCurrencyIfNeeded() async {
+        guard isResolvingCurrency else { return }
+        defer { isResolvingCurrency = false }
+
+        // Older custom pins may have coordinates but no country metadata.
+        // If geocoding is unavailable, retain the locale fallback.
+        if let result = try? await MapSearchService().resolveDroppedPin(at: place.coordinate) {
+            priceCurrency = DishReviewCurrency(
+                countryCode: result.countryCode,
+                existingCurrencyCode: existingReview?.currencyCode
+            )
+        }
+    }
+
     private func defaultCategoryID(in categories: [CustomCategory]) -> UUID? {
         categories.first(where: \.isDefault)?.id ?? categories.first?.id
     }
@@ -299,7 +327,7 @@ final class AddDishReviewViewModel: ObservableObject {
     }
 
     private var currencyCodeForSave: String? {
-        normalizedPriceForSave == nil ? nil : Locale.current.currency?.identifier
+        normalizedPriceForSave == nil ? nil : priceCurrency.code
     }
 
     private func normalizedOptionalText(_ value: String) -> String? {

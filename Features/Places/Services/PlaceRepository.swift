@@ -73,8 +73,8 @@ final class PlaceRepository {
         let payload = CreatePlacePayload(
             name: result.name,
             address: result.subtitle,
-            city: result.mapItem?.placemark.locality,
-            countryCode: result.mapItem?.placemark.isoCountryCode,
+            city: result.city,
+            countryCode: result.countryCode,
             latitude: coordinate.latitude,
             longitude: coordinate.longitude,
             provider: result.mapItem == nil ? nil : "apple-maps",

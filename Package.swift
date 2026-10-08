@@ -23,6 +23,7 @@ let package = Package(
                 "Core/Localization/L10n.swift",
                 "Core/State/AppConfiguration.swift",
                 "Core/State/AppError.swift",
+                "Features/Dishes/Models/DishReviewCurrency.swift",
                 "Features/Feed/Models/FeedPlaceActivityItem.swift",
                 "Features/Feed/Services/FeedRepository.swift",
                 "Features/Friends/Models/FriendInvite.swift",
