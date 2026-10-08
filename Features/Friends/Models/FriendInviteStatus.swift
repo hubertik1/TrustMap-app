@@ -11,13 +11,13 @@ enum FriendInviteStatus: String, Codable, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .accepted:
-            return "Accepted"
+            return L10n.accepted
         case .cancelled:
-            return "Canceled"
+            return L10n.canceled
         case .pending:
-            return "Pending"
+            return L10n.pending
         case .rejected:
-            return "Rejected"
+            return L10n.rejected
         }
     }
 }

@@ -41,15 +41,15 @@ struct ContributorSummaryRow: View {
 
         let identity = contributorIdentity(for: firstContributor)
         guard totalCount > 1 else {
-            return identity.isCurrentUser ? "Reviewed by you" : "Reviewed by \(identity.name)"
+            return identity.isCurrentUser ? L10n.reviewedByYou : L10n.reviewedByValue(String(describing: identity.name))
         }
 
         if identity.isFallback {
-            return "\(totalCount) people reviewed"
+            return L10n.contributorsReviewed(totalCount)
         }
 
-        let leadingName = identity.isCurrentUser ? "You" : identity.name
-        return "\(leadingName) + \(totalCount - 1) reviewed"
+        let leadingName = identity.isCurrentUser ? L10n.you : identity.name
+        return L10n.valueValueReviewed(String(describing: leadingName), String(describing: totalCount - 1))
     }
 
     private var accessibilityText: String? {
@@ -59,28 +59,28 @@ struct ContributorSummaryRow: View {
 
         let identity = contributorIdentity(for: firstContributor)
         guard totalCount > 1 else {
-            return identity.isCurrentUser ? "Reviewed by you" : "Reviewed by \(identity.name)"
+            return identity.isCurrentUser ? L10n.reviewedByYou : L10n.reviewedByValue(String(describing: identity.name))
         }
 
         if identity.isFallback {
-            return "\(totalCount) people reviewed"
+            return L10n.contributorsReviewed(totalCount)
         }
 
-        let leadingName = identity.isCurrentUser ? "You" : identity.name
+        let leadingName = identity.isCurrentUser ? L10n.you : identity.name
         let others = totalCount - 1
-        return "\(leadingName) and \(others) \(others == 1 ? "other" : "others") reviewed"
+        return L10n.otherContributorsReviewed(leadingName, others)
     }
 
     private func contributorIdentity(for contributor: UserSummary) -> (name: String, isCurrentUser: Bool, isFallback: Bool) {
         if contributor.id == currentUserID {
-            return ("you", true, false)
+            return (L10n.you, true, false)
         }
 
         if let displayName = contributor.contributorDisplayName {
             return (displayName, false, false)
         }
 
-        return ("Someone", false, true)
+        return (L10n.someone, false, true)
     }
 }
 
@@ -107,7 +107,7 @@ private struct ContributorAvatarStack: View {
         HStack(spacing: -overlap) {
             ForEach(Array(visibleContributors.enumerated()), id: \.element.id) { index, contributor in
                 AvatarView(
-                    name: contributor.contributorDisplayName ?? "Someone",
+                    name: contributor.contributorDisplayName ?? L10n.someone,
                     avatarURL: contributor.avatarURL,
                     size: avatarSize,
                     allowsFullscreen: false

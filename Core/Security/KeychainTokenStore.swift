@@ -42,14 +42,14 @@ final class KeychainTokenStore {
 
             let insertStatus = SecItemAdd(insert as CFDictionary, nil)
             guard insertStatus == errSecSuccess else {
-                throw AppError.underlying("The app could not save the session securely.")
+                throw AppError.underlying(L10n.theAppCouldNotSaveTheSessionSecurely)
             }
 
             return
         }
 
         guard updateStatus == errSecSuccess else {
-            throw AppError.underlying("The app could not update the saved session.")
+            throw AppError.underlying(L10n.theAppCouldNotUpdateTheSavedSession)
         }
     }
 

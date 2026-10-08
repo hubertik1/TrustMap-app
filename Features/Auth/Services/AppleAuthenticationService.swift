@@ -31,11 +31,11 @@ final class AppleAuthenticationService: NSObject, AuthServicing {
 
         case .success(let authorization):
             guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
-                throw AppError.authFailed("TrustMap could not read the Apple sign-in response.")
+                throw AppError.authFailed(L10n.trustmapCouldNotReadTheAppleSignInResponse)
             }
 
             guard let rawNonce = activeRawNonce else {
-                throw AppError.authFailed("The Apple sign-in request could not be validated.")
+                throw AppError.authFailed(L10n.theAppleSignInRequestCouldNotBeValidated)
             }
 
             activeRawNonce = nil
@@ -43,7 +43,7 @@ final class AppleAuthenticationService: NSObject, AuthServicing {
             guard let identityTokenData = credential.identityToken,
                   let identityToken = String(data: identityTokenData, encoding: .utf8),
                   !identityToken.isEmpty else {
-                throw AppError.authFailed("Apple did not return a valid identity token.")
+                throw AppError.authFailed(L10n.appleDidNotReturnAValidIdentityToken)
             }
 
             let authorizationCode: String?

@@ -14,13 +14,13 @@ enum UserLocationAccessState: Equatable {
         case .idle, .ready:
             return nil
         case .requestingPermission:
-            return "TrustMap is requesting access to your location to center the map around you."
+            return L10n.trustmapIsRequestingAccessToYourLocationToCenterTheMapAroundYou
         case .locating:
-            return "Finding your current location."
+            return L10n.findingYourCurrentLocation
         case .denied:
-            return "Location access is off. Enable it in Settings to center the map on your current position."
+            return L10n.locationAccessIsOffEnableItInSettingsToCenterTheMapOnYourCurrentPosition
         case .restricted:
-            return "Location access is restricted on this device."
+            return L10n.locationAccessIsRestrictedOnThisDevice
         case .failed(let message):
             return message
         }

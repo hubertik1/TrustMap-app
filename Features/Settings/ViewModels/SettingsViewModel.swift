@@ -78,7 +78,7 @@ final class SettingsViewModel: ObservableObject {
 
     var accountDisplayName: String {
         let displayName = currentUser?.displayName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return displayName.isEmpty ? "TrustMap Member" : displayName
+        return displayName.isEmpty ? L10n.trustmapMember : displayName
     }
 
     var accountHandleLabel: String {
@@ -107,7 +107,7 @@ final class SettingsViewModel: ObservableObject {
     static func appVersionBuildLabel(version: String?, build: String?) -> String {
         let version = version?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? "1.0"
         let build = build?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? "1"
-        return "Version \(version) (\(build))"
+        return L10n.versionValueValue(String(describing: version), String(describing: build))
     }
 
     var defaultPlaceReviewVisibility: VisibilityStatus {
@@ -138,15 +138,15 @@ final class SettingsViewModel: ObservableObject {
     var locationAccessLabel: String {
         switch locationAuthorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
-            return "On"
+            return L10n.on
         case .denied:
-            return "Off"
+            return L10n.off
         case .restricted:
-            return "Restricted"
+            return L10n.restricted
         case .notDetermined:
-            return "Not Requested"
+            return L10n.notRequested
         @unknown default:
-            return "Off"
+            return L10n.off
         }
     }
 
@@ -244,7 +244,7 @@ final class SettingsViewModel: ObservableObject {
         } catch {
             let wrappedError = AppError.wrap(error)
             logger.error("Account deletion failed: \(wrappedError.logDescription, privacy: .public)")
-            accountDeletionErrorMessage = "Couldn’t delete your account. Please check your connection and try again."
+            accountDeletionErrorMessage = L10n.couldnTDeleteYourAccountPleaseCheckYourConnectionAndTryAgain
         }
     }
 
@@ -264,7 +264,7 @@ final class SettingsViewModel: ObservableObject {
     ) {
         guard !isUpdatingPrivacy else { return }
         guard supportsPrivacySettings else {
-            privacyErrorMessage = "Privacy settings are not available on this server version."
+            privacyErrorMessage = L10n.privacySettingsAreNotAvailableOnThisServerVersion
             logger.warning("Privacy update blocked because current user profile does not include privacy support fields")
             return
         }
@@ -378,7 +378,7 @@ final class SettingsViewModel: ObservableObject {
                 privacyErrorMessage = nil
                 logger.info("Recovered privacy update state from /me after PATCH failure")
             } else {
-                privacyErrorMessage = "Couldn’t update privacy settings. Please try again."
+                privacyErrorMessage = L10n.couldnTUpdatePrivacySettingsPleaseTryAgain
                 logger.warning("Privacy refresh after failure returned a profile, but it did not confirm requested values")
             }
         } catch {
@@ -388,7 +388,7 @@ final class SettingsViewModel: ObservableObject {
                 profileVisibility: previousProfileVisibility,
                 profilePictureVisibility: previousProfilePictureVisibility
             )
-            privacyErrorMessage = "Couldn’t update privacy settings. Please try again."
+            privacyErrorMessage = L10n.couldnTUpdatePrivacySettingsPleaseTryAgain
             let wrappedError = AppError.wrap(error)
             logger.error("Privacy refresh after failure also failed: \(wrappedError.logDescription, privacy: .public)")
         }
@@ -418,7 +418,7 @@ final class SettingsViewModel: ObservableObject {
 
 private extension AppError {
     var logDescription: String {
-        errorDescription ?? "Unknown error"
+        errorDescription ?? L10n.unknownError
     }
 }
 

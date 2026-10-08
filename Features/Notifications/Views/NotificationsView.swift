@@ -20,15 +20,15 @@ struct NotificationsView: View {
     var body: some View {
         Group {
             if viewModel.isLoading && !viewModel.hasLoaded {
-                LoadingStateView(title: "Loading notifications")
+                LoadingStateView(title: L10n.loadingNotifications)
             } else if let errorMessage = viewModel.errorMessage, viewModel.notifications.isEmpty {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
             } else if viewModel.isEmpty {
                 EmptyStateView(
-                    title: "No notifications yet",
-                    message: "Friend activity and requests will appear here.",
+                    title: L10n.noNotificationsYet,
+                    message: L10n.friendActivityAndRequestsWillAppearHere,
                     systemImage: "bell"
                 )
             } else {
@@ -36,7 +36,7 @@ struct NotificationsView: View {
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Notifications")
+        .navigationTitle(L10n.notifications)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.load()
@@ -44,7 +44,7 @@ struct NotificationsView: View {
         .toolbar {
             if viewModel.hasUnreadNotifications {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Mark all read") {
+                    Button(L10n.markAllRead) {
                         Task { await viewModel.markAllAsRead() }
                     }
                 }
@@ -65,7 +65,7 @@ struct NotificationsView: View {
         List {
             if let actionErrorMessage {
                 InlineErrorBanner(
-                    title: "Couldn't open notification",
+                    title: L10n.couldnTOpenNotification,
                     message: actionErrorMessage,
                     retryAction: {
                         self.actionErrorMessage = nil
@@ -74,7 +74,7 @@ struct NotificationsView: View {
             }
 
             if let errorMessage = viewModel.errorMessage {
-                InlineErrorBanner(title: "Couldn't refresh notifications", message: errorMessage) {
+                InlineErrorBanner(title: L10n.couldnTRefreshNotifications, message: errorMessage) {
                     Task { await viewModel.refresh() }
                 }
             }
@@ -94,7 +94,7 @@ struct NotificationsView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(activeNotificationID != nil)
-                .accessibilityHint("Opens notification")
+                .accessibilityHint(L10n.opensNotification)
             }
         }
         .listStyle(.insetGrouped)
@@ -116,7 +116,7 @@ struct NotificationsView: View {
         switch notification.type {
         case .placeReviewAdded:
             guard let placeReviewId = notification.placeReviewId else {
-                actionErrorMessage = "This review is no longer available."
+                actionErrorMessage = L10n.thisReviewIsNoLongerAvailable
                 return
             }
 
@@ -127,12 +127,12 @@ struct NotificationsView: View {
                 route = .place(details.place)
             } catch {
                 guard !Self.isCancellation(error) else { return }
-                actionErrorMessage = "This place or review is no longer available."
+                actionErrorMessage = L10n.thisPlaceOrReviewIsNoLongerAvailable
             }
 
         case .dishReviewAdded:
             guard let dishReviewId = notification.dishReviewId else {
-                actionErrorMessage = "This review is no longer available."
+                actionErrorMessage = L10n.thisReviewIsNoLongerAvailable
                 return
             }
 
@@ -143,7 +143,7 @@ struct NotificationsView: View {
                 route = .place(details.place)
             } catch {
                 guard !Self.isCancellation(error) else { return }
-                actionErrorMessage = "This place or review is no longer available."
+                actionErrorMessage = L10n.thisPlaceOrReviewIsNoLongerAvailable
             }
 
         case .friendRequestSent:

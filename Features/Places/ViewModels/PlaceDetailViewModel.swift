@@ -81,7 +81,7 @@ final class PlaceDetailViewModel: ObservableObject {
     }
 
     var placeReviewButtonTitle: String {
-        currentUserPlaceReview == nil ? "Add Place Review" : "Edit Place Review"
+        currentUserPlaceReview == nil ? L10n.addPlaceReview : L10n.editPlaceReview
     }
 
     var canAddDishReview: Bool {
@@ -116,7 +116,7 @@ final class PlaceDetailViewModel: ObservableObject {
     }
 
     var customPlaceActionTitle: String {
-        place.customDisplayName == nil ? "Name Custom Place" : "Rename Custom Place"
+        place.customDisplayName == nil ? L10n.nameCustomPlace : L10n.renameCustomPlace
     }
 
     func beginRenamingCustomPlace() {
@@ -131,7 +131,7 @@ final class PlaceDetailViewModel: ObservableObject {
 
         let trimmedDraft = customDisplayNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedDraft.isEmpty else {
-            errorMessage = "Enter a place name."
+            errorMessage = L10n.enterAPlaceName
             return
         }
 
@@ -163,7 +163,7 @@ final class PlaceDetailViewModel: ObservableObject {
             return review.author.displayName
         }
 
-        return "TrustMap User"
+        return L10n.trustmapUser
     }
 
     private var sortedContributorActivities: [(author: UserSummary, date: Date)] {

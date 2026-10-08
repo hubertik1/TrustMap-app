@@ -10,30 +10,30 @@ enum AppTab: Hashable {
     var phoneTitle: String {
         switch self {
         case .map:
-            return "Map"
+            return L10n.map
         case .places:
-            return "Places"
+            return L10n.places
         case .add:
-            return "Add"
+            return L10n.add
         case .feed:
-            return "Feed"
+            return L10n.feed
         case .profile:
-            return "Profile"
+            return L10n.profile
         }
     }
 
     var macTitle: String {
         switch self {
         case .map:
-            return "Map"
+            return L10n.map
         case .places:
-            return "Places"
+            return L10n.places
         case .add:
-            return "Add Review"
+            return L10n.addReview
         case .feed:
-            return "Activity"
+            return L10n.activity
         case .profile:
-            return "Profile"
+            return L10n.profile
         }
     }
 

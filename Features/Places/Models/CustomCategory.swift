@@ -87,6 +87,12 @@ struct CustomCategory: Identifiable, Codable, Hashable, Sendable {
         self.hiddenAt = hiddenAt
     }
 
+    var displayName: String {
+        isDefault && DefaultCategoryCatalog.isRestaurants(categoryID: id, categoryName: name)
+            ? L10n.restaurants
+            : name
+    }
+
     var ownerDisplayName: String? {
         owner?.displayName
     }

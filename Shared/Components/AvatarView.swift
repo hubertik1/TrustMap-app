@@ -210,7 +210,7 @@ private struct AvatarLightboxView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding()
 
-            Button("Done") {
+            Button(L10n.done) {
                 dismiss()
             }
             .padding(.top, 16)

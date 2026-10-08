@@ -9,17 +9,17 @@ struct BlockUserButton: View {
 
     var body: some View {
         Menu {
-            Button("Block User", systemImage: "person.crop.circle.badge.xmark", role: .destructive) {
+            Button(L10n.blockUser, systemImage: "person.crop.circle.badge.xmark", role: .destructive) {
                 showsConfirmation = true
             }
         } label: {
-            Label("Profile actions", systemImage: "ellipsis")
+            Label(L10n.profileActions, systemImage: "ellipsis")
                 .foregroundStyle(.secondary)
         }
         .tint(.red)
         .disabled(isBlocking)
-        .confirmationDialog("Block \(user.displayName)?", isPresented: $showsConfirmation, titleVisibility: .visible) {
-            Button("Block User", role: .destructive) {
+        .confirmationDialog(L10n.blockValue(String(describing: user.displayName)), isPresented: $showsConfirmation, titleVisibility: .visible) {
+            Button(L10n.blockUser, role: .destructive) {
                 Task {
                     isBlocking = true
                     defer { isBlocking = false }
@@ -28,12 +28,12 @@ struct BlockUserButton: View {
                 }
             }
         } message: {
-            Text("You won't see each other's content or receive friend requests. Your friendship will be removed.")
+            Text(L10n.youWonTSeeEachOtherSContentOrReceiveFriendRequestsYourFriendshipWillBeRemoved)
         }
-        .alert("Couldn't Block User", isPresented: Binding(
+        .alert(L10n.couldnTBlockUser, isPresented: Binding(
             get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } }
         )) {} message: {
-            Text(errorMessage ?? "Please try again.")
+            Text(errorMessage ?? L10n.pleaseTryAgain)
         }
     }
 }

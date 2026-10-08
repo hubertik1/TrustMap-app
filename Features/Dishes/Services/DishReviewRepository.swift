@@ -72,7 +72,7 @@ final class DishReviewRepository {
 
     func createReview(_ draft: DishReviewDraft) async throws -> DishReview {
         guard let categoryId = draft.selectedCategoryId else {
-            throw AppError.validationFailure("Choose a category for this place.")
+            throw AppError.validationFailure(L10n.chooseACategoryForThisPlace)
         }
 
         let payload = CreateDishReviewPayload(
@@ -88,7 +88,7 @@ final class DishReviewRepository {
         )
 
         guard !payload.dishName.isEmpty else {
-            throw AppError.validationFailure("Enter a dish name.")
+            throw AppError.validationFailure(L10n.enterADishName)
         }
 
         let review = try await apiClient.send(
@@ -106,7 +106,7 @@ final class DishReviewRepository {
             } catch {
                 try? await deleteReview(review)
                 throw AppError.validationFailure(
-                    "The dish review could not be saved because the photo upload failed. Nothing was changed."
+                    L10n.theDishReviewCouldNotBeSavedBecauseThePhotoUploadFailedNothingWasChanged
                 )
             }
 
@@ -118,7 +118,7 @@ final class DishReviewRepository {
 
     func updateReview(_ review: DishReview, with draft: DishReviewDraft) async throws -> DishReview {
         guard let categoryId = draft.selectedCategoryId else {
-            throw AppError.validationFailure("Choose a category for this place.")
+            throw AppError.validationFailure(L10n.chooseACategoryForThisPlace)
         }
 
         let payload = UpdateDishReviewPayload(
@@ -132,7 +132,7 @@ final class DishReviewRepository {
         )
 
         guard !payload.dishName.isEmpty else {
-            throw AppError.validationFailure("Enter a dish name.")
+            throw AppError.validationFailure(L10n.enterADishName)
         }
 
         _ = try await apiClient.send(
@@ -153,7 +153,7 @@ final class DishReviewRepository {
             }
         } catch {
             throw AppError.validationFailure(
-                "Dish review details were saved, but TrustMap could not finish the photo changes. Refresh the place and try again."
+                L10n.dishReviewDetailsWereSavedButTrustmapCouldNotFinishThePhotoChangesRefreshThePlaceAndTryAgain
             )
         }
 

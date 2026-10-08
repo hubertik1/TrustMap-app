@@ -23,6 +23,9 @@ CONFIGURATIONS = [
 FileUtils.rm_rf(PROJECT_PATH) if PROJECT_PATH.exist?
 
 project = Xcodeproj::Project.new(PROJECT_PATH.to_s)
+project.root_object.development_region = 'en'
+project.root_object.known_regions = %w[en pl de es fr it pt uk Base]
+
 project.root_object.attributes['LastSwiftUpdateCheck'] = '2630'
 project.root_object.attributes['LastUpgradeCheck'] = '2630'
 
@@ -112,7 +115,7 @@ def add_folder_references(group, path, target)
       case File.extname(full_path)
       when '.swift'
         target.source_build_phase.add_file_reference(file_ref)
-      when '.xcassets', '.storyboard'
+      when '.xcassets', '.storyboard', '.xcstrings'
         target.resources_build_phase.add_file_reference(file_ref)
       end
     end

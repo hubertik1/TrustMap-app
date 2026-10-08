@@ -11,11 +11,11 @@ struct BlockedUsersView: View {
     var body: some View {
         Group {
             if viewModel.isLoading && viewModel.users.isEmpty {
-                LoadingStateView(title: "Loading blocked users")
+                LoadingStateView(title: L10n.loadingBlockedUsers)
             } else if let error = viewModel.errorMessage, viewModel.users.isEmpty {
                 ErrorStateView(message: error) { Task { await viewModel.load() } }
             } else if viewModel.users.isEmpty {
-                EmptyStateView(title: "No blocked users", message: "People you block will appear here.", systemImage: "person.crop.circle.badge.checkmark")
+                EmptyStateView(title: L10n.noBlockedUsers, message: L10n.peopleYouBlockWillAppearHere, systemImage: "person.crop.circle.badge.checkmark")
             } else {
                 List(viewModel.users) { user in
                     HStack(spacing: 12) {
@@ -25,27 +25,27 @@ struct BlockedUsersView: View {
                             Text("@\(user.handle)").font(.subheadline).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Button("Unblock") { selectedUser = user }
+                        Button(L10n.unblock) { selectedUser = user }
                             .disabled(viewModel.unblockingID != nil)
-                            .accessibilityLabel("Unblock \(user.displayName)")
+                            .accessibilityLabel(L10n.unblockValue(String(describing: user.displayName)))
                     }
                 }
                 .refreshable { await viewModel.load() }
             }
         }
-        .navigationTitle("Blocked Users")
+        .navigationTitle(L10n.blockedUsers)
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.load() }
-        .confirmationDialog("Unblock \(selectedUser?.displayName ?? "user")?", isPresented: Binding(
+        .confirmationDialog(L10n.confirmUnblockUser(String(describing: selectedUser?.displayName ?? L10n.trustmapUser)), isPresented: Binding(
             get: { selectedUser != nil }, set: { if !$0 { selectedUser = nil } }
         ), titleVisibility: .visible, presenting: selectedUser) { user in
-            Button("Unblock") {
+            Button(L10n.unblock) {
                 Task { await viewModel.unblock(user) }
             }
         } message: { _ in
-            Text("This allows you to see each other's content again. Your previous friendship won't be restored.")
+            Text(L10n.thisAllowsYouToSeeEachOtherSContentAgainYourPreviousFriendshipWonTBeRestored)
         }
-        .alert("Couldn't Update Blocked Users", isPresented: Binding(
+        .alert(L10n.couldnTUpdateBlockedUsers, isPresented: Binding(
             get: { viewModel.errorMessage != nil && !viewModel.users.isEmpty },
             set: { if !$0 { viewModel.errorMessage = nil } }
         )) {} message: { Text(viewModel.errorMessage ?? "") }

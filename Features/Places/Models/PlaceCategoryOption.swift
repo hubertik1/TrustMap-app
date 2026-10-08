@@ -13,19 +13,19 @@ struct PlaceCategoryOption: Identifiable, Hashable, Sendable {
 
     static let all = PlaceCategoryOption(
         id: "all",
-        title: "All Categories",
+        title: L10n.allCategories,
         categoryID: nil
     )
 
     static let restaurants = PlaceCategoryOption(
         id: TrustMapCategory.restaurantsCategoryID.uuidString,
-        title: TrustMapCategory.restaurantsName,
+        title: L10n.restaurants,
         categoryID: TrustMapCategory.restaurantsCategoryID
     )
 
     init(category: CustomCategory) {
         self.id = category.id.uuidString
-        self.title = category.name
+        self.title = category.displayName
         self.categoryID = category.id
     }
 

@@ -15,25 +15,25 @@ enum AppError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .authFailed(let message):
-            return message
+            return L10n.backendMessage(message)
         case .invalidSession:
-            return "Your session could not be restored."
+            return L10n.yourSessionCouldNotBeRestored
         case .missingCurrentUser:
-            return "No signed-in user is available."
+            return L10n.noSignedInUserIsAvailable
         case .invalidPlaceSelection:
-            return "Select a place before continuing."
+            return L10n.selectAPlaceBeforeContinuing
         case .locationFailure(let message):
-            return message
+            return L10n.backendMessage(message)
         case .persistenceFailure(let message):
-            return message
+            return L10n.backendMessage(message)
         case .rateLimited(let message):
-            return message
+            return L10n.backendMessage(message)
         case .syncFailure(let message):
-            return message
+            return L10n.backendMessage(message)
         case .validationFailure(let message):
-            return message
+            return L10n.backendMessage(message)
         case .underlying(let message):
-            return message
+            return L10n.backendMessage(message)
         }
     }
 
@@ -72,7 +72,7 @@ enum AppError: LocalizedError {
                  NSURLErrorCallIsActive,
                  NSURLErrorDataNotAllowed,
                  NSURLErrorCannotLoadFromNetwork:
-                return .syncFailure("Could not connect to the server.")
+                return .syncFailure(L10n.couldNotConnectToTheServer)
             default:
                 break
             }

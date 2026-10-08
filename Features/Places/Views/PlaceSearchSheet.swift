@@ -28,7 +28,7 @@ struct PlaceSearchSheet: View {
         title: String,
         requiresRestaurantsCategory: Bool = false,
         suggestedPlaces: [Place] = [],
-        suggestedSectionTitle: String = "Recent Places",
+        suggestedSectionTitle: String = L10n.recentPlaces,
         onPlaceSelected: @escaping (Place) -> Void
     ) {
         self.title = title
@@ -65,18 +65,18 @@ struct PlaceSearchSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button(L10n.close) { dismiss() }
                 }
             }
         }
         .onChange(of: viewModel.query) { _, _ in
             viewModel.handleSearchTextChange()
         }
-        .alert("Can't Add Dish Review", isPresented: Binding(
+        .alert(L10n.canTAddDishReview, isPresented: Binding(
             get: { selectionErrorMessage != nil },
             set: { if !$0 { selectionErrorMessage = nil } }
         )) {
-            Button("OK", role: .cancel) { selectionErrorMessage = nil }
+            Button(L10n.ok, role: .cancel) { selectionErrorMessage = nil }
         } message: {
             Text(selectionErrorMessage ?? "")
         }
@@ -87,7 +87,7 @@ struct PlaceSearchSheet: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
 
-            TextField("Search places", text: $viewModel.query)
+            TextField(L10n.searchPlaces, text: $viewModel.query)
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
@@ -150,10 +150,10 @@ struct PlaceSearchSheet: View {
                 )
 
             VStack(spacing: 6) {
-                Text("Search places")
+                Text(L10n.searchPlaces)
                     .font(.headline)
 
-                Text("Find the place you want to review.")
+                Text(L10n.findThePlaceYouWantToReview)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -197,7 +197,7 @@ struct PlaceSearchSheet: View {
         if viewModel.isSearching {
             VStack(spacing: 12) {
                 ProgressView()
-                Text("Searching places...")
+                Text(L10n.searchingPlaces)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -219,7 +219,7 @@ struct PlaceSearchSheet: View {
                         .fill(Color.orange.opacity(0.12))
                 )
 
-            Text("Something went wrong")
+            Text(L10n.somethingWentWrong)
                 .font(.headline)
 
             Text(message)
@@ -227,7 +227,7 @@ struct PlaceSearchSheet: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            Button("Try Again") {
+            Button(L10n.tryAgain) {
                 Task { await viewModel.search() }
             }
             .buttonStyle(.borderedProminent)
@@ -240,7 +240,7 @@ struct PlaceSearchSheet: View {
         ScrollView {
             LazyVStack(spacing: 8) {
                 if let errorMessage = viewModel.errorMessage {
-                    InlineErrorBanner(title: "Couldn't search places", message: errorMessage) {
+                    InlineErrorBanner(title: L10n.couldnTSearchPlaces, message: errorMessage) {
                         Task { await viewModel.search() }
                     }
                     .padding(.bottom, 4)
@@ -306,7 +306,7 @@ struct PlaceSearchSheet: View {
             do {
                 let place = try await viewModel.select(result)
                 if requiresRestaurantsCategory && !place.supportsDishReviews {
-                    selectionErrorMessage = "Dish reviews are available only for places in the \(TrustMapCategory.restaurantsName) category."
+                    selectionErrorMessage = L10n.dishReviewsAreAvailableOnlyForPlacesInTheValueCategory(L10n.restaurants)
                     return
                 }
                 onPlaceSelected(place)
@@ -319,7 +319,7 @@ struct PlaceSearchSheet: View {
 
     private func selectSuggestedPlace(_ place: Place) {
         if requiresRestaurantsCategory && !place.supportsDishReviews {
-            selectionErrorMessage = "Dish reviews are available only for places in the \(TrustMapCategory.restaurantsName) category."
+            selectionErrorMessage = L10n.dishReviewsAreAvailableOnlyForPlacesInTheValueCategory(L10n.restaurants)
             return
         }
 
@@ -344,7 +344,7 @@ struct PlaceSearchSheet: View {
 #Preview {
     PlaceSearchSheet(
         container: PreviewAppFactory.makeContainer(),
-        title: "Add Place Review",
+        title: L10n.addPlaceReview,
         onPlaceSelected: { _ in }
     )
 }

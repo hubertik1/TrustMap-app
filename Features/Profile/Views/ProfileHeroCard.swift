@@ -26,7 +26,7 @@ struct ProfileHeroCard<FriendsDestination: View, PlacesDestination: View, Dishes
                             .stroke(Color.primary.opacity(0.06), lineWidth: 1)
                     }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Profile photo")
+                    .accessibilityLabel(L10n.profilePhoto)
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(user.displayName)
@@ -43,7 +43,7 @@ struct ProfileHeroCard<FriendsDestination: View, PlacesDestination: View, Dishes
 
                     if let onEditProfile {
                         Button(action: onEditProfile) {
-                            Text("Edit Profile")
+                            Text(L10n.editProfile)
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(Color.accentColor)
                                 .padding(.horizontal, 11)
@@ -56,7 +56,7 @@ struct ProfileHeroCard<FriendsDestination: View, PlacesDestination: View, Dishes
                         }
                         .buttonStyle(.plain)
                         .padding(.top, 3)
-                        .accessibilityLabel("Edit Profile")
+                        .accessibilityLabel(L10n.editProfile)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -69,7 +69,7 @@ struct ProfileHeroCard<FriendsDestination: View, PlacesDestination: View, Dishes
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text(onEditProfile == nil ? "No bio yet." : "Add a short bio to help friends recognize you.")
+                Text(onEditProfile == nil ? L10n.noBioYet : L10n.addAShortBioToHelpFriendsRecognizeYou)
                     .font(.subheadline)
                     .foregroundStyle(Color(uiColor: .tertiaryLabel))
                     .lineLimit(2)
@@ -121,13 +121,13 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
         HStack(spacing: 0) {
             stat(canNavigate: canNavigateToFriends, value: friendsStat.value, title: friendsStat.title,
                  pendingRequests: pendingRequestCount, label: friendsAccessibilityLabel,
-                 hint: "Opens friends", destination: friendsDestination)
+                 hint: L10n.opensFriends, destination: friendsDestination)
             ProfileStatDivider()
             stat(canNavigate: !placesStat.isPrivate, value: placesStat.value, title: placesStat.title,
-                 label: "\(placesStat.value) rated places", hint: "Opens places", destination: placesDestination)
+                 label: L10n.valueRatedPlaces(String(describing: placesStat.value)), hint: L10n.opensPlaces, destination: placesDestination)
             ProfileStatDivider()
             stat(canNavigate: !dishesStat.isPrivate, value: dishesStat.value, title: dishesStat.title,
-                 label: "\(dishesStat.value) reviewed dishes", hint: "Opens dishes", destination: dishesDestination)
+                 label: L10n.valueReviewedDishes(String(describing: dishesStat.value)), hint: L10n.opensDishes, destination: dishesDestination)
         }
     }
 
@@ -151,14 +151,14 @@ private struct ProfileStatsRow<FriendsDestination: View, PlacesDestination: View
 
     private var friendsAccessibilityLabel: String {
         if pendingRequestCount == 1 {
-            return "\(friendsStat.value) friends, 1 pending request"
+            return L10n.valueFriends1PendingRequest(String(describing: friendsStat.value))
         }
 
         if pendingRequestCount > 1 {
-            return "\(friendsStat.value) friends, \(pendingRequestCount) pending requests"
+            return L10n.valueFriendsValuePendingRequests(String(describing: friendsStat.value), String(describing: pendingRequestCount))
         }
 
-        return "\(friendsStat.value) friends"
+        return L10n.friendsCount(friendsStat.value)
     }
 }
 

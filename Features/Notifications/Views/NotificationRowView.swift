@@ -48,7 +48,7 @@ struct NotificationRowView: View {
                     .fill(Color.accentColor)
                     .frame(width: 8, height: 8)
                     .padding(.top, 7)
-                    .accessibilityLabel("Unread")
+                    .accessibilityLabel(L10n.unread)
             }
         }
         .padding(.vertical, 6)

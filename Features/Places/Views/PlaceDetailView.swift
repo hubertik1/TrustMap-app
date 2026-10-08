@@ -27,7 +27,7 @@ struct PlaceDetailView: View {
     var body: some View {
         Group {
             if viewModel.isLoading && !viewModel.hasLoadedContent {
-                LoadingStateView(title: "Loading place details")
+                LoadingStateView(title: L10n.loadingPlaceDetails)
             } else if let errorMessage = viewModel.errorMessage, !viewModel.hasLoadedContent {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
@@ -35,7 +35,7 @@ struct PlaceDetailView: View {
             } else {
                 List {
                     if let errorMessage = viewModel.errorMessage {
-                        InlineErrorBanner(title: "Couldn't refresh place details", message: errorMessage) {
+                        InlineErrorBanner(title: L10n.couldnTRefreshPlaceDetails, message: errorMessage) {
                             Task { await viewModel.load() }
                         }
                         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
@@ -66,8 +66,8 @@ struct PlaceDetailView: View {
                     Section {
                         if viewModel.placeReviews.isEmpty {
                             PlaceDetailEmptyStateCard(
-                                title: "No place reviews yet",
-                                message: "Visible place reviews for this location will appear here.",
+                                title: L10n.noPlaceReviewsYet,
+                                message: L10n.visiblePlaceReviewsForThisLocationWillAppearHere,
                                 systemImage: "text.bubble"
                             )
                             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
@@ -83,7 +83,7 @@ struct PlaceDetailView: View {
                         }
                     } header: {
                         PlaceDetailSectionHeaderView(
-                            title: "Place Reviews",
+                            title: L10n.placeReviews,
                             count: viewModel.placeReviews.isEmpty ? nil : viewModel.placeReviews.count,
                             titleVerticalOffset: PlaceDetailVisualSystem.Metrics.sectionHeaderTitleVerticalOffset
                         )
@@ -93,8 +93,8 @@ struct PlaceDetailView: View {
                         Section {
                             if viewModel.dishReviews.isEmpty {
                                 PlaceDetailEmptyStateCard(
-                                    title: "No dish reviews yet",
-                                    message: "Dish reviews added for this place will appear here.",
+                                    title: L10n.noDishReviewsYet,
+                                    message: L10n.dishReviewsAddedForThisPlaceWillAppearHere,
                                     systemImage: "fork.knife"
                                 )
                                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
@@ -110,10 +110,10 @@ struct PlaceDetailView: View {
                             }
                         } header: {
                             PlaceDetailSectionHeaderView(
-                                title: "Dish Reviews",
+                                title: L10n.dishReviews,
                                 count: viewModel.dishReviews.isEmpty ? nil : viewModel.dishReviews.count,
-                                actionTitle: "+ Add Dish",
-                                actionAccessibilityLabel: "Add dish review"
+                                actionTitle: L10n.addDish,
+                                actionAccessibilityLabel: L10n.addDishReview
                             ) {
                                 viewModel.isPresentingAddDishReview = true
                             }
@@ -175,24 +175,24 @@ struct PlaceDetailView: View {
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
         }
-        .alert("Custom Place Name", isPresented: $viewModel.isPresentingCustomNameEditor) {
-            TextField("Shared name", text: $viewModel.customDisplayNameDraft)
+        .alert(L10n.customPlaceName, isPresented: $viewModel.isPresentingCustomNameEditor) {
+            TextField(L10n.sharedName, text: $viewModel.customDisplayNameDraft)
 
-            Button("Cancel", role: .cancel) {
+            Button(L10n.cancel, role: .cancel) {
                 viewModel.customDisplayNameDraft = viewModel.place.customDisplayName ?? ""
             }
 
-            Button("Save") {
+            Button(L10n.save) {
                 Task { await viewModel.saveCustomPlaceName() }
             }
             .disabled(viewModel.isSavingCustomName)
         } message: {
-            Text("Only the original creator of a custom map pin can change this shared name.")
+            Text(L10n.onlyTheOriginalCreatorOfACustomMapPinCanChangeThisSharedName)
         }
         .toolbar {
             if showsDoneButton {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button(L10n.done) { dismiss() }
                 }
             }
         }
@@ -230,7 +230,7 @@ struct PlaceDetailView: View {
                 Image(systemName: "arrow.triangle.turn.up.right.diamond")
                     .font(.system(size: PlaceDetailVisualSystem.Metrics.headerActionIconSize, weight: .semibold))
 
-                Text("Directions")
+                Text(L10n.directions)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }
@@ -246,8 +246,8 @@ struct PlaceDetailView: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Directions")
-        .accessibilityHint("Opens Apple Maps")
+        .accessibilityLabel(L10n.directions)
+        .accessibilityHint(L10n.opensAppleMaps)
     }
 
     private var placeReviewButton: some View {
@@ -279,7 +279,7 @@ struct PlaceDetailView: View {
     }
 
     private var compactPlaceReviewButtonTitle: String {
-        viewModel.currentUserPlaceReview == nil ? "Add Review" : "Edit Review"
+        viewModel.currentUserPlaceReview == nil ? L10n.addReview : L10n.editReview
     }
 
     private var placeReviewButtonSystemImage: String {
@@ -287,7 +287,7 @@ struct PlaceDetailView: View {
     }
 
     private var placeReviewButtonAccessibilityLabel: String {
-        viewModel.currentUserPlaceReview == nil ? "Add place review" : "Edit place review"
+        viewModel.currentUserPlaceReview == nil ? L10n.addPlaceReview : L10n.editPlaceReview
     }
 
     private func placeReviewRow(for review: PlaceReview) -> some View {

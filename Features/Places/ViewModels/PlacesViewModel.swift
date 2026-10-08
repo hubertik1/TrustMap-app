@@ -14,15 +14,15 @@ enum PlacesSortOption: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .recentlyUpdated:
-            return "Recently Updated"
+            return L10n.recentlyUpdated
         case .highestRated:
-            return "Highest Rated"
+            return L10n.highestRated
         case .mostReviewed:
-            return "Most Reviewed"
+            return L10n.mostReviewed
         case .nearest:
-            return "Nearest"
+            return L10n.nearest
         case .alphabetical:
-            return "A-Z"
+            return L10n.aZ
         }
     }
 
@@ -131,10 +131,10 @@ final class PlacesViewModel: ObservableObject {
     var filterAccessibilityLabel: String {
         let activeFilterCount = filterState.activeFilterCount
         guard activeFilterCount > 0 else {
-            return "Filters"
+            return L10n.filters
         }
 
-        return "Filters, \(activeFilterCount) active"
+        return L10n.filtersValueActive(String(describing: activeFilterCount))
     }
 
     func refreshLocationAvailability() {

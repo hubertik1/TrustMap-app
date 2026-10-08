@@ -11,11 +11,11 @@ final class ProfileViewModel: ObservableObject {
         var secondaryText: String {
             switch pendingRequestCount {
             case 1:
-                return "1 pending request"
+                return L10n.pendingRequests(1)
             case let count where count > 1:
-                return "\(count) pending requests"
+                return L10n.pendingRequests(count)
             default:
-                return "Your trusted network"
+                return L10n.yourTrustedNetwork
             }
         }
     }
@@ -105,11 +105,11 @@ final class ProfileViewModel: ObservableObject {
         let displayName = normalizedEditedDisplayName
 
         if displayName.isEmpty {
-            return "Display name is required."
+            return L10n.displayNameIsRequired
         }
 
         if displayName.count > Self.displayNameLimit {
-            return "Display name must be 100 characters or fewer."
+            return L10n.displayNameMustBe100CharactersOrFewer
         }
 
         return nil
@@ -119,15 +119,15 @@ final class ProfileViewModel: ObservableObject {
         let handle = normalizedEditedHandle
 
         if handle.isEmpty {
-            return "Enter a username."
+            return L10n.enterAUsername
         }
 
         if handle.count < Self.usernameMinLength {
-            return "Username must be at least 3 characters."
+            return L10n.usernameMustBeAtLeast3Characters
         }
 
         if handle.count > Self.usernameMaxLength {
-            return "Username must be 32 characters or fewer."
+            return L10n.usernameMustBe32CharactersOrFewer
         }
 
         return nil
@@ -135,7 +135,7 @@ final class ProfileViewModel: ObservableObject {
 
     var bioValidationMessage: String? {
         if normalizedEditedBioText.count > Self.bioLimit {
-            return "Bio must be 500 characters or fewer."
+            return L10n.bioMustBe500CharactersOrFewer
         }
 
         return nil
@@ -273,7 +273,7 @@ final class ProfileViewModel: ObservableObject {
             let wrappedError = AppError.wrap(error)
             if case .validationFailure(let message) = wrappedError,
                Self.isUsernameValidationError(message) {
-                usernameErrorMessage = message
+                usernameErrorMessage = L10n.backendMessage(message)
                 errorMessage = nil
             } else {
                 errorMessage = wrappedError.errorDescription

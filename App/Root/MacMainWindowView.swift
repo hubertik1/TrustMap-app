@@ -46,8 +46,8 @@ struct MacMainWindowView: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
-                .help("Refresh")
-                .accessibilityLabel("Refresh")
+                .help(L10n.refresh)
+                .accessibilityLabel(L10n.refresh)
 
                 Button {
                     isShowingNotifications = true
@@ -62,8 +62,8 @@ struct MacMainWindowView: View {
                 } label: {
                     Image(systemName: "gearshape")
                 }
-                .help("Settings")
-                .accessibilityLabel("Settings")
+                .help(L10n.settings)
+                .accessibilityLabel(L10n.settings)
             }
         }
         .sheet(isPresented: $isShowingNotifications) {
@@ -154,7 +154,7 @@ struct MacMainWindowView: View {
 
     private var notificationAccessibilityLabel: String {
         let count = notificationBadgeStore.unreadCount
-        return count > 0 ? "\(count) unread notifications" : "Notifications"
+        return count > 0 ? L10n.valueUnreadNotifications(String(describing: count)) : L10n.notifications
     }
 }
 

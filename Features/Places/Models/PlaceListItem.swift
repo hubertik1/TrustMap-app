@@ -46,6 +46,7 @@ enum PlaceListSearch {
             item.place.city,
             item.place.countryCode,
             item.categoryNames.joined(separator: " "),
+            item.categoryNames.map { DefaultCategoryCatalog.displayName(for: $0) }.joined(separator: " "),
             item.searchText
         ]
 

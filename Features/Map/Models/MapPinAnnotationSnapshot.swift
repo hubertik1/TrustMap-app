@@ -63,7 +63,7 @@ enum MapPinAnnotationBuilder {
         if let trimmedDisplayName, !trimmedDisplayName.isEmpty {
             resolvedDisplayName = trimmedDisplayName
         } else {
-            resolvedDisplayName = "Reviewed place"
+            resolvedDisplayName = L10n.reviewedPlace
         }
 
         return Place(

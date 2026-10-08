@@ -22,7 +22,7 @@ struct UserFriendsView: View {
     var body: some View {
         Group {
             if viewModel.isLoading && viewModel.friends.isEmpty {
-                LoadingStateView(title: "Loading friends")
+                LoadingStateView(title: L10n.loadingFriends)
             } else if viewModel.isPrivate {
                 FriendListPrivacyStateView()
             } else if let errorMessage = viewModel.errorMessage, viewModel.friends.isEmpty {
@@ -31,8 +31,8 @@ struct UserFriendsView: View {
                 }
             } else if viewModel.friends.isEmpty {
                 EmptyStateView(
-                    title: "No friends to show",
-                    message: "\(user.displayName) does not have visible friends yet.",
+                    title: L10n.noFriendsToShow,
+                    message: L10n.valueDoesNotHaveVisibleFriendsYet(String(describing: user.displayName)),
                     systemImage: "person.2.slash"
                 )
             } else {
@@ -40,7 +40,7 @@ struct UserFriendsView: View {
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Friends")
+        .navigationTitle(L10n.friends)
         .navigationBarTitleDisplayMode(.inline)
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
@@ -50,7 +50,7 @@ struct UserFriendsView: View {
     private var friendsList: some View {
         List {
             if let errorMessage = viewModel.errorMessage {
-                InlineErrorBanner(title: "Couldn't refresh friends", message: errorMessage) {
+                InlineErrorBanner(title: L10n.couldnTRefreshFriends, message: errorMessage) {
                     Task { await viewModel.load() }
                 }
             }
@@ -79,8 +79,8 @@ struct UserFriendsView: View {
 struct FriendListPrivacyStateView: View {
     var body: some View {
         EmptyStateView(
-            title: "Friend list private",
-            message: "This user keeps their friend list private.",
+            title: L10n.friendListPrivate,
+            message: L10n.thisUserKeepsTheirFriendListPrivate,
             systemImage: "lock.fill"
         )
     }
@@ -116,7 +116,7 @@ private struct UserFriendRow: View {
                                 .lineLimit(1)
                         }
 
-                        Text("Friends since \(item.friendsSinceUtc.formatted(date: .abbreviated, time: .omitted))")
+                        Text(L10n.friendsSinceValue(String(describing: item.friendsSinceUtc.formatted(date: .abbreviated, time: .omitted))))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -141,17 +141,17 @@ private struct UserFriendRow: View {
             if isBusy {
                 ProgressView()
             } else {
-                Button("Add", action: onAdd)
+                Button(L10n.add, action: onAdd)
                     .buttonStyle(.borderedProminent)
             }
         case .friends:
-            statusText("Friends")
+            statusText(L10n.friends)
         case .outgoingRequest:
-            statusText("Pending")
+            statusText(L10n.pending)
         case .incomingRequest:
-            statusText("Incoming")
+            statusText(L10n.incoming)
         case .self:
-            statusText("You")
+            statusText(L10n.you)
         }
     }
 

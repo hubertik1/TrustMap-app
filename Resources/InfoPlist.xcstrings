@@ -1,0 +1,112 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSCameraUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap uses your camera to add photos to your reviews."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap używa aparatu, aby dodawać zdjęcia do Twoich opinii."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap verwendet deine Kamera, um Fotos zu deinen Bewertungen hinzuzufügen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap usa tu cámara para añadir fotos a tus reseñas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap utilise votre appareil photo pour ajouter des photos à vos avis."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap usa la fotocamera per aggiungere foto alle tue recensioni."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O TrustMap usa a tua câmara para adicionar fotos às tuas avaliações."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap використовує камеру, щоб додавати фото до ваших відгуків."
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap uses your location to center the map around you and help you discover nearby places."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap używa Twojej lokalizacji, aby wyśrodkować mapę wokół Ciebie i pomagać odkrywać miejsca w pobliżu."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap verwendet deinen Standort, um die Karte auf dich zu zentrieren und dir Orte in der Nähe zu zeigen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap usa tu ubicación para centrar el mapa a tu alrededor y ayudarte a descubrir lugares cercanos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap utilise votre position pour centrer la carte autour de vous et vous aider à découvrir les lieux à proximité."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap usa la tua posizione per centrare la mappa intorno a te e aiutarti a scoprire luoghi nelle vicinanze."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O TrustMap usa a tua localização para centrar o mapa à tua volta e ajudar-te a descobrir locais próximos."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TrustMap використовує ваше місцезнаходження, щоб центрувати мапу навколо вас і допомагати знаходити місця поруч."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

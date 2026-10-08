@@ -10,6 +10,6 @@ extension MKMapItem {
             return formatted.replacingOccurrences(of: "\n", with: ", ")
         }
 
-        return placemark.title ?? "Address unavailable"
+        return placemark.title ?? L10n.addressUnavailable
     }
 }

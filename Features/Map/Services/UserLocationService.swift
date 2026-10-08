@@ -68,7 +68,7 @@ final class UserLocationService: NSObject, UserLocationServicing {
             onAuthorizationChange?(authorizationStatus)
 
         @unknown default:
-            onError?(.locationFailure("TrustMap could not determine the current location permission state."))
+            onError?(.locationFailure(L10n.trustmapCouldNotDetermineTheCurrentLocationPermissionState))
         }
     }
 
@@ -89,7 +89,7 @@ final class UserLocationService: NSObject, UserLocationServicing {
             onAuthorizationChange?(authorizationStatus)
 
         @unknown default:
-            onError?(.locationFailure("TrustMap could not request your current location."))
+            onError?(.locationFailure(L10n.trustmapCouldNotRequestYourCurrentLocation))
         }
     }
 
@@ -116,7 +116,7 @@ extension UserLocationService: CLLocationManagerDelegate {
             case .denied, .restricted, .notDetermined:
                 break
             @unknown default:
-                onError?(.locationFailure("TrustMap could not determine the current location permission state."))
+                onError?(.locationFailure(L10n.trustmapCouldNotDetermineTheCurrentLocationPermissionState))
             }
         }
     }
@@ -138,7 +138,7 @@ extension UserLocationService: CLLocationManagerDelegate {
         }
 
         Task { @MainActor in
-            onError?(.locationFailure("TrustMap could not determine your current location."))
+            onError?(.locationFailure(L10n.trustmapCouldNotDetermineYourCurrentLocation))
         }
     }
 }

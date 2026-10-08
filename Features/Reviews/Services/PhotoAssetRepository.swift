@@ -71,7 +71,7 @@ final class PhotoRepository {
 
     private func prepareUpload(from imageData: Data) throws -> PreparedUpload {
         guard !imageData.isEmpty else {
-            throw AppError.validationFailure("Select a supported image before uploading.")
+            throw AppError.validationFailure(L10n.selectASupportedImageBeforeUploading)
         }
 
         return PreparedUpload(

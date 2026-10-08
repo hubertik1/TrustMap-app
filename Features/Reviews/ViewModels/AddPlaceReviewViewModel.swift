@@ -10,9 +10,9 @@ final class AddPlaceReviewViewModel: ObservableObject {
         var errorTitle: String {
             switch self {
             case .save:
-                return "Unable to Save Review"
+                return L10n.unableToSaveReview
             case .delete:
-                return "Unable to Delete Review"
+                return L10n.unableToDeleteReview
             }
         }
     }
@@ -77,7 +77,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
     }
 
     var navigationTitle: String {
-        isEditing ? "Edit Place Review" : "Add Place Review"
+        isEditing ? L10n.editPlaceReview : L10n.addPlaceReview
     }
 
     var selectedPhotoData: [Data] {
@@ -145,7 +145,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
 
         selectedPhotos.append(contentsOf: photos)
         if didSkipAnyPhotos {
-            errorMessage = AppError.validationFailure("Some selected photos couldn't be prepared.").errorDescription
+            errorMessage = AppError.validationFailure(L10n.someSelectedPhotosCouldnTBePrepared).errorDescription
         } else {
             errorMessage = nil
         }
@@ -173,12 +173,12 @@ final class AddPlaceReviewViewModel: ObservableObject {
 
     func save() async {
         guard ratingOverall > 0 else {
-            errorMessage = AppError.validationFailure("Choose a rating.").errorDescription
+            errorMessage = AppError.validationFailure(L10n.chooseARating).errorDescription
             return
         }
 
         guard let selectedCategoryId else {
-            errorMessage = AppError.validationFailure("Choose an active category.").errorDescription
+            errorMessage = AppError.validationFailure(L10n.chooseAnActiveCategory).errorDescription
             return
         }
 
@@ -237,7 +237,7 @@ final class AddPlaceReviewViewModel: ObservableObject {
 
         do {
             guard let review = existingReview else {
-                throw AppError.validationFailure("No review exists for this place yet.")
+                throw AppError.validationFailure(L10n.noReviewExistsForThisPlaceYet)
             }
 
             try await placeReviewRepository.deleteReview(review)

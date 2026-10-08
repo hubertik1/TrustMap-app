@@ -33,7 +33,7 @@ enum PhotoUploadPreparation {
         }.value
 
         guard let previewImage = UIImage(data: payload.previewData) else {
-            throw AppError.validationFailure("Select a supported image before uploading.")
+            throw AppError.validationFailure(L10n.selectASupportedImageBeforeUploading)
         }
 
         return SelectedPhotoUpload(
@@ -44,11 +44,11 @@ enum PhotoUploadPreparation {
 
     private static func preparePayload(from rawData: Data) throws -> PreparedPayload {
         guard let source = CGImageSourceCreateWithData(rawData as CFData, nil) else {
-            throw AppError.validationFailure("Select a supported image before uploading.")
+            throw AppError.validationFailure(L10n.selectASupportedImageBeforeUploading)
         }
 
         guard let uploadImage = downsampledImage(from: source, maxPixelSize: uploadMaxPixelSize) else {
-            throw AppError.validationFailure("Select a supported image before uploading.")
+            throw AppError.validationFailure(L10n.selectASupportedImageBeforeUploading)
         }
 
         let previewImage = downsampledImage(from: source, maxPixelSize: previewMaxPixelSize) ?? uploadImage
@@ -81,7 +81,7 @@ enum PhotoUploadPreparation {
             1,
             nil
         ) else {
-            throw AppError.validationFailure("Select a supported image before uploading.")
+            throw AppError.validationFailure(L10n.selectASupportedImageBeforeUploading)
         }
 
         let options: [CFString: Any] = [
@@ -91,7 +91,7 @@ enum PhotoUploadPreparation {
         CGImageDestinationAddImage(destination, flattenedImage, options as CFDictionary)
 
         guard CGImageDestinationFinalize(destination) else {
-            throw AppError.validationFailure("Select a supported image before uploading.")
+            throw AppError.validationFailure(L10n.selectASupportedImageBeforeUploading)
         }
 
         return mutableData as Data

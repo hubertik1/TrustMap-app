@@ -42,7 +42,7 @@ struct ProfilePlaceReviewCard: View {
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(accessibilitySummary)
-                .accessibilityHint(onTap == nil ? "" : "Opens edit review")
+                .accessibilityHint(onTap == nil ? "" : L10n.opensEditReview)
 
                 if !previewPhotos.isEmpty {
                     PhotoGridView(
@@ -148,11 +148,11 @@ struct ProfilePlaceReviewCard: View {
     }
 
     private var metadataText: String {
-        "Updated \(review.updatedAt.profileReviewsCompactTimestampTextWithAgo) · \(review.visibility.profileReviewsCompactLabel)"
+        L10n.updatedValueValue(String(describing: review.updatedAt.profileReviewsCompactTimestampTextWithAgo), String(describing: review.visibility.profileReviewsCompactLabel))
     }
 
     private var accessibilitySummary: String {
-        "\(placeName), rating \(RatingDisplayFormatter.rating(review.ratingOverall)), \(metadataText)"
+        L10n.valueRatingValueValue(String(describing: placeName), String(describing: RatingDisplayFormatter.rating(review.ratingOverall)), String(describing: metadataText))
     }
 }
 
@@ -195,7 +195,7 @@ struct ProfileDishReviewCard: View {
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(accessibilitySummary)
-                .accessibilityHint(onTap == nil ? "" : "Opens edit review")
+                .accessibilityHint(onTap == nil ? "" : L10n.opensEditReview)
 
                 if !extraPhotos.isEmpty {
                     PhotoGridView(
@@ -249,7 +249,7 @@ struct ProfileDishReviewCard: View {
                 .onTapGesture {
                     onTap?()
                 }
-                .accessibilityHint(onTap == nil ? "" : "Opens edit review")
+                .accessibilityHint(onTap == nil ? "" : L10n.opensEditReview)
         }
     }
 
@@ -263,7 +263,7 @@ struct ProfileDishReviewCard: View {
                     .foregroundStyle(PlaceDetailVisualSystem.Colors.placeholderAccent)
                     .accessibilityHidden(true)
             }
-            .accessibilityLabel("No dish photo")
+            .accessibilityLabel(L10n.noDishPhoto)
     }
 
     private var content: some View {
@@ -317,11 +317,11 @@ struct ProfileDishReviewCard: View {
     }
 
     private var metadataText: String {
-        "Updated \(review.updatedAt.profileReviewsCompactTimestampTextWithAgo) · \(review.visibility.profileReviewsCompactLabel)"
+        L10n.updatedValueValue(String(describing: review.updatedAt.profileReviewsCompactTimestampTextWithAgo), String(describing: review.visibility.profileReviewsCompactLabel))
     }
 
     private var accessibilitySummary: String {
-        "\(review.dishName), \(placeName), rating \(RatingDisplayFormatter.rating(review.dishRating)), \(metadataText)"
+        L10n.valueValueRatingValueValue(String(describing: review.dishName), String(describing: placeName), String(describing: RatingDisplayFormatter.rating(review.dishRating)), String(describing: metadataText))
     }
 }
 
@@ -352,7 +352,7 @@ struct ProfileReviewsSearchField: View {
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Clear search")
+                .accessibilityLabel(L10n.clearSearch)
             }
         }
         .padding(.horizontal, 14)
@@ -396,10 +396,10 @@ struct ProfileReviewsFilteredEmptyState: View {
                     .multilineTextAlignment(.center)
             }
 
-            Button("Clear Search", action: onClearSearch)
+            Button(L10n.clearSearch, action: onClearSearch)
                 .font(.subheadline.weight(.semibold))
                 .buttonStyle(.bordered)
-                .accessibilityLabel("Clear Search")
+                .accessibilityLabel(L10n.clearSearch)
         }
         .frame(maxWidth: .infinity)
         .padding(24)
@@ -432,23 +432,7 @@ extension String {
 
 extension Date {
     var profileReviewsCompactTimestampTextWithAgo: String {
-        let elapsedSeconds = max(0, Int(Date.now.timeIntervalSince(self)))
-        if elapsedSeconds < 60 {
-            return "just now"
-        }
-
-        let minutes = elapsedSeconds / 60
-        if minutes < 60 {
-            return "\(minutes) min ago"
-        }
-
-        let hours = minutes / 60
-        if hours < 24 {
-            return "\(hours) h ago"
-        }
-
-        let days = hours / 24
-        return "\(days) d ago"
+        L10n.relativeTime(self)
     }
 }
 
@@ -456,13 +440,13 @@ extension VisibilityStatus {
     var profileReviewsCompactLabel: String {
         switch self {
         case .friendsOnly:
-            return "Friends"
+            return L10n.friends
         case .friendsOfFriends:
-            return "Friends of Friends"
+            return L10n.friendsOfFriends
         case .onlyMe:
-            return "Private"
+            return L10n.privateVisibility
         case .public:
-            return "Everyone"
+            return L10n.everyone
         }
     }
 }

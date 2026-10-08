@@ -25,10 +25,10 @@ struct MyDishReviewsView: View {
         Group {
             if reviews.isEmpty {
                 ProductEmptyStateView(
-                    title: "No reviewed dishes yet",
-                    message: "Dishes you review will appear here.",
+                    title: L10n.noReviewedDishesYet,
+                    message: L10n.dishesYouReviewWillAppearHere,
                     systemImage: "fork.knife.circle.fill",
-                    primaryActionTitle: "Add Review",
+                    primaryActionTitle: L10n.addReview,
                     onPrimaryAction: {
                         container.selectedTab = .add
                     }
@@ -38,7 +38,7 @@ struct MyDishReviewsView: View {
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Reviewed Dishes")
+        .navigationTitle(L10n.reviewedDishes)
     }
 
     private var reviewsContent: some View {
@@ -46,13 +46,13 @@ struct MyDishReviewsView: View {
             LazyVStack(spacing: 14) {
                 ProfileReviewsSearchField(
                     text: $searchText,
-                    placeholder: "Search reviewed dishes"
+                    placeholder: L10n.searchReviewedDishes
                 )
 
                 if filteredReviews.isEmpty {
                     ProfileReviewsFilteredEmptyState(
-                        title: "No matching dishes",
-                        message: "Try a different search.",
+                        title: L10n.noMatchingDishes,
+                        message: L10n.tryADifferentSearch,
                         onClearSearch: {
                             searchText = ""
                         }
@@ -101,7 +101,7 @@ struct MyDishReviewsView: View {
     private func placeDisplayName(for review: DishReview) -> String {
         let displayName = review.place.displayName.profileReviewsTrimmedNonEmptyText
         let fallbackName = placeNames[review.placeId]?.profileReviewsTrimmedNonEmptyText
-        return displayName ?? fallbackName ?? "Place"
+        return displayName ?? fallbackName ?? L10n.place
     }
 
     private func searchableText(for review: DishReview) -> String {

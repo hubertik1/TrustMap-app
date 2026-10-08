@@ -27,7 +27,7 @@ struct FriendsView: View {
 
             Group {
                 if viewModel.isLoading && !viewModel.hasLoadedRelationships {
-                    LoadingStateView(title: "Loading friends")
+                    LoadingStateView(title: L10n.loadingFriends)
                 } else if let errorMessage = viewModel.errorMessage, !viewModel.hasLoadedRelationships {
                     ErrorStateView(message: errorMessage) {
                         Task { await viewModel.load() }
@@ -39,7 +39,7 @@ struct FriendsView: View {
         }
         .trustMapReadableContent(maxWidth: 840)
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Friends")
+        .navigationTitle(L10n.friends)
         .onChange(of: viewModel.searchText) { _, _ in
             viewModel.handleSearchTextChange()
         }
@@ -64,7 +64,7 @@ struct FriendsView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
 
-            TextField("Search names or usernames", text: $viewModel.searchText)
+            TextField(L10n.searchNamesOrUsernames, text: $viewModel.searchText)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
@@ -79,7 +79,7 @@ struct FriendsView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Clear search")
+                .accessibilityLabel(L10n.clearSearch)
             }
         }
         .padding(.horizontal, 14)
@@ -100,7 +100,7 @@ struct FriendsView: View {
     private var friendsList: some View {
         List {
             if let errorMessage = viewModel.errorMessage {
-                InlineErrorBanner(title: "Couldn't refresh friends", message: errorMessage) {
+                InlineErrorBanner(title: L10n.couldnTRefreshFriends, message: errorMessage) {
                     Task { await viewModel.load() }
                 }
             }
@@ -110,11 +110,11 @@ struct FriendsView: View {
                     HStack(spacing: 10) {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Searching users...")
+                        Text(L10n.searchingUsers)
                             .foregroundStyle(.secondary)
                     }
                 } else if viewModel.searchResults.isEmpty {
-                    Text("No users.")
+                    Text(L10n.noUsers)
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(viewModel.searchResults) { result in
@@ -132,9 +132,9 @@ struct FriendsView: View {
                 }
             }
 
-            Section("Incoming Requests") {
+            Section(L10n.incomingRequests) {
                 if viewModel.incomingRequests.isEmpty {
-                    Text("You don’t have any incoming requests right now.")
+                    Text(L10n.youDonTHaveAnyIncomingRequestsRightNow)
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(viewModel.incomingRequests) { request in
@@ -143,8 +143,8 @@ struct FriendsView: View {
                             title: request.displayName,
                             subtitle: "@\(request.handle)",
                             createdAt: request.createdAt,
-                            primaryActionTitle: "Accept",
-                            secondaryActionTitle: "Reject",
+                            primaryActionTitle: L10n.accept,
+                            secondaryActionTitle: L10n.reject,
                             isBusy: viewModel.activeUserID == request.userID,
                             onOpenProfile: {
                                 selectedFriendProfile = FriendProfileRoute(initialUser: request.user)
@@ -160,9 +160,9 @@ struct FriendsView: View {
                 }
             }
 
-            Section("Outgoing Requests") {
+            Section(L10n.outgoingRequests) {
                 if viewModel.outgoingRequests.isEmpty {
-                    Text("You haven’t sent any pending requests.")
+                    Text(L10n.youHavenTSentAnyPendingRequests)
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(viewModel.outgoingRequests) { request in
@@ -172,12 +172,12 @@ struct FriendsView: View {
             }
 
             if viewModel.friends.isEmpty {
-                Section("Friends") {
-                    Text("You don’t have any accepted friends yet.")
+                Section(L10n.friends) {
+                    Text(L10n.youDonTHaveAnyAcceptedFriendsYet)
                         .foregroundStyle(.secondary)
                 }
             } else {
-                Section("Friends") {
+                Section(L10n.friends) {
                     ForEach(viewModel.friends) { friend in
                         friendRow(friend)
                     }
@@ -203,7 +203,7 @@ struct FriendsView: View {
             title: request.displayName,
             subtitle: "@\(request.handle)",
             createdAt: request.createdAt,
-            primaryActionTitle: "Cancel",
+            primaryActionTitle: L10n.cancel,
             secondaryActionTitle: nil,
             isBusy: viewModel.activeUserID == request.userID,
             onOpenProfile: {
@@ -215,8 +215,8 @@ struct FriendsView: View {
             },
             secondaryAction: {},
             showsPrimaryConfirmation: requestPendingCancellationID == request.id,
-            primaryConfirmationActionTitle: "Cancel Request",
-            primaryConfirmationCancelTitle: "Keep",
+            primaryConfirmationActionTitle: L10n.cancelRequest,
+            primaryConfirmationCancelTitle: L10n.keep,
             confirmPrimaryAction: {
                 requestPendingCancellationID = nil
                 Task { await viewModel.cancel(request) }
@@ -244,7 +244,7 @@ struct FriendsView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
-                        Text("Added \(friend.addedAt.formatted(date: .abbreviated, time: .omitted))")
+                        Text(L10n.addedValue(String(describing: friend.addedAt.formatted(date: .abbreviated, time: .omitted))))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -260,7 +260,7 @@ struct FriendsView: View {
             if viewModel.activeUserID == friend.userID {
                 ProgressView()
             } else {
-                Button("Remove", role: .destructive) {
+                Button(L10n.remove, role: .destructive) {
                     friendPendingRemovalID = friend.id
                     requestPendingCancellationID = nil
                 }
@@ -276,10 +276,10 @@ struct FriendsView: View {
                     arrowEdge: .trailing
                 ) {
                     DestructiveConfirmationPopover(
-                        title: "Remove friend?",
-                        message: "Are you sure you want to remove \(friend.displayName)?",
-                        destructiveTitle: "Remove",
-                        cancelTitle: "Keep",
+                        title: L10n.removeFriend,
+                        message: L10n.areYouSureYouWantToRemoveValue(String(describing: friend.displayName)),
+                        destructiveTitle: L10n.remove,
+                        cancelTitle: L10n.keep,
                         destructiveAction: {
                             friendPendingRemovalID = nil
                             Task { await viewModel.remove(friend: friend) }
@@ -346,18 +346,18 @@ private struct SearchResultRow: View {
     private var relationshipControl: some View {
         switch result.relationshipStatus {
         case .friends:
-            statusText("Friends")
+            statusText(L10n.friends)
         case .incomingRequest:
-            statusText("Incoming")
+            statusText(L10n.incoming)
         case .outgoingRequest:
-            statusText("Pending")
+            statusText(L10n.pending)
         case .self:
-            statusText("You")
+            statusText(L10n.you)
         case .none:
             if isBusy {
                 ProgressView()
             } else {
-                Button("Add", action: action)
+                Button(L10n.add, action: action)
                     .font(.caption.weight(.semibold))
                     .controlSize(.small)
                     .buttonStyle(.borderedProminent)
@@ -421,8 +421,8 @@ private struct RequestRow: View {
         primaryAction: @escaping () -> Void,
         secondaryAction: @escaping () -> Void,
         showsPrimaryConfirmation: Bool = false,
-        primaryConfirmationActionTitle: String = "Confirm",
-        primaryConfirmationCancelTitle: String = "Keep",
+        primaryConfirmationActionTitle: String = L10n.confirm,
+        primaryConfirmationCancelTitle: String = L10n.keep,
         confirmPrimaryAction: (() -> Void)? = nil,
         cancelPrimaryConfirmation: (() -> Void)? = nil
     ) {
@@ -544,8 +544,8 @@ private struct RequestRow: View {
             ) {
                 if let confirmPrimaryAction, let cancelPrimaryConfirmation {
                     DestructiveConfirmationPopover(
-                        title: "Cancel request?",
-                        message: "Are you sure you want to cancel this friend request?",
+                        title: L10n.confirmCancelRequest,
+                        message: L10n.areYouSureYouWantToCancelThisFriendRequest,
                         destructiveTitle: primaryConfirmationActionTitle,
                         cancelTitle: primaryConfirmationCancelTitle,
                         destructiveAction: confirmPrimaryAction,

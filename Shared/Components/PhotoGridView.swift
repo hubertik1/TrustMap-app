@@ -90,10 +90,10 @@ struct PhotoGridView: View {
 
     private func accessibilityLabel(forPhotoAt index: Int) -> String {
         guard assets.count > 1 else {
-            return "Review photo"
+            return L10n.reviewPhoto
         }
 
-        return "Review photo, \(index + 1) of \(assets.count)"
+        return L10n.reviewPhotoValueOfValue(String(describing: index + 1), String(describing: assets.count))
     }
 }
 
@@ -149,23 +149,23 @@ private struct PhotoLightboxView: View {
     private var topBar: some View {
         ZStack {
             if photos.count > 1 {
-                Text("\(selectedIndex + 1) of \(photos.count)")
+                Text(L10n.valueOfValue(String(describing: selectedIndex + 1), String(describing: photos.count)))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.92))
                     .monospacedDigit()
-                    .accessibilityLabel("Photo \(selectedIndex + 1) of \(photos.count)")
+                    .accessibilityLabel(L10n.photoValueOfValue(String(describing: selectedIndex + 1), String(describing: photos.count)))
             }
 
             HStack {
                 Spacer()
 
-                Button("Done") {
+                Button(L10n.done) {
                     dismiss()
                 }
                 .font(.body.weight(.semibold))
                 .foregroundStyle(.white)
                 .buttonStyle(.plain)
-                .accessibilityLabel("Done")
+                .accessibilityLabel(L10n.done)
             }
         }
         .frame(maxWidth: .infinity)

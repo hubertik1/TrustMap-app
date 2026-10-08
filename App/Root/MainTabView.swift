@@ -133,7 +133,7 @@ private struct PhoneMainTabView: View {
 
     private var notificationAccessibilityLabel: String {
         let count = notificationBadgeStore.unreadCount
-        return count > 0 ? "\(count) unread notifications" : "Notifications"
+        return count > 0 ? L10n.valueUnreadNotifications(String(describing: count)) : L10n.notifications
     }
 }
 

@@ -38,7 +38,7 @@ struct AddPlaceReviewView: View {
         .toolbar {
             if showsCancelButton {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
             }
 
@@ -46,7 +46,7 @@ struct AddPlaceReviewView: View {
                 if viewModel.isSaving || viewModel.isDeleting {
                     ProgressView()
                 } else {
-                    Button("Save") {
+                    Button(L10n.save) {
                         Task { await viewModel.save() }
                     }
                     .disabled(!viewModel.canSave)
@@ -70,7 +70,7 @@ struct AddPlaceReviewView: View {
             viewModel.lastAction.errorTitle,
             isPresented: isShowingError
         ) {
-            Button("OK", role: .cancel) {}
+            Button(L10n.ok, role: .cancel) {}
         } message: {
             Text(errorAlertMessage)
         }
@@ -121,9 +121,9 @@ struct AddPlaceReviewView: View {
     }
 
     private var placeSection: some View {
-        Section("Place") {
+        Section(L10n.place) {
             if viewModel.canEditCustomPlaceDisplayName {
-                TextField("Place name", text: $viewModel.customPlaceDisplayName)
+                TextField(L10n.placeName, text: $viewModel.customPlaceDisplayName)
                     .font(.headline)
                     .textInputAutocapitalization(.words)
             } else {
@@ -139,10 +139,10 @@ struct AddPlaceReviewView: View {
     }
 
     private var reviewSection: some View {
-        Section("Review") {
+        Section(L10n.review) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Rating")
+                    Text(L10n.rating)
                         .font(.subheadline.weight(.medium))
 
                     Spacer()
@@ -155,21 +155,21 @@ struct AddPlaceReviewView: View {
                 StarRatingInputView(rating: $viewModel.ratingOverall)
             }
 
-            TextField("Description (optional)", text: $viewModel.descriptionText, axis: .vertical)
+            TextField(L10n.descriptionOptional, text: $viewModel.descriptionText, axis: .vertical)
                 .lineLimit(3...6)
 
-            Picker("Category", selection: $viewModel.selectedCategoryId) {
+            Picker(L10n.category, selection: $viewModel.selectedCategoryId) {
                 if viewModel.availableCategories.isEmpty {
-                    Text("No active categories").tag(UUID?.none)
+                    Text(L10n.noActiveCategories).tag(UUID?.none)
                 } else {
                     ForEach(viewModel.availableCategories) { category in
-                        Text(category.name).tag(Optional(category.id))
+                        Text(category.displayName).tag(Optional(category.id))
                     }
                 }
             }
 
             if viewModel.selectedCategoryId == nil {
-                Text("Choose an active category before saving.")
+                Text(L10n.chooseAnActiveCategoryBeforeSaving)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -177,17 +177,17 @@ struct AddPlaceReviewView: View {
     }
 
     private var photosSection: some View {
-        Section("Photos") {
+        Section(L10n.photos) {
             Button {
                 isPhotoSourceDialogPresented = true
             } label: {
-                Label("Add Photos", systemImage: "photo.on.rectangle.angled")
+                Label(L10n.addPhotos, systemImage: "photo.on.rectangle.angled")
             }
-            .accessibilityLabel("Add photos")
+            .accessibilityLabel(L10n.addPhotos)
             .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
             .reviewPhotoSourcePicker(
                 isPresented: $isPhotoSourceDialogPresented,
-                title: "Add Photos",
+                title: L10n.addPhotos,
                 allowsMultipleSelection: true
             ) { preparedPhotos, didSkipAnyPhotos in
                 viewModel.appendSelectedPhotos(preparedPhotos, didSkipAnyPhotos: didSkipAnyPhotos)
@@ -197,7 +197,7 @@ struct AddPlaceReviewView: View {
 
             if !visibleExistingPhotos.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Current Photos")
+                    Text(L10n.currentPhotos)
                         .font(.subheadline.weight(.medium))
 
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -212,7 +212,7 @@ struct AddPlaceReviewView: View {
 
             if !viewModel.selectedPreviewImages.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("New Photos")
+                    Text(L10n.newPhotos)
                         .font(.subheadline.weight(.medium))
 
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -234,24 +234,24 @@ struct AddPlaceReviewView: View {
                 Button(role: .destructive) {
                     isDeleteConfirmationPresented = true
                 } label: {
-                    Text("Delete Review")
+                    Text(L10n.deleteReview)
                 }
                 .disabled(viewModel.isSaving || viewModel.isDeleting)
                 .confirmationDialog(
-                    "Delete this review?",
+                    L10n.deleteThisReview,
                     isPresented: $isDeleteConfirmationPresented,
                     titleVisibility: .visible
                 ) {
-                    Button("Delete Review", role: .destructive) {
+                    Button(L10n.deleteReview, role: .destructive) {
                         Task { await viewModel.deleteReview() }
                     }
 
-                    Button("Cancel", role: .cancel) {}
+                    Button(L10n.cancel, role: .cancel) {}
                 } message: {
-                    Text("This action can't be undone.")
+                    Text(L10n.thisActionCanTBeUndone)
                 }
             } header: {
-                Text("Danger Zone")
+                Text(L10n.dangerZone)
             }
         }
     }

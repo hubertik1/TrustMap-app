@@ -22,13 +22,13 @@ struct FriendProfileView: View {
     var body: some View {
         Group {
             if !viewModel.hasLoadedProfile && (viewModel.isLoading || viewModel.errorMessage == nil) {
-                LoadingStateView(title: "Loading profile")
+                LoadingStateView(title: L10n.loadingProfile)
             } else if !viewModel.hasLoadedProfile || viewModel.user == nil {
                 ProductEmptyStateView(
-                    title: "Profile unavailable",
-                    message: "We couldn't load this profile.",
+                    title: L10n.profileUnavailable,
+                    message: L10n.weCouldnTLoadThisProfile,
                     systemImage: "person.crop.circle.badge.exclamationmark",
-                    primaryActionTitle: "Try Again",
+                    primaryActionTitle: L10n.tryAgain,
                     onPrimaryAction: {
                         Task { await viewModel.load() }
                     }
@@ -42,7 +42,7 @@ struct FriendProfileView: View {
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Profile")
+        .navigationTitle(L10n.profile)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if let user = viewModel.user, !user.isMe {
@@ -60,13 +60,13 @@ struct FriendProfileView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 18) {
                 if let errorMessage = viewModel.errorMessage {
-                    InlineErrorBanner(title: "Couldn't refresh profile", message: errorMessage) {
+                    InlineErrorBanner(title: L10n.couldnTRefreshProfile, message: errorMessage) {
                         Task { await viewModel.load() }
                     }
                 }
 
                 if let reviewsErrorMessage = viewModel.reviewsErrorMessage {
-                    InlineErrorBanner(title: "Couldn't load all reviews", message: reviewsErrorMessage) {
+                    InlineErrorBanner(title: L10n.couldnTLoadAllReviews, message: reviewsErrorMessage) {
                         Task { await viewModel.load() }
                     }
                 }
@@ -143,9 +143,9 @@ struct FriendProfileView: View {
                 }
 
                 VStack(spacing: 6) {
-                    Text("This profile is private.")
+                    Text(L10n.thisProfileIsPrivate)
                         .font(.headline)
-                    Text("This user doesn’t allow you to view their profile.")
+                    Text(L10n.thisUserDoesnTAllowYouToViewTheirProfile)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)

@@ -12,7 +12,7 @@ struct ProfileStatDisplay: Equatable, Sendable {
 
     static func friends(count: Int, canViewFriends: Bool) -> ProfileStatDisplay {
         ProfileStatDisplay(
-            title: "Friends",
+            title: L10n.friends,
             value: count.formatted(),
             isPrivate: !canViewFriends
         )
@@ -20,7 +20,7 @@ struct ProfileStatDisplay: Equatable, Sendable {
 
     static func places(count: Int, canViewReviews: Bool) -> ProfileStatDisplay {
         ProfileStatDisplay(
-            title: "Places",
+            title: L10n.places,
             value: count.formatted(),
             isPrivate: !canViewReviews
         )
@@ -28,7 +28,7 @@ struct ProfileStatDisplay: Equatable, Sendable {
 
     static func dishes(count: Int, canViewReviews: Bool) -> ProfileStatDisplay {
         ProfileStatDisplay(
-            title: "Dishes",
+            title: L10n.dishes,
             value: count.formatted(),
             isPrivate: !canViewReviews
         )
@@ -36,6 +36,6 @@ struct ProfileStatDisplay: Equatable, Sendable {
 }
 
 enum ProfileReviewPrivacyContent {
-    static let title = "Reviews are private"
-    static let message = "This user doesn’t allow you to view their rated places or reviewed dishes."
+    static let title = L10n.reviewsArePrivate
+    static let message = L10n.thisUserDoesnTAllowYouToViewTheirRatedPlacesOrReviewedDishes
 }

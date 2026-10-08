@@ -10,48 +10,48 @@ struct MapFilterSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Filters") {
-                    Picker("Added by", selection: $filterState.selectedOwnershipFilter) {
+                Section(L10n.filters) {
+                    Picker(L10n.addedBy, selection: $filterState.selectedOwnershipFilter) {
                         ForEach(PlaceOwnershipFilter.allCases) { option in
                             Text(option.title).tag(option)
                         }
                     }
 
-                    Picker("Category", selection: $filterState.selectedCategory) {
+                    Picker(L10n.category, selection: $filterState.selectedCategory) {
                         ForEach(categoryOptions) { option in
                             Text(option.title).tag(option)
                         }
                     }
                 }
 
-                Section("Rating Range") {
+                Section(L10n.ratingRange) {
                     Stepper(
-                        "Minimum Rating: \(RatingDisplayFormatter.rating(filterState.minimumRating))",
+                        L10n.minimumRatingValue(String(describing: RatingDisplayFormatter.rating(filterState.minimumRating))),
                         value: $filterState.minimumRating,
                         in: 1...filterState.maximumRating
                     )
                     Stepper(
-                        "Maximum Rating: \(RatingDisplayFormatter.rating(filterState.maximumRating))",
+                        L10n.maximumRatingValue(String(describing: RatingDisplayFormatter.rating(filterState.maximumRating))),
                         value: $filterState.maximumRating,
                         in: filterState.minimumRating...5
                     )
                 }
 
                 Section {
-                    Button("Reset Filters", role: .destructive) {
+                    Button(L10n.resetFilters, role: .destructive) {
                         filterState = .defaultState
                     }
                 }
             }
-            .navigationTitle("Map Filters")
+            .navigationTitle(L10n.mapFilters)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button(L10n.close) { dismiss() }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
+                    Button(L10n.apply) {
                         onApply()
                         dismiss()
                     }

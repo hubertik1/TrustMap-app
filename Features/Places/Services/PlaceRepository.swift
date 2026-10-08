@@ -114,7 +114,7 @@ final class PlaceRepository {
     func updateCustomDisplayName(placeID: UUID, displayName: String) async throws -> Place {
         let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedDisplayName.isEmpty else {
-            throw AppError.validationFailure("Enter a place name.")
+            throw AppError.validationFailure(L10n.enterAPlaceName)
         }
 
         return try await apiClient.send(
@@ -176,7 +176,7 @@ final class CategoryRepository {
     func createCategory(name: String, iconName: String? = nil) async throws -> CustomCategory {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
-            throw AppError.validationFailure("Enter a category name.")
+            throw AppError.validationFailure(L10n.enterACategoryName)
         }
 
         return try await apiClient.send(
@@ -222,7 +222,7 @@ final class CategoryRepository {
     func updateCategory(id: UUID, name: String, iconName: String? = nil) async throws -> CustomCategory {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
-            throw AppError.validationFailure("Enter a category name.")
+            throw AppError.validationFailure(L10n.enterACategoryName)
         }
 
         return try await apiClient.send(

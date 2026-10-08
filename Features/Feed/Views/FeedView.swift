@@ -20,17 +20,17 @@ struct FeedView: View {
     var body: some View {
         Group {
             if viewModel.isLoading && viewModel.feedItems.isEmpty {
-                LoadingStateView(title: "Loading activity")
+                LoadingStateView(title: L10n.loadingActivity)
             } else if let errorMessage = viewModel.errorMessage, viewModel.feedItems.isEmpty {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
             } else if viewModel.feedItems.isEmpty {
                 ProductEmptyStateView(
-                    title: "No activity yet",
-                    message: "Reviews from you and your friends will appear here.",
+                    title: L10n.noActivityYet,
+                    message: L10n.reviewsFromYouAndYourFriendsWillAppearHere,
                     systemImage: "bell.badge",
-                    primaryActionTitle: "Add Review",
+                    primaryActionTitle: L10n.addReview,
                     onPrimaryAction: {
                         container.selectedTab = .add
                     }
@@ -40,7 +40,7 @@ struct FeedView: View {
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Activity")
+        .navigationTitle(L10n.activity)
         .navigationBarTitleDisplayMode(.inline)
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
@@ -59,7 +59,7 @@ struct FeedView: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 if let errorMessage = viewModel.errorMessage {
-                    InlineErrorBanner(title: "Couldn't refresh activity", message: errorMessage) {
+                    InlineErrorBanner(title: L10n.couldnTRefreshActivity, message: errorMessage) {
                         Task { await viewModel.load() }
                     }
                 }
@@ -163,7 +163,7 @@ private struct FeedFilterChip: View {
                 }
         }
         .buttonStyle(.plain)
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityValue(isSelected ? L10n.selected : L10n.notSelected)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
@@ -229,7 +229,7 @@ private struct FeedActivityCard: View {
         .onTapGesture(perform: onSelect)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Opens place details")
+        .accessibilityHint(L10n.opensPlaceDetails)
         .accessibilityAction {
             onSelect()
         }
@@ -294,20 +294,20 @@ private struct FeedFilteredEmptyStateView: View {
                 )
 
             VStack(spacing: 4) {
-                Text("No matching activity")
+                Text(L10n.noMatchingActivity)
                     .font(.headline)
                     .foregroundStyle(.primary)
 
-                Text("Try another filter.")
+                Text(L10n.tryAnotherFilter)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
 
-            Button("Show All", action: onShowAll)
+            Button(L10n.showAll, action: onShowAll)
                 .font(.subheadline.weight(.semibold))
                 .buttonStyle(.bordered)
-                .accessibilityLabel("Show All")
+                .accessibilityLabel(L10n.showAll)
         }
         .frame(maxWidth: .infinity)
         .padding(24)
@@ -334,9 +334,9 @@ private extension FeedPlaceActivityItem {
     private var activityLabelText: String {
         switch activityKind {
         case .placeReview:
-            return "Place review"
+            return L10n.placeReview
         case .dishReview:
-            return "Dish review"
+            return L10n.dishReview
         }
     }
 
@@ -346,10 +346,10 @@ private extension FeedPlaceActivityItem {
             return place.displayName
         case .dishReview:
             if let dishName = dishName?.feedNonEmptyText {
-                return "\(dishName) at \(place.displayName)"
+                return L10n.valueAtValue(String(describing: dishName), String(describing: place.displayName))
             }
 
-            return "Dish at \(place.displayName)"
+            return L10n.dishAtValue(String(describing: place.displayName))
         }
     }
 
@@ -371,44 +371,11 @@ private extension String {
 
 private extension Date {
     var feedTimestampText: String {
-        let elapsedSeconds = max(0, Int(Date.now.timeIntervalSince(self)))
-        if elapsedSeconds < 60 {
-            return "Just now"
-        }
-
-        let minutes = elapsedSeconds / 60
-
-        if minutes < 60 {
-            return "\(minutes) min"
-        }
-
-        let hours = minutes / 60
-        if hours < 24 {
-            return "\(hours) h"
-        }
-
-        let days = hours / 24
-        return "\(days) d"
+        L10n.relativeTime(self)
     }
 
     var feedTimestampAccessibilityText: String {
-        let elapsedSeconds = max(0, Int(Date.now.timeIntervalSince(self)))
-        if elapsedSeconds < 60 {
-            return "Just now"
-        }
-
-        let minutes = elapsedSeconds / 60
-        if minutes < 60 {
-            return "\(minutes) \(minutes == 1 ? "minute" : "minutes") ago"
-        }
-
-        let hours = minutes / 60
-        if hours < 24 {
-            return "\(hours) \(hours == 1 ? "hour" : "hours") ago"
-        }
-
-        let days = hours / 24
-        return "\(days) \(days == 1 ? "day" : "days") ago"
+        L10n.relativeTime(self, abbreviated: false)
     }
 }
 

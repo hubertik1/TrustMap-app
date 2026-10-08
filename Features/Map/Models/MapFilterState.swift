@@ -9,9 +9,9 @@ enum PlaceOwnershipFilter: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .all:
-            return "Anyone"
+            return L10n.anyone
         case .mine:
-            return "Me"
+            return L10n.me
         }
     }
 }
@@ -29,17 +29,17 @@ enum PlaceSortOption: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .recentlyUpdated:
-            return "Recently Updated"
+            return L10n.recentlyUpdated
         case .highestRated:
-            return "Highest Rated"
+            return L10n.highestRated
         case .lowestRated:
-            return "Lowest Rated"
+            return L10n.lowestRated
         case .mostReviewed:
-            return "Most Reviewed"
+            return L10n.mostReviewed
         case .leastReviewed:
-            return "Least Reviewed"
+            return L10n.leastReviewed
         case .alphabetical:
-            return "A-Z"
+            return L10n.aZ
         }
     }
 }
@@ -63,7 +63,7 @@ struct MapFilterState: Equatable, Sendable {
             && selectedCategory == .all
             && selectedOwnershipFilter == .all
             && selectedSortOption == .recentlyUpdated {
-            return "All visible places"
+            return L10n.allVisiblePlaces
         }
 
         if minimumRating == 1
@@ -83,7 +83,7 @@ struct MapFilterState: Equatable, Sendable {
         if selectedCategory == .all
             && selectedOwnershipFilter == .all
             && selectedSortOption == .recentlyUpdated {
-            return "Rating \(minimumRating)-\(maximumRating)/5"
+            return L10n.ratingValueValue5(String(describing: minimumRating), String(describing: maximumRating))
         }
 
         var components: [String] = []
@@ -94,7 +94,7 @@ struct MapFilterState: Equatable, Sendable {
             components.append(selectedOwnershipFilter.title)
         }
         if minimumRating != 1 || maximumRating != 5 {
-            components.append("Rating \(minimumRating)-\(maximumRating)/5")
+            components.append(L10n.ratingValueValue5(String(describing: minimumRating), String(describing: maximumRating)))
         }
         if selectedSortOption != .recentlyUpdated {
             components.append(selectedSortOption.title)

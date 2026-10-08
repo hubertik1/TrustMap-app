@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ErrorStateView: View {
     let message: String
-    var retryTitle: String = "Try Again"
+    var retryTitle: String = L10n.tryAgain
     var retryAction: (() -> Void)?
 
     var body: some View {
@@ -21,7 +21,7 @@ struct ErrorStateView: View {
                     )
                     .accessibilityHidden(true)
 
-                Text("Something Went Wrong")
+                Text(L10n.somethingWentWrong)
                     .font(.headline)
 
                 Text(message)

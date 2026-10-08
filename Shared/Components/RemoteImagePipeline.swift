@@ -114,7 +114,7 @@ final class RemoteImagePipeline {
 
                 let (data, response) = try await session.data(for: request)
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    lastError = AppError.underlying("The photo response was invalid.")
+                    lastError = AppError.underlying(L10n.thePhotoResponseWasInvalid)
                     continue
                 }
 
@@ -127,11 +127,11 @@ final class RemoteImagePipeline {
                         continue
                     }
 
-                    throw AppError.underlying("Unable to load the selected photo.")
+                    throw AppError.underlying(L10n.unableToLoadTheSelectedPhoto)
                 }
 
                 guard let image = downsampledImage(from: data, maxPixelSize: maxPixelSize) else {
-                    lastError = AppError.underlying("The photo data was invalid.")
+                    lastError = AppError.underlying(L10n.thePhotoDataWasInvalid)
                     continue
                 }
 
@@ -143,7 +143,7 @@ final class RemoteImagePipeline {
             }
         }
 
-        throw lastError ?? AppError.underlying("Unable to load the selected photo.")
+        throw lastError ?? AppError.underlying(L10n.unableToLoadTheSelectedPhoto)
     }
 
     private static func isBackendURL(_ url: URL, backendBaseURL: URL) -> Bool {

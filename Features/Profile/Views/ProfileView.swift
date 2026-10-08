@@ -27,13 +27,13 @@ struct ProfileView: View {
     var body: some View {
         Group {
             if viewModel.isLoading && displayUser == nil {
-                LoadingStateView(title: "Loading profile")
+                LoadingStateView(title: L10n.loadingProfile)
             } else if displayUser == nil {
                 ProductEmptyStateView(
-                    title: "Profile unavailable",
-                    message: "We couldn't load your account data.",
+                    title: L10n.profileUnavailable,
+                    message: L10n.weCouldnTLoadYourAccountData,
                     systemImage: "person.crop.circle.badge.exclamationmark",
-                    primaryActionTitle: "Try Again",
+                    primaryActionTitle: L10n.tryAgain,
                     onPrimaryAction: {
                         Task { await viewModel.load() }
                     }
@@ -43,7 +43,7 @@ struct ProfileView: View {
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Profile")
+        .navigationTitle(L10n.profile)
         .navigationBarTitleDisplayMode(.inline)
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
@@ -63,7 +63,7 @@ struct ProfileView: View {
     private var refreshErrorBanner: some View {
         Group {
             if let errorMessage = viewModel.errorMessage {
-                InlineErrorBanner(title: "Couldn't refresh profile", message: errorMessage) {
+                InlineErrorBanner(title: L10n.couldnTRefreshProfile, message: errorMessage) {
                     Task { await viewModel.load() }
                 }
             }
@@ -105,7 +105,7 @@ struct ProfileView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    ProfileSectionHeader(title: "Network")
+                    ProfileSectionHeader(title: L10n.network)
 
                     ProfileCardGroup {
                         NavigationLink {
@@ -114,7 +114,7 @@ struct ProfileView: View {
                             ProfileCardRow(
                                 icon: "person.2.fill",
                                 iconColor: .cyan,
-                                title: "Friends",
+                                title: L10n.friends,
                                 subtitle: viewModel.friendsSummary.secondaryText,
                                 value: viewModel.friendsSummary.friendCount.formatted()
                             )
@@ -126,7 +126,7 @@ struct ProfileView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    ProfileSectionHeader(title: "Your activity")
+                    ProfileSectionHeader(title: L10n.yourActivity)
 
                     ProfileCardGroup {
                         NavigationLink {
@@ -142,7 +142,7 @@ struct ProfileView: View {
                             ProfileCardRow(
                                 icon: "mappin.and.ellipse",
                                 iconColor: .red,
-                                title: "Rated Places",
+                                title: L10n.ratedPlaces,
                                 value: viewModel.stats.ratedPlacesCount.formatted()
                             )
                         }
@@ -163,7 +163,7 @@ struct ProfileView: View {
                             ProfileCardRow(
                                 icon: "fork.knife",
                                 iconColor: .orange,
-                                title: "Reviewed Dishes",
+                                title: L10n.reviewedDishes,
                                 value: viewModel.stats.reviewedDishesCount.formatted()
                             )
                         }
@@ -172,7 +172,7 @@ struct ProfileView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    ProfileSectionHeader(title: "Manage")
+                    ProfileSectionHeader(title: L10n.manage)
 
                     ProfileCardGroup {
                         NavigationLink {
@@ -184,7 +184,7 @@ struct ProfileView: View {
                             ProfileCardRow(
                                 icon: "tag.fill",
                                 iconColor: .blue,
-                                title: "Categories",
+                                title: L10n.categories,
                                 value: viewModel.categoryCount.formatted()
                             )
                         }
@@ -198,7 +198,7 @@ struct ProfileView: View {
                             ProfileCardRow(
                                 icon: "gearshape.fill",
                                 iconColor: .secondary,
-                                title: "Settings"
+                                title: L10n.settings
                             )
                         }
                         .buttonStyle(.plain)
@@ -224,7 +224,7 @@ struct ProfileView: View {
     }
 
     private var friendsRowAccessibilityLabel: String {
-        "Friends, \(viewModel.friendsSummary.friendCount.formatted()), \(viewModel.friendsSummary.secondaryText)"
+        L10n.friendsValueValue(String(describing: viewModel.friendsSummary.friendCount.formatted()), String(describing: viewModel.friendsSummary.secondaryText))
     }
 }
 
@@ -340,14 +340,14 @@ private struct ProfileEditorSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 8) {
-                    ProfileEditorSectionHeader(title: "Profile photo")
+                    ProfileEditorSectionHeader(title: L10n.profilePhoto)
                     ProfileEditorCard {
                         profilePhotoEditor
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    ProfileEditorSectionHeader(title: "Public profile")
+                    ProfileEditorSectionHeader(title: L10n.publicProfile)
                     ProfileEditorCard {
                         publicProfileForm
                     }
@@ -361,7 +361,7 @@ private struct ProfileEditorSheet: View {
         .background(Color(uiColor: .systemGroupedBackground))
         .scrollDismissesKeyboard(.interactively)
         .disabled(viewModel.isSavingProfile)
-        .navigationTitle("Edit Profile")
+        .navigationTitle(L10n.editProfile)
         .navigationBarTitleDisplayMode(.inline)
         .task(id: selectedPhotoItem) {
             await loadPendingAvatarCrop(from: selectedPhotoItem)
@@ -401,7 +401,7 @@ private struct ProfileEditorSheet: View {
                 Button {
                     cancelEditing()
                 } label: {
-                    ProfileEditorToolbarButtonLabel(title: "Cancel")
+                    ProfileEditorToolbarButtonLabel(title: L10n.cancel)
                 }
                 .buttonStyle(.plain)
                 .fixedSize(horizontal: true, vertical: false)
@@ -415,7 +415,7 @@ private struct ProfileEditorSheet: View {
                     Button {
                         save()
                     } label: {
-                        ProfileEditorToolbarButtonLabel(title: "Save")
+                        ProfileEditorToolbarButtonLabel(title: L10n.save)
                     }
                     .buttonStyle(.plain)
                     .fixedSize(horizontal: true, vertical: false)
@@ -425,26 +425,26 @@ private struct ProfileEditorSheet: View {
             }
         }
         .confirmationDialog(
-            "Discard changes?",
+            L10n.confirmDiscardChanges,
             isPresented: $isShowingDiscardConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Discard Changes", role: .destructive) {
+            Button(L10n.discardChanges, role: .destructive) {
                 dismiss()
             }
 
-            Button("Keep Editing", role: .cancel) {}
+            Button(L10n.keepEditing, role: .cancel) {}
         } message: {
-            Text("Your profile edits won't be saved.")
+            Text(L10n.yourProfileEditsWonTBeSaved)
         }
         .alert(
-            "Unable to Save Profile",
+            L10n.unableToSaveProfile,
             isPresented: Binding(
                 get: { viewModel.errorMessage != nil && pendingAvatarCrop == nil },
                 set: { if !$0 { viewModel.errorMessage = nil } }
             )
         ) {
-            Button("OK", role: .cancel) {}
+            Button(L10n.ok, role: .cancel) {}
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
@@ -455,12 +455,12 @@ private struct ProfileEditorSheet: View {
 
         return VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 8) {
-                ProfileEditorFieldLabel("Display name")
+                ProfileEditorFieldLabel(L10n.displayName)
 
                 ProfileEditorInputContainer(isInvalid: viewModel.displayNameValidationMessage != nil) {
                     TextField(
                         text: $viewModel.editedDisplayName,
-                        prompt: Text("Display name").foregroundStyle(.secondary)
+                        prompt: Text(L10n.displayName).foregroundStyle(.secondary)
                     ) {
                         EmptyView()
                     }
@@ -481,7 +481,7 @@ private struct ProfileEditorSheet: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 8) {
-                ProfileEditorFieldLabel("Username")
+                ProfileEditorFieldLabel(L10n.username)
 
                 UniqueUsernameFieldRow(
                     usernameBase: $viewModel.editedHandle,
@@ -489,7 +489,7 @@ private struct ProfileEditorSheet: View {
                     isInvalid: usernameMessage != nil
                 )
 
-                Text("Only the name before the suffix can be changed.")
+                Text(L10n.onlyTheNameBeforeTheSuffixCanBeChanged)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -505,7 +505,7 @@ private struct ProfileEditorSheet: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 8) {
-                ProfileEditorFieldLabel("Bio")
+                ProfileEditorFieldLabel(L10n.bio)
 
                 BioEditorField(
                     text: $viewModel.editedBio,
@@ -526,7 +526,7 @@ private struct ProfileEditorSheet: View {
 
     private var profilePhotoEditor: some View {
         let hasEditedPhoto = viewModel.selectedAvatarPhoto != nil || viewModel.editedAvatarURL != nil
-        let photoButtonTitle = hasEditedPhoto ? "Change Photo" : "Add Photo"
+        let photoButtonTitle = hasEditedPhoto ? L10n.changePhoto : L10n.addPhoto
 
         return VStack(alignment: .center, spacing: 14) {
             avatarPreview
@@ -544,7 +544,7 @@ private struct ProfileEditorSheet: View {
                 .accessibilityLabel(photoButtonTitle)
 
                 if hasEditedPhoto {
-                    Button("Remove Photo", role: .destructive) {
+                    Button(L10n.removePhoto, role: .destructive) {
                         selectedPhotoItem = nil
                         pendingAvatarCrop = nil
                         isPreparingCroppedAvatar = false
@@ -552,11 +552,11 @@ private struct ProfileEditorSheet: View {
                     }
                     .font(.subheadline.weight(.semibold))
                     .buttonStyle(.plain)
-                    .accessibilityHint("Removes your profile photo.")
+                    .accessibilityHint(L10n.removesYourProfilePhoto)
                 }
             }
 
-            Text("Your photo appears next to your reviews and activity.")
+            Text(L10n.yourPhotoAppearsNextToYourReviewsAndActivity)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -574,7 +574,7 @@ private struct ProfileEditorSheet: View {
                     .scaledToFill()
             } else {
                 AvatarView(
-                    name: viewModel.editedDisplayName.isEmpty ? "TrustMap Member" : viewModel.editedDisplayName,
+                    name: viewModel.editedDisplayName.isEmpty ? L10n.trustmapMember : viewModel.editedDisplayName,
                     avatarURL: viewModel.editedAvatarURL,
                     size: 112
                 )
@@ -587,7 +587,7 @@ private struct ProfileEditorSheet: View {
                 .stroke(Color.primary.opacity(0.08), lineWidth: 1)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Profile photo")
+        .accessibilityLabel(L10n.profilePhoto)
     }
 
     private func cancelEditing() {
@@ -624,18 +624,18 @@ private struct ProfileEditorSheet: View {
 
         do {
             guard let rawData = try await item.loadTransferable(type: Data.self) else {
-                throw AppError.validationFailure("Couldn't load the selected photo. Try another image.")
+                throw AppError.validationFailure(L10n.couldnTLoadTheSelectedPhotoTryAnotherImage)
             }
 
             guard let image = ProfilePhotoCropperImageLoader.image(from: rawData) else {
-                throw AppError.validationFailure("Couldn't load the selected photo. Try another image.")
+                throw AppError.validationFailure(L10n.couldnTLoadTheSelectedPhotoTryAnotherImage)
             }
 
             pendingAvatarCrop = PendingAvatarCrop(image: image)
         } catch is CancellationError {
             return
         } catch {
-            viewModel.errorMessage = "Couldn't load the selected photo. Try another image."
+            viewModel.errorMessage = L10n.couldnTLoadTheSelectedPhotoTryAnotherImage
             selectedPhotoItem = nil
             pendingAvatarCrop = nil
         }
@@ -695,7 +695,7 @@ private struct ProfileEditorSheet: View {
     }
 
     private func showAvatarCropPreparationError() {
-        viewModel.errorMessage = "Couldn't prepare photo. Try another image."
+        viewModel.errorMessage = L10n.couldnTPreparePhotoTryAnotherImage
     }
 }
 
@@ -801,7 +801,7 @@ private struct BioEditorField: View {
         VStack(alignment: .leading, spacing: 6) {
             ZStack(alignment: .topLeading) {
                 if text.isEmpty {
-                    Text("Tell friends what kind of places you like...")
+                    Text(L10n.tellFriendsWhatKindOfPlacesYouLike)
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 5)
@@ -824,8 +824,8 @@ private struct BioEditorField: View {
                     .foregroundStyle(isOverLimit ? .red : .secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .accessibilityLabel("Bio character count")
-                    .accessibilityValue("\(characterCount) of \(characterLimit)")
+                    .accessibilityLabel(L10n.bioCharacterCount)
+                    .accessibilityValue(L10n.valueOfValue(String(describing: characterCount), String(describing: characterLimit)))
             }
         }
         .padding(.horizontal, 8)
@@ -854,7 +854,7 @@ private struct UniqueUsernameFieldRow: View {
             HStack(spacing: 8) {
                 TextField(
                     text: $usernameBase,
-                    prompt: Text("username").foregroundStyle(.secondary)
+                    prompt: Text(L10n.username).foregroundStyle(.secondary)
                 ) {
                     EmptyView()
                 }
@@ -865,8 +865,8 @@ private struct UniqueUsernameFieldRow: View {
                 .autocorrectionDisabled()
                 .textContentType(.username)
                 .layoutPriority(1)
-                .accessibilityLabel("Username")
-                .accessibilityHint("Editable part of your unique username.")
+                .accessibilityLabel(L10n.username)
+                .accessibilityHint(L10n.editablePartOfYourUniqueUsername)
 
                 Text(displayedSuffix)
                     .font(suffix.isEmpty ? .caption.weight(.semibold) : .body.monospacedDigit())
@@ -878,8 +878,8 @@ private struct UniqueUsernameFieldRow: View {
                     .background(Color(uiColor: .tertiarySystemFill), in: Capsule())
                     .fixedSize(horizontal: true, vertical: false)
                     .accessibilityElement()
-                    .accessibilityLabel("Read-only automatic suffix")
-                    .accessibilityValue(suffix.isEmpty ? "Assigned automatically" : suffix)
+                    .accessibilityLabel(L10n.readOnlyAutomaticSuffix)
+                    .accessibilityValue(suffix.isEmpty ? L10n.assignedAutomatically : suffix)
             }
         }
         .accessibilityElement(children: .contain)
@@ -909,7 +909,7 @@ private struct CategoriesView: View {
     var body: some View {
         Group {
             if viewModel.isLoading && !viewModel.hasLoadedCategories {
-                LoadingStateView(title: "Loading categories")
+                LoadingStateView(title: L10n.loadingCategories)
             } else if let errorMessage = viewModel.errorMessage,
                       !viewModel.hasLoadedCategories {
                 ErrorStateView(message: errorMessage) {
@@ -920,7 +920,7 @@ private struct CategoriesView: View {
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Categories")
+        .navigationTitle(L10n.categories)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -930,7 +930,7 @@ private struct CategoriesView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
-                .accessibilityLabel("New Category")
+                .accessibilityLabel(L10n.newCategory)
             }
         }
         .task {
@@ -957,7 +957,7 @@ private struct CategoriesView: View {
             .trustMapMacSheet(width: 520, minHeight: 360)
         }
         .confirmationDialog(
-            "Delete category?",
+            L10n.confirmDeleteCategory,
             isPresented: Binding(
                 get: { categoryPendingDeletion != nil },
                 set: { if !$0 { categoryPendingDeletion = nil } }
@@ -965,7 +965,7 @@ private struct CategoriesView: View {
             titleVisibility: .visible
         ) {
             if let categoryPendingDeletion {
-                Button("Delete Category", role: .destructive) {
+                Button(L10n.deleteCategory, role: .destructive) {
                     Task {
                         await viewModel.deleteCategory(categoryPendingDeletion)
                         self.categoryPendingDeletion = nil
@@ -973,11 +973,11 @@ private struct CategoriesView: View {
                 }
             }
 
-            Button("Cancel", role: .cancel) {
+            Button(L10n.cancel, role: .cancel) {
                 categoryPendingDeletion = nil
             }
         } message: {
-            Text("This category will stop being available to you and your friends. Existing reviews will keep their history.")
+            Text(L10n.thisCategoryWillStopBeingAvailableToYouAndYourFriendsExistingReviewsWillKeepTheirHistory)
         }
     }
 
@@ -985,23 +985,23 @@ private struct CategoriesView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 18) {
                 if let errorMessage = viewModel.errorMessage {
-                    InlineErrorBanner(title: "Couldn't update categories", message: errorMessage) {
+                    InlineErrorBanner(title: L10n.couldnTUpdateCategories, message: errorMessage) {
                         Task { await viewModel.load() }
                     }
                 }
 
                 CategorySection(
-                    title: "Default Categories",
+                    title: L10n.defaultCategories,
                     categories: viewModel.defaultCategories,
-                    emptyMessage: "No default categories are available yet."
+                    emptyMessage: L10n.noDefaultCategoriesAreAvailableYet
                 ) { category in
                     CategoryRow(
                         category: category
                     ) {
                         if category.canHide {
                             CategoryActionButton(
-                                title: "Hide",
-                                categoryName: category.name,
+                                title: L10n.hide,
+                                categoryName: category.displayName,
                                 style: .secondary,
                                 isLoading: viewModel.submittingCategoryID == category.id,
                                 isDisabled: viewModel.isSubmitting
@@ -1013,13 +1013,13 @@ private struct CategoriesView: View {
                 }
 
                 CategorySection(
-                    title: "My Categories",
+                    title: L10n.myCategories,
                     categories: viewModel.ownCustomCategories,
-                    emptyMessage: "Create your own categories to organize places your way."
+                    emptyMessage: L10n.createYourOwnCategoriesToOrganizePlacesYourWay
                 ) { category in
                     CategoryRow(
                         category: category,
-                        subtitle: "Created by you"
+                        subtitle: L10n.createdByYou
                     ) {
                         if category.canEdit || category.canDelete {
                             ownCategoryMenu(for: category)
@@ -1028,9 +1028,9 @@ private struct CategoriesView: View {
                 }
 
                 CategorySection(
-                    title: "Added from Friends",
+                    title: L10n.addedFromFriends,
                     categories: viewModel.addedFriendCategories,
-                    emptyMessage: "Categories you add from friends will appear here."
+                    emptyMessage: L10n.categoriesYouAddFromFriendsWillAppearHere
                 ) { category in
                     CategoryRow(
                         category: category,
@@ -1038,8 +1038,8 @@ private struct CategoriesView: View {
                     ) {
                         if category.canHide {
                             CategoryActionButton(
-                                title: "Remove",
-                                categoryName: category.name,
+                                title: L10n.remove,
+                                categoryName: category.displayName,
                                 style: .secondary,
                                 isLoading: viewModel.submittingCategoryID == category.id,
                                 isDisabled: viewModel.isSubmitting
@@ -1051,9 +1051,9 @@ private struct CategoriesView: View {
                 }
 
                 CategorySection(
-                    title: "Categories from Friends",
+                    title: L10n.categoriesFromFriends,
                     categories: viewModel.availableFriendCategories,
-                    emptyMessage: "Friend categories you haven't added yet will show up here."
+                    emptyMessage: L10n.friendCategoriesYouHavenTAddedYetWillShowUpHere
                 ) { category in
                     CategoryRow(
                         category: category,
@@ -1061,8 +1061,8 @@ private struct CategoriesView: View {
                     ) {
                         if category.canAdopt {
                             CategoryActionButton(
-                                title: "Add",
-                                categoryName: category.name,
+                                title: L10n.add,
+                                categoryName: category.displayName,
                                 style: .primary,
                                 isLoading: viewModel.submittingCategoryID == category.id,
                                 isDisabled: viewModel.isSubmitting
@@ -1074,18 +1074,18 @@ private struct CategoriesView: View {
                 }
 
                 CategorySection(
-                    title: "Hidden Default Categories",
+                    title: L10n.hiddenDefaultCategories,
                     categories: viewModel.hiddenDefaultCategories,
-                    emptyMessage: "Default categories you hide will appear here so you can restore them later."
+                    emptyMessage: L10n.defaultCategoriesYouHideWillAppearHereSoYouCanRestoreThemLater
                 ) { category in
                     CategoryRow(
                         category: category,
-                        subtitle: "Hidden only for you"
+                        subtitle: L10n.hiddenOnlyForYou
                     ) {
                         if category.canUnhide {
                             CategoryActionButton(
-                                title: "Show",
-                                categoryName: category.name,
+                                title: L10n.show,
+                                categoryName: category.displayName,
                                 style: .primary,
                                 isLoading: viewModel.submittingCategoryID == category.id,
                                 isDisabled: viewModel.isSubmitting
@@ -1117,18 +1117,18 @@ private struct CategoriesView: View {
                     viewModel.clearError()
                     editorPresentation = .edit(category)
                 } label: {
-                    Label("Edit", systemImage: "pencil")
+                    Label(L10n.edit, systemImage: "pencil")
                 }
-                .accessibilityLabel("Edit \(category.name)")
+                .accessibilityLabel(L10n.editValue(String(describing: category.displayName)))
             }
 
             if category.canDelete {
                 Button(role: .destructive) {
                     categoryPendingDeletion = category
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(L10n.delete, systemImage: "trash")
                 }
-                .accessibilityLabel("Delete \(category.name)")
+                .accessibilityLabel(L10n.deleteValue(String(describing: category.displayName)))
             }
         } label: {
             Image(systemName: "ellipsis.circle")
@@ -1139,23 +1139,23 @@ private struct CategoriesView: View {
         }
         .buttonStyle(.plain)
         .disabled(viewModel.isSubmitting)
-        .accessibilityLabel("Category actions for \(category.name)")
+        .accessibilityLabel(L10n.categoryActionsForValue(String(describing: category.displayName)))
     }
 
     private func addedFriendSubtitle(for category: CustomCategory) -> String {
         if let ownerName = friendOwnerName(for: category) {
-            return "Added from \(ownerName)"
+            return L10n.addedFromValue(String(describing: ownerName))
         }
 
-        return "Added from a friend"
+        return L10n.addedFromAFriend
     }
 
     private func availableFriendSubtitle(for category: CustomCategory) -> String {
         if let ownerName = friendOwnerName(for: category) {
-            return "Created by \(ownerName)"
+            return L10n.createdByValue(String(describing: ownerName))
         }
 
-        return "Created by a friend"
+        return L10n.createdByAFriend
     }
 
     private func friendOwnerName(for category: CustomCategory) -> String? {
@@ -1374,27 +1374,27 @@ private struct CategoryEditorPresentation: Identifiable {
     var title: String {
         switch kind {
         case .create:
-            return "New Category"
+            return L10n.newCategory
         case .edit:
-            return "Edit Category"
+            return L10n.editCategory
         }
     }
 
     var actionTitle: String {
         switch kind {
         case .create:
-            return "Create"
+            return L10n.create
         case .edit:
-            return "Save"
+            return L10n.save
         }
     }
 
     var helperText: String {
         switch kind {
         case .create:
-            return "Custom categories can be discovered and added by your friends."
+            return L10n.customCategoriesCanBeDiscoveredAndAddedByYourFriends
         case .edit:
-            return "Changes apply for everyone who has added this category."
+            return L10n.changesApplyForEveryoneWhoHasAddedThisCategory
         }
     }
 
@@ -1447,8 +1447,8 @@ private struct CategoryEditorSheet: View {
 
     var body: some View {
         Form {
-            Section("Category") {
-                TextField("Name", text: $name)
+            Section(L10n.category) {
+                TextField(L10n.name, text: $name)
                     .textInputAutocapitalization(.words)
                     .autocorrectionDisabled()
 
@@ -1479,7 +1479,7 @@ private struct CategoryEditorSheet: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+                Button(L10n.cancel) { dismiss() }
                     .disabled(isSaving)
             }
 
@@ -1502,11 +1502,11 @@ private struct CategoryEditorSheet: View {
 
     private var validationMessage: String? {
         if trimmedName.isEmpty {
-            return "Enter a category name."
+            return L10n.enterACategoryName
         }
 
         if trimmedName.count > 120 {
-            return "Category name must be 120 characters or fewer."
+            return L10n.categoryNameMustBe120CharactersOrFewer
         }
 
         return nil
@@ -1586,7 +1586,7 @@ private struct CategoryRow<TrailingContent: View>: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(category.name)
+                Text(category.displayName)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
@@ -1617,10 +1617,10 @@ private struct CategoryRow<TrailingContent: View>: View {
 
     private var accessibilityLabel: String {
         if let subtitle {
-            return "\(category.name), \(subtitle)"
+            return "\(category.displayName), \(subtitle)"
         }
 
-        return category.name
+        return category.displayName
     }
 }
 

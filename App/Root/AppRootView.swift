@@ -19,7 +19,7 @@ struct AppRootView: View {
         Group {
             switch sessionStore.state {
             case .launching:
-                LoadingStateView(title: "Preparing TrustMap")
+                LoadingStateView(title: L10n.preparingTrustmap)
 
             case .signedOut:
                 WelcomeView(
@@ -66,7 +66,7 @@ struct AppRootView: View {
                 set: { if !$0 { sessionStore.alertMessage = nil } }
             )
         ) {
-            Button("OK", role: .cancel) {}
+            Button(L10n.ok, role: .cancel) {}
         } message: {
             Text(sessionStore.alertMessage ?? "")
         }

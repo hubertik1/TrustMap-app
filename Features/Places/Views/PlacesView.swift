@@ -34,7 +34,7 @@ struct PlacesView: View {
         .onTapGesture {
             isSearchFieldFocused = false
         }
-        .navigationTitle("Places")
+        .navigationTitle(L10n.places)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -75,17 +75,17 @@ struct PlacesView: View {
     private var phoneContent: some View {
         Group {
             if viewModel.isLoading && !viewModel.shouldShowLibraryContent {
-                LoadingStateView(title: "Loading places")
+                LoadingStateView(title: L10n.loadingPlaces)
             } else if let errorMessage = viewModel.errorMessage, !viewModel.shouldShowLibraryContent {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
             } else if !viewModel.shouldShowLibraryContent {
                 ProductEmptyStateView(
-                    title: "No places yet",
-                    message: "Add your first review to start building your trusted places.",
+                    title: L10n.noPlacesYet,
+                    message: L10n.addYourFirstReviewToStartBuildingYourTrustedPlaces,
                     systemImage: "fork.knife.circle.fill",
-                    primaryActionTitle: "Add Review",
+                    primaryActionTitle: L10n.addReview,
                     onPrimaryAction: {
                         container.selectedTab = .add
                     }
@@ -99,7 +99,7 @@ struct PlacesView: View {
     private var macContent: some View {
         Group {
             if viewModel.isLoading && !viewModel.shouldShowLibraryContent {
-                LoadingStateView(title: "Loading places")
+                LoadingStateView(title: L10n.loadingPlaces)
             } else if let errorMessage = viewModel.errorMessage, !viewModel.shouldShowLibraryContent {
                 ErrorStateView(message: errorMessage) {
                     Task { await viewModel.load() }
@@ -107,10 +107,10 @@ struct PlacesView: View {
                 .trustMapReadableContent()
             } else if !viewModel.shouldShowLibraryContent {
                 ProductEmptyStateView(
-                    title: "No places yet",
-                    message: "Add your first review to start building your trusted places.",
+                    title: L10n.noPlacesYet,
+                    message: L10n.addYourFirstReviewToStartBuildingYourTrustedPlaces,
                     systemImage: "fork.knife.circle.fill",
-                    primaryActionTitle: "Add Review",
+                    primaryActionTitle: L10n.addReview,
                     onPrimaryAction: {
                         container.selectedTab = .add
                     }
@@ -158,7 +158,7 @@ struct PlacesView: View {
                 .listRowBackground(Color.clear)
 
             if let errorMessage = viewModel.errorMessage {
-                InlineErrorBanner(title: "Couldn't refresh places", message: errorMessage) {
+                InlineErrorBanner(title: L10n.couldnTRefreshPlaces, message: errorMessage) {
                     Task { await viewModel.load() }
                 }
                 .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 10, trailing: 16))
@@ -204,7 +204,7 @@ struct PlacesView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
 
-            TextField("Search places or dishes", text: $viewModel.searchText)
+            TextField(L10n.searchPlacesOrDishes, text: $viewModel.searchText)
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
                 .focused($isSearchFieldFocused)
@@ -218,7 +218,7 @@ struct PlacesView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Clear search")
+                .accessibilityLabel(L10n.clearSearch)
             }
         }
         .padding(.horizontal, 14)
@@ -269,16 +269,16 @@ struct PlacesView: View {
     private var emptyResultsTitle: String {
         if viewModel.hasSearchText {
             let query = viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-            return "No results for \"\(query)\""
+            return L10n.noResultsForValue(String(describing: query))
         }
 
-        return "No matching places"
+        return L10n.noMatchingPlaces
     }
 
     private var emptyResultsMessage: String {
         viewModel.hasSearchText
-            ? "Try a different search or adjust your filters."
-            : "Try adjusting your filters."
+            ? L10n.tryADifferentSearchOrAdjustYourFilters
+            : L10n.tryAdjustingYourFilters
     }
 }
 
@@ -313,9 +313,9 @@ private struct PlacesFilterToolbarIcon: View {
 private struct MacPlaceSelectionPlaceholder: View {
     var body: some View {
         ContentUnavailableView(
-            "Select a place",
+            L10n.selectAPlace,
             systemImage: "mappin.and.ellipse",
-            description: Text("Choose a reviewed place from the list to see details, reviews, and actions.")
+            description: Text(L10n.chooseAReviewedPlaceFromTheListToSeeDetailsReviewsAndActions)
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(uiColor: .systemGroupedBackground))
@@ -335,33 +335,33 @@ private struct PlacesQuickFilterBar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 PlacesFilterChip(
-                    title: "All",
+                    title: L10n.all,
                     isSelected: filterState.isDefault,
                     action: onReset
                 )
 
                 PlacesFilterChip(
-                    title: "4.0+",
+                    title: RatingDisplayFormatter.rating(4) + "+",
                     isSelected: filterState.minimumRating == 4.0,
                     action: onToggleMinimumRating
                 )
 
                 PlacesFilterChip(
-                    title: "Nearby",
+                    title: L10n.nearby,
                     isSelected: filterState.selectedSortOption == .nearest,
                     isDisabled: !isNearestAvailable,
-                    disabledHint: "Current location is unavailable.",
+                    disabledHint: L10n.currentLocationIsUnavailable,
                     action: onSelectNearby
                 )
 
                 PlacesFilterChip(
-                    title: "Most Reviewed",
+                    title: L10n.mostReviewed,
                     isSelected: filterState.selectedSortOption == .mostReviewed,
                     action: onToggleMostReviewed
                 )
 
                 PlacesFilterChip(
-                    title: "Mine",
+                    title: L10n.mine,
                     isSelected: filterState.addedBy == .mine,
                     action: onToggleMine
                 )
@@ -399,7 +399,7 @@ private struct PlacesFilterChip: View {
         .buttonStyle(.plain)
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.58 : 1)
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityValue(isSelected ? L10n.selected : L10n.notSelected)
         .accessibilityHint(disabledHint ?? "")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
@@ -459,11 +459,11 @@ private struct PlacesEmptyResultsView: View {
             }
 
             if showsResetFilters {
-                Button("Reset Filters", role: .destructive, action: onResetFilters)
+                Button(L10n.resetFilters, role: .destructive, action: onResetFilters)
                     .font(.subheadline.weight(.semibold))
                     .buttonStyle(.bordered)
                     .padding(.top, 2)
-                    .accessibilityLabel("Reset Filters")
+                    .accessibilityLabel(L10n.resetFilters)
             }
         }
         .frame(maxWidth: .infinity)
@@ -490,47 +490,47 @@ private struct PlacesFilterSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Filters") {
-                    Picker("Added or reviewed by", selection: $filterState.addedBy) {
+                Section(L10n.filters) {
+                    Picker(L10n.addedOrReviewedBy, selection: $filterState.addedBy) {
                         ForEach(PlaceOwnershipFilter.allCases) { option in
                             Text(option.title).tag(option)
                         }
                     }
 
-                    Picker("Category", selection: $filterState.selectedCategory) {
+                    Picker(L10n.category, selection: $filterState.selectedCategory) {
                         ForEach(categoryOptions) { option in
                             Text(option.title).tag(option)
                         }
                     }
 
-                    Picker("Sort by", selection: $filterState.selectedSortOption) {
+                    Picker(L10n.sortBy, selection: $filterState.selectedSortOption) {
                         ForEach(sortOptions) { option in
                             Text(option.title).tag(option)
                         }
                     }
                 }
 
-                Section("Minimum rating") {
+                Section(L10n.minimumRating) {
                     MinimumRatingChipGrid(
                         selectedMinimumRating: $filterState.minimumRating
                     )
                 }
 
                 Section {
-                    Button("Reset Filters", role: .destructive) {
+                    Button(L10n.resetFilters, role: .destructive) {
                         filterState = PlacesViewModel.defaultFilterState
                     }
                 }
             }
-            .navigationTitle("Filters")
+            .navigationTitle(L10n.filters)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
+                    Button(L10n.apply) {
                         onApply()
                         dismiss()
                     }
@@ -551,13 +551,13 @@ private enum MinimumRatingFilterOption: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .any:
-            return "Any"
+            return L10n.any
         case .three:
-            return "3.0+"
+            return RatingDisplayFormatter.rating(3) + "+"
         case .four:
-            return "4.0+"
+            return RatingDisplayFormatter.rating(4) + "+"
         case .fourPointFive:
-            return "4.5+"
+            return RatingDisplayFormatter.rating(4.5) + "+"
         }
     }
 

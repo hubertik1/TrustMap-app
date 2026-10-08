@@ -41,7 +41,7 @@ private struct ProblemDetailsResponse: Decodable {
             return title
         }
 
-        return "The server returned an unexpected response."
+        return L10n.theServerReturnedAnUnexpectedResponse
     }
 }
 
@@ -186,7 +186,7 @@ final class APIClient {
         let (data, response) = try await urlSession.data(for: urlRequest)
 
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw AppError.underlying("The server response was invalid.")
+            throw AppError.underlying(L10n.theServerResponseWasInvalid)
         }
 
         if request.acceptedStatusCodes.contains(httpResponse.statusCode) {
@@ -205,7 +205,7 @@ final class APIClient {
 
     private func buildURLRequest<Response>(for request: APIRequest<Response>) throws -> URLRequest {
         guard var components = URLComponents(url: baseURL.appendingPathComponent(request.path), resolvingAgainstBaseURL: false) else {
-            throw AppError.underlying("The backend URL is invalid.")
+            throw AppError.underlying(L10n.theBackendUrlIsInvalid)
         }
 
         if !request.queryItems.isEmpty {
@@ -213,7 +213,7 @@ final class APIClient {
         }
 
         guard let url = components.url else {
-            throw AppError.underlying("The backend URL is invalid.")
+            throw AppError.underlying(L10n.theBackendUrlIsInvalid)
         }
 
         var urlRequest = URLRequest(url: url)
@@ -255,13 +255,13 @@ final class APIClient {
         }
 
         if data.isEmpty {
-            throw AppError.underlying("The server returned an empty response.")
+            throw AppError.underlying(L10n.theServerReturnedAnEmptyResponse)
         }
 
         do {
             return try decoder.decode(type, from: data)
         } catch {
-            throw AppError.underlying("The app could not decode the server response.")
+            throw AppError.underlying(L10n.theAppCouldNotDecodeTheServerResponse)
         }
     }
 

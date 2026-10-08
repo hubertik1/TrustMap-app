@@ -10,11 +10,11 @@ enum PeopleFilterMode: String, Codable, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .allVisible:
-            return "All Visible"
+            return L10n.allVisible
         case .includeSelected:
-            return "Include Selected"
+            return L10n.includeSelected
         case .excludeSelected:
-            return "Exclude Selected"
+            return L10n.excludeSelected
         }
     }
 }

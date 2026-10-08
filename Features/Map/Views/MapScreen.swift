@@ -35,7 +35,7 @@ struct MapScreen: View {
                     UserAnnotation()
 
                     if let droppedPinPlace = viewModel.droppedPinPlace {
-                        Annotation("Dropped Pin", coordinate: droppedPinPlace.coordinate, anchor: .bottom) {
+                        Annotation(L10n.droppedPin, coordinate: droppedPinPlace.coordinate, anchor: .bottom) {
                             Image(systemName: "mappin.circle.fill")
                                 .font(.title)
                                 .foregroundStyle(.red)
@@ -87,7 +87,7 @@ struct MapScreen: View {
                     isLoading: viewModel.isLoading,
                     hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleAnnotationsInCurrentViewport
                 ) {
-                    LoadingStateView(title: "Loading your map")
+                    LoadingStateView(title: L10n.loadingYourMap)
                         .background(.thinMaterial)
                 } else if MapStatusOverlayVisibility.shouldShowFullScreenError(
                     errorMessage: viewModel.errorMessage,
@@ -162,7 +162,7 @@ struct MapScreen: View {
                 Color(uiColor: .systemBackground)
             }
         }
-        .navigationTitle("Map")
+        .navigationTitle(L10n.map)
         .navigationBarTitleDisplayMode(.inline)
         .modifier(PhoneMapSearchModifier(searchText: $viewModel.searchText))
         .onChange(of: viewModel.searchText) { _, _ in
@@ -189,7 +189,7 @@ struct MapScreen: View {
                 } label: {
                     Image(systemName: "location.fill")
                 }
-                .accessibilityLabel("Center on my location")
+                .accessibilityLabel(L10n.centerOnMyLocation)
             }
 
             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -198,14 +198,14 @@ struct MapScreen: View {
                 } label: {
                     Image(systemName: viewModel.isSatelliteEnabled ? "globe.americas.fill" : "map")
                 }
-                .accessibilityLabel(viewModel.isSatelliteEnabled ? "Switch to standard map" : "Switch to satellite map")
+                .accessibilityLabel(viewModel.isSatelliteEnabled ? L10n.switchToStandardMap : L10n.switchToSatelliteMap)
 
                 Button {
                     viewModel.isFilterPresented = true
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
                 }
-                .accessibilityLabel(viewModel.hasActiveFilters ? "Filters, active" : "Filters")
+                .accessibilityLabel(viewModel.hasActiveFilters ? L10n.filtersActive : L10n.filters)
             }
 
             if TrustMapPlatform.isMacCatalyst {
@@ -340,7 +340,7 @@ struct MapScreen: View {
 
             if viewModel.locationAccessState.showsSettingsAction,
                let settingsURL = TrustMapSystemSettings.appSettingsURL {
-                Button("Settings") {
+                Button(L10n.settings) {
                     openURL(settingsURL)
                 }
                 .font(.footnote.weight(.semibold))
@@ -383,21 +383,21 @@ struct MapScreen: View {
             errorMessage: viewModel.errorMessage,
             hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleAnnotationsInCurrentViewport
         ), let errorMessage = viewModel.errorMessage {
-            InlineErrorBanner(title: "Couldn't refresh map", message: errorMessage) {
+            InlineErrorBanner(title: L10n.couldnTRefreshMap, message: errorMessage) {
                 Task { await viewModel.load() }
             }
         } else if viewModel.hasActiveFilters {
             MapStatusCard(
-                title: "No places match your filters",
-                message: "Try changing filters or moving the map.",
-                actionTitle: "Filters"
+                title: L10n.noPlacesMatchYourFilters,
+                message: L10n.tryChangingFiltersOrMovingTheMap,
+                actionTitle: L10n.filters
             ) {
                 viewModel.isFilterPresented = true
             }
         } else {
             MapStatusCard(
-                title: "No reviewed places in this area yet",
-                message: "Move the map or add a review."
+                title: L10n.noReviewedPlacesInThisAreaYet,
+                message: L10n.moveTheMapOrAddAReview
             )
         }
     }
@@ -480,7 +480,7 @@ struct MapScreen: View {
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
-            .accessibilityLabel("Open \(annotation.place.displayName)")
+            .accessibilityLabel(L10n.openValue(String(describing: annotation.place.displayName)))
             .zIndex(isSelected ? 10 : 0)
         }
         .tag(annotation.id)
@@ -562,20 +562,20 @@ struct MapScreen: View {
         Button {
             AppleMapsDirectionsOpener.openDirections(to: place)
         } label: {
-            Label("Directions", systemImage: "arrow.triangle.turn.up.right.diamond")
+            Label(L10n.directions, systemImage: "arrow.triangle.turn.up.right.diamond")
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(.bordered)
         .controlSize(.large)
-        .accessibilityHint("Opens Apple Maps")
+        .accessibilityHint(L10n.opensAppleMaps)
     }
 
     private var viewPlaceButton: some View {
         Button {
             viewModel.openPromptedPlaceDetails()
         } label: {
-            Label("View Place", systemImage: "arrow.right")
+            Label(L10n.viewPlace, systemImage: "arrow.right")
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity)
         }
@@ -584,7 +584,7 @@ struct MapScreen: View {
     }
 
     private func reviewCountText(_ count: Int) -> String {
-        count == 1 ? "1 review" : "\(count) reviews"
+        L10n.reviewCount(count)
     }
 }
 
@@ -599,7 +599,7 @@ private struct PhoneMapSearchModifier: ViewModifier {
                 .searchable(
                     text: $searchText,
                     placement: .navigationBarDrawer(displayMode: .always),
-                    prompt: "Search places"
+                    prompt: L10n.searchPlaces
                 )
                 // Hide the full-width navigation material and its separator while
                 // retaining the system backgrounds on individual controls.
@@ -615,7 +615,7 @@ private struct MacMapSearchTextField: UIViewRepresentable {
     func makeUIView(context: Context) -> UISearchTextField {
         let textField = UISearchTextField(frame: .zero)
         textField.delegate = context.coordinator
-        textField.placeholder = "Search places"
+        textField.placeholder = L10n.searchPlaces
         textField.returnKeyType = .search
         textField.autocorrectionType = .no
         textField.autocapitalizationType = .words

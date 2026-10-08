@@ -35,7 +35,7 @@ struct AddHubView: View {
         .contentMargins(.top, 8, for: .scrollContent)
         .contentMargins(.horizontal, 16, for: .scrollContent)
         .contentMargins(.bottom, TrustMapLayout.tabAwareBottomPadding, for: .scrollContent)
-        .navigationTitle("Add Review")
+        .navigationTitle(L10n.addReview)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(
             isPresented: $isPlaceSearchPresented,
@@ -48,10 +48,10 @@ struct AddHubView: View {
         ) {
             PlaceSearchSheet(
                 container: container,
-                title: activeFlow?.title ?? "Add Place Review",
+                title: activeFlow?.title ?? L10n.addPlaceReview,
                 requiresRestaurantsCategory: false,
                 suggestedPlaces: viewModel.recentPlaces,
-                suggestedSectionTitle: "Recent Places"
+                suggestedSectionTitle: L10n.recentPlaces
             ) { place in
                 selectedPlace = place
                 selectedPlaceReview = viewModel.placeReview(for: place)
@@ -161,8 +161,8 @@ struct AddHubView: View {
     private var placeReviewActionButton: some View {
         Button(action: presentPlaceReviewSearch) {
             AddHubActionCard(
-                title: "Add Place Review",
-                subtitle: "Rate a place and share your experience.",
+                title: L10n.addPlaceReview,
+                subtitle: L10n.rateAPlaceAndShareYourExperience,
                 systemImage: "mappin.and.ellipse"
             )
         }
@@ -173,8 +173,8 @@ struct AddHubView: View {
     private var dishReviewActionButton: some View {
         Button(action: presentDishReviewPicker) {
             AddHubActionCard(
-                title: "Add Dish Review",
-                subtitle: "Review a dish from a restaurant you visited.",
+                title: L10n.addDishReview,
+                subtitle: L10n.reviewADishFromARestaurantYouVisited,
                 systemImage: "fork.knife"
             )
         }
@@ -185,7 +185,7 @@ struct AddHubView: View {
     @ViewBuilder
     private var recentPlacesErrorBanner: some View {
         if let errorMessage = viewModel.errorMessage {
-            InlineErrorBanner(title: "Couldn't load recent places", message: errorMessage) {
+            InlineErrorBanner(title: L10n.couldnTLoadRecentPlaces, message: errorMessage) {
                 Task { await viewModel.load() }
             }
         }
@@ -193,12 +193,12 @@ struct AddHubView: View {
 
     private var recentPlacesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Recent Places")
+            Text(L10n.recentPlaces)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.primary)
 
             if viewModel.recentPlaces.isEmpty {
-                Text("Places you've reviewed recently will show up here.")
+                Text(L10n.placesYouVeReviewedRecentlyWillShowUpHere)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {
@@ -341,11 +341,11 @@ private struct RecentPlaceActionRow: View {
     let onDishReview: () -> Void
 
     private var placeReviewTitle: String {
-        hasExistingPlaceReview ? "Edit Review" : "Add Review"
+        hasExistingPlaceReview ? L10n.editReview : L10n.addReview
     }
 
     private var placeReviewAccessibilityLabel: String {
-        hasExistingPlaceReview ? "Edit place review" : "Add place review"
+        hasExistingPlaceReview ? L10n.editPlaceReview : L10n.addPlaceReview
     }
 
     var body: some View {
@@ -393,10 +393,10 @@ private struct RecentPlaceActionRow: View {
     private var dishReviewButton: some View {
         if supportsDishReview {
             Button(action: onDishReview) {
-                Text("+ Dish")
+                Text(L10n.dish)
             }
             .buttonStyle(RecentPlaceQuickActionButtonStyle(fillOpacity: 0.09))
-            .accessibilityLabel(Text("Add dish review"))
+            .accessibilityLabel(Text(L10n.addDishReview))
         }
     }
 }
@@ -471,11 +471,11 @@ private struct DishReviewPlacePickerSheet: View {
             .onTapGesture {
                 isSearchFieldFocused = false
             }
-            .navigationTitle("Add Dish Review")
+            .navigationTitle(L10n.addDishReview)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button(L10n.close) { dismiss() }
                 }
             }
         }
@@ -499,23 +499,23 @@ private struct DishReviewPlacePickerSheet: View {
             }
 
             VStack(spacing: 6) {
-                Text("Rate a place first")
+                Text(L10n.rateAPlaceFirst)
                     .font(.title3.weight(.semibold))
                     .multilineTextAlignment(.center)
 
-                Text("To add a dish review, first choose a restaurant and rate it.")
+                Text(L10n.toAddADishReviewFirstChooseARestaurantAndRateIt)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
 
-            Button("Add Place Review") {
+            Button(L10n.addPlaceReview) {
                 onAddPlaceReview()
                 dismiss()
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.regular)
-            .accessibilityLabel(Text("Add place review"))
+            .accessibilityLabel(Text(L10n.addPlaceReview))
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
@@ -539,10 +539,10 @@ private struct DishReviewPlacePickerSheet: View {
     private var ratedRestaurantSelectionState: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Choose a rated restaurant")
+                Text(L10n.chooseARatedRestaurant)
                     .font(.title3.weight(.semibold))
 
-                Text("Pick a place you've already reviewed to add a dish.")
+                Text(L10n.pickAPlaceYouVeAlreadyReviewedToAddADish)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -551,7 +551,7 @@ private struct DishReviewPlacePickerSheet: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
 
-                TextField("Search rated restaurants", text: $searchText)
+                TextField(L10n.searchRatedRestaurants, text: $searchText)
                     .textInputAutocapitalization(.words)
                     .autocorrectionDisabled()
                     .focused($isSearchFieldFocused)
@@ -629,10 +629,10 @@ private struct DishReviewPlacePickerSheet: View {
                 onAddPlaceReview()
                 dismiss()
             } label: {
-                Text("+ Rate another place")
+                Text(L10n.rateAnotherPlace)
             }
             .buttonStyle(RecentPlaceQuickActionButtonStyle(fillOpacity: 0.09))
-            .accessibilityLabel(Text("Rate another place"))
+            .accessibilityLabel(Text(L10n.rateAnotherPlaceAccessibility))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

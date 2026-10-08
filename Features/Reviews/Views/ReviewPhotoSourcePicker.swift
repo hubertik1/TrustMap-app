@@ -58,7 +58,7 @@ struct ReviewPhotoSourcePicker: ViewModifier {
                     }
                 } onFailure: {
                     isCameraPresented = false
-                    onError(AppError.validationFailure("The captured photo couldn't be prepared."))
+                    onError(AppError.validationFailure(L10n.theCapturedPhotoCouldnTBePrepared))
                 }
                 #endif
             }
@@ -84,8 +84,8 @@ struct ReviewPhotoSourcePicker: ViewModifier {
 
     private var allPhotosFailedMessage: String {
         allowsMultipleSelection
-            ? "The selected photos couldn't be prepared."
-            : "The selected photo couldn't be prepared."
+            ? L10n.theSelectedPhotosCouldnTBePrepared
+            : L10n.theSelectedPhotoCouldnTBePrepared
     }
 
     private func selectSource(_ source: ReviewPhotoSource) {
@@ -276,11 +276,11 @@ private enum ReviewPhotoSource: Hashable {
     var title: String {
         switch self {
         case .photoLibrary:
-            "Photo Library"
+            L10n.photoLibrary
         case .camera:
-            "Camera"
+            L10n.camera
         case .files:
-            "Files"
+            L10n.files
         }
     }
 

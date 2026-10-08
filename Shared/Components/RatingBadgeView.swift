@@ -3,8 +3,8 @@ import SwiftUI
 
 enum RatingDisplayFormatter {
     static func rating(_ value: Double) -> String {
-        guard value.isFinite else { return "0.0" }
-        return String(format: "%.1f", locale: Locale(identifier: "en_US_POSIX"), value)
+        let finiteValue = value.isFinite ? value : 0
+        return finiteValue.formatted(.number.precision(.fractionLength(1)))
     }
 
     static func rating(_ value: Int) -> String {
@@ -26,7 +26,7 @@ struct RatingBadgeView: View {
                 Capsule()
                     .strokeBorder(rating.badgeBorderColor, lineWidth: 1.5)
             }
-            .accessibilityLabel("Rating \(RatingDisplayFormatter.rating(rating)) out of 5")
+            .accessibilityLabel(L10n.ratingValueOutOf5(String(describing: RatingDisplayFormatter.rating(rating))))
     }
 }
 
@@ -47,16 +47,16 @@ struct StarRatingInputView: View {
                         .contentTransition(.symbolEffect(.replace))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("\(star) star\(star == 1 ? "" : "s")")
+                .accessibilityLabel(L10n.starCount(star))
                 .accessibilityAddTraits(star == rating ? .isSelected : [])
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Rating")
+        .accessibilityLabel(L10n.rating)
         .accessibilityValue(
             rating == 0
-            ? "No rating selected"
-            : "\(RatingDisplayFormatter.rating(rating)) out of \(maximumRating)"
+            ? L10n.noRatingSelected
+            : L10n.valueOutOfValue(String(describing: RatingDisplayFormatter.rating(rating)), String(describing: maximumRating))
         )
     }
 }

@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "TrustMapContractSupport",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v14)
     ],
@@ -16,9 +17,10 @@ let package = Package(
         .target(
             name: "TrustMapContractSupport",
             path: ".",
-            exclude: ["Resources"],
+            exclude: ["Resources/Assets.xcassets", "Resources/Preview Content", "Resources/Info-Local.plist", "Resources/Info-Prod.plist", "Resources/TrustMap.entitlements", "Resources/LaunchScreen.storyboard", "Resources/InfoPlist.xcstrings"],
             sources: [
                 "Core/Networking/BackendAPI.swift",
+                "Core/Localization/L10n.swift",
                 "Core/State/AppConfiguration.swift",
                 "Core/State/AppError.swift",
                 "Features/Feed/Models/FeedPlaceActivityItem.swift",
@@ -49,7 +51,8 @@ let package = Package(
                 "Features/Profile/Services/UserProfileRepository.swift",
                 "Features/Reviews/Models/PhotoAsset.swift",
                 "Features/Reviews/Models/VisibilityStatus.swift"
-            ]
+            ],
+            resources: [.process("Resources/Localizable.xcstrings")]
         ),
         .testTarget(
             name: "TrustMapContractSupportTests",

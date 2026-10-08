@@ -18,7 +18,7 @@ struct PlaceSearchResult: Identifiable, @unchecked Sendable {
         self.id = identifier
         self.mapItem = mapItem
         self.completion = nil
-        self.fallbackName = mapItem.name ?? "Unknown Place"
+        self.fallbackName = mapItem.name ?? L10n.unknownPlace
         self.fallbackSubtitle = mapItem.formattedAddress
         self.fallbackCoordinate = mapItem.placemark.coordinate
     }

@@ -14,11 +14,11 @@ enum ReviewSourceFilterMode: String, Codable, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .mineOnly:
-            return "Mine Only"
+            return L10n.mineOnly
         case .friendsOnly:
-            return "Friends Only"
+            return L10n.friendsOnly
         case .mineAndFriends:
-            return "Mine and Friends"
+            return L10n.mineAndFriends
         }
     }
 }

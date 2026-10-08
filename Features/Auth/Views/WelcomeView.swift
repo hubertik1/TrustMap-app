@@ -119,21 +119,15 @@ struct WelcomeView: View {
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            (
-                Text("Keep the places your")
-                    .foregroundStyle(.primary) +
-                Text("\npeople trust")
-                    .foregroundStyle(theme.headlineAccent) +
-                Text("\nall in one map.")
-                    .foregroundStyle(.primary)
-            )
+            Text(L10n.keepThePlacesYourPeopleTrustAllInOneMap)
+                .foregroundStyle(.primary)
             .font(.system(size: 27, weight: .bold, design: .rounded))
             .tracking(-0.15)
             .lineSpacing(3)
             .fixedSize(horizontal: false, vertical: true)
-            .accessibilityLabel("Keep the places your people trust all in one map.")
+            .accessibilityLabel(L10n.keepThePlacesYourPeopleTrustAllInOneMap)
 
-            Text("Save favorite spots, compare notes, and revisit trusted picks from your friends.")
+            Text(L10n.saveFavoriteSpotsCompareNotesAndRevisitTrustedPicksFromYourFriends)
                 .font(.system(size: 16))
                 .foregroundStyle(.secondary)
                 .lineSpacing(3)
@@ -183,7 +177,7 @@ private struct WelcomeBrandHeader: View {
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
 
-                Text("Private recommendations from trusted friends")
+                Text(L10n.privateRecommendationsFromTrustedFriends)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -198,13 +192,8 @@ private struct WelcomePreviewCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Image("WelcomeScreenMap")
-                .resizable()
-                .interpolation(.high)
-                .scaledToFill()
+            WelcomeMapPreview()
                 .frame(maxWidth: .infinity)
-                .aspectRatio(1, contentMode: .fit)
-                .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -223,7 +212,7 @@ private struct WelcomePreviewCard: View {
         }
         .shadow(color: theme.cardShadow, radius: theme.cardShadowRadius, y: 16)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Preview of the real TrustMap product showing the welcome map screen.")
+        .accessibilityLabel(L10n.previewOfTheRealTrustmapProductShowingTheWelcomeMapScreen)
     }
 }
 
@@ -250,11 +239,11 @@ private struct WelcomeCTASection: View {
 
             HStack(spacing: 24) {
                 if let privacyPolicyURL = AppConfiguration.privacyPolicyURL {
-                    Link("Privacy Policy", destination: privacyPolicyURL)
+                    Link(L10n.privacyPolicy, destination: privacyPolicyURL)
                         .frame(minHeight: 44)
                 }
                 if let supportURL = AppConfiguration.supportURL {
-                    Link("Support", destination: supportURL)
+                    Link(L10n.support, destination: supportURL)
                         .frame(minHeight: 44)
                 }
             }
@@ -263,15 +252,15 @@ private struct WelcomeCTASection: View {
             .frame(maxWidth: .infinity)
 
             if isSigningIn {
-                ProgressView("Signing in…")
+                ProgressView(L10n.signingIn)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .accessibilityLabel("Signing in. Waiting for the server.")
+                    .accessibilityLabel(L10n.signingInWaitingForTheServer)
             }
 
             if isPreviewEnvironment {
-                Text("Sign in with Apple is unavailable in SwiftUI previews. Run TrustMap in the Simulator or on a device to test authentication.")
+                Text(L10n.signInWithAppleIsUnavailableInSwiftuiPreviewsRunTrustmapInTheSimulatorOrOnADeviceToTestAut)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

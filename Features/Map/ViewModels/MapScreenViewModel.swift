@@ -578,7 +578,7 @@ final class MapScreenViewModel: ObservableObject {
         case .restricted:
             locationAccessState = .restricted
         @unknown default:
-            locationAccessState = .failed("TrustMap could not determine location access.")
+            locationAccessState = .failed(L10n.trustmapCouldNotDetermineLocationAccess)
         }
     }
 
@@ -598,7 +598,7 @@ final class MapScreenViewModel: ObservableObject {
     }
 
     private func handleLocationError(_ error: AppError) {
-        locationAccessState = .failed(error.errorDescription ?? "TrustMap could not determine your current location.")
+        locationAccessState = .failed(error.errorDescription ?? L10n.trustmapCouldNotDetermineYourCurrentLocation)
     }
 
     private static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)

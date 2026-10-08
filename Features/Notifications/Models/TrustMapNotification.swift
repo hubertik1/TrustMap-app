@@ -37,11 +37,11 @@ struct TrustMapNotification: Identifiable, Decodable, Hashable, Sendable {
     var title: String {
         switch type {
         case .placeReviewAdded:
-            return "\(actorMention) added a place review"
+            return L10n.valueAddedAPlaceReview(String(describing: actorMention))
         case .dishReviewAdded:
-            return "\(actorMention) added a dish review"
+            return L10n.valueAddedADishReview(String(describing: actorMention))
         case .friendRequestSent:
-            return "\(actorMention) sent you a friend request"
+            return L10n.valueSentYouAFriendRequest(String(describing: actorMention))
         }
     }
 
@@ -55,7 +55,7 @@ struct TrustMapNotification: Identifiable, Decodable, Hashable, Sendable {
         case .dishReviewAdded:
             let dishAndPlace: String?
             if let dishName = dishName?.nilIfEmpty, let placeName = placeName?.nilIfEmpty {
-                dishAndPlace = "\(dishName) at \(placeName)"
+                dishAndPlace = L10n.valueAtValue(String(describing: dishName), String(describing: placeName))
             } else {
                 dishAndPlace = dishName?.nilIfEmpty ?? placeName?.nilIfEmpty
             }
@@ -65,7 +65,7 @@ struct TrustMapNotification: Identifiable, Decodable, Hashable, Sendable {
                 .joined(separator: " • ")
 
         case .friendRequestSent:
-            return "Open Friends to respond"
+            return L10n.openFriendsToRespond
         }
     }
 
@@ -131,7 +131,7 @@ struct TrustMapNotification: Identifiable, Decodable, Hashable, Sendable {
     private var actorMention: String {
         let base = actorHandleBase
         guard !base.isEmpty else {
-            return "Someone"
+            return L10n.someone
         }
 
         return base.hasPrefix("@") ? base : "@\(base)"

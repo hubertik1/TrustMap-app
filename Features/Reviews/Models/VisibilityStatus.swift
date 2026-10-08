@@ -70,13 +70,13 @@ enum VisibilityStatus: String, Codable, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .friendsOnly:
-            return "Friends Only"
+            return L10n.friendsOnly
         case .friendsOfFriends:
-            return "Friends of Friends"
+            return L10n.friendsOfFriends
         case .onlyMe:
-            return "Only Me"
+            return L10n.onlyMe
         case .public:
-            return "Everyone"
+            return L10n.everyone
         }
     }
 

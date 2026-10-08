@@ -17,42 +17,42 @@ struct TrustMapApp: App {
         .commands {
             SidebarCommands()
 
-            CommandMenu("Navigate") {
-                Button("Map") {
+            CommandMenu(L10n.navigate) {
+                Button(L10n.map) {
                     container.selectedTab = .map
                 }
                 .keyboardShortcut("1", modifiers: .command)
 
-                Button("Places") {
+                Button(L10n.places) {
                     container.selectedTab = .places
                 }
                 .keyboardShortcut("2", modifiers: .command)
 
-                Button("Add Review") {
+                Button(L10n.addReview) {
                     container.selectedTab = .add
                 }
                 .keyboardShortcut("3", modifiers: .command)
 
-                Button("Activity") {
+                Button(L10n.activity) {
                     container.selectedTab = .feed
                 }
                 .keyboardShortcut("4", modifiers: .command)
 
-                Button("Profile") {
+                Button(L10n.profile) {
                     container.selectedTab = .profile
                 }
                 .keyboardShortcut("5", modifiers: .command)
             }
 
             CommandGroup(after: .appSettings) {
-                Button("Refresh") {
+                Button(L10n.refresh) {
                     container.refreshCenter.invalidateAll()
                 }
                 .keyboardShortcut("r", modifiers: .command)
             }
 
             CommandGroup(replacing: .appSettings) {
-                Button("Settings...") {
+                Button(L10n.settingsMenu) {
                     container.isSettingsPresented = true
                 }
                 .keyboardShortcut(",", modifiers: .command)

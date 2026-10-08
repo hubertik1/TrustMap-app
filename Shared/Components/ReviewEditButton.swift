@@ -17,7 +17,7 @@ struct ReviewEditButton<Content: View>: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Edit review")
+            .accessibilityLabel(L10n.editReview)
         } else {
             content
         }

@@ -57,7 +57,7 @@ final class MapSearchService {
 
         return try await reverseGeocodedPlace(
             at: coordinate,
-            fallbackName: title ?? "Selected Place"
+            fallbackName: title ?? L10n.selectedPlace
         )
     }
 
@@ -70,7 +70,7 @@ final class MapSearchService {
     }
 
     func resolveDroppedPin(at coordinate: CLLocationCoordinate2D) async throws -> PlaceSearchResult {
-        try await reverseGeocodedPlace(at: coordinate, fallbackName: "Pinned Location")
+        try await reverseGeocodedPlace(at: coordinate, fallbackName: L10n.pinnedLocation)
     }
 
     private func nearestPointOfInterest(
@@ -120,7 +120,7 @@ final class MapSearchService {
 
     private func reverseGeocodedPlace(
         at coordinate: CLLocationCoordinate2D,
-        fallbackName: String = "Dropped Pin"
+        fallbackName: String = L10n.droppedPin
     ) async throws -> PlaceSearchResult {
         let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
         let placemarks = try await CLGeocoder().reverseGeocodeLocation(location)
@@ -153,7 +153,7 @@ final class MapSearchService {
 
         return PlaceSearchResult(
             name: displayName,
-            subtitle: address.isEmpty ? "Selected from map" : address,
+            subtitle: address.isEmpty ? L10n.selectedFromMap : address,
             coordinate: coordinate
         )
     }

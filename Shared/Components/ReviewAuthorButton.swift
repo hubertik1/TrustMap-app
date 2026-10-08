@@ -24,6 +24,6 @@ struct ReviewAuthorButton: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(name)
-        .accessibilityHint("Opens this user's profile")
+        .accessibilityHint(L10n.opensThisUserSProfile)
     }
 }

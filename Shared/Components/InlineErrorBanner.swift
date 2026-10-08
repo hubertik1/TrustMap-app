@@ -3,7 +3,7 @@ import SwiftUI
 struct InlineErrorBanner: View {
     let title: String
     let message: String
-    var retryTitle = "Try Again"
+    var retryTitle = L10n.tryAgain
     var retryAction: (() -> Void)?
 
     var body: some View {
@@ -55,7 +55,7 @@ struct InlineErrorBanner: View {
 
 #Preview {
     InlineErrorBanner(
-        title: "Couldn't refresh places",
+        title: L10n.couldnTRefreshPlaces,
         message: "Check your connection and try again.",
         retryAction: {}
     )

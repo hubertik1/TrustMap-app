@@ -145,12 +145,12 @@ final class SessionStore: ObservableObject, APISessionProviding {
         }
 
         clearSessionState()
-        var message = "Your account has been deleted."
+        var message = L10n.yourAccountHasBeenDeleted
         if result.cleanupPending {
-            message += " Remaining cleanup will finish automatically in the background."
+            message += L10n.remainingCleanupWillFinishAutomaticallyInTheBackground
         }
         if result.requiresManualAppleRevocation {
-            message += " To disconnect Sign in with Apple, open Settings > your name > Sign in with Apple > TrustMap, then tap Delete and confirm."
+            message += L10n.toDisconnectSignInWithAppleOpenSettingsYourNameSignInWithAppleTrustmapThenTapDeleteAndConfi
         }
         alertMessage = message
         state = .signedOut
@@ -167,7 +167,7 @@ final class SessionStore: ObservableObject, APISessionProviding {
             guard credentialState == .authorized else {
                 clearSessionState()
                 state = .signedOut
-                alertMessage = "Your Apple sign-in is no longer valid. Sign in again to continue."
+                alertMessage = L10n.yourAppleSignInIsNoLongerValidSignInAgainToContinue
                 return
             }
         } catch {

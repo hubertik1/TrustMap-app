@@ -65,7 +65,7 @@ struct PlaceListRowView: View {
             RatingBadgeView(rating: item.averageRating)
 
             if !hasContributorSummary {
-                Text("\(item.reviewCount) review\(item.reviewCount == 1 ? "" : "s")")
+                Text(L10n.reviewCount(item.reviewCount))
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

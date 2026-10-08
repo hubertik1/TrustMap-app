@@ -30,27 +30,27 @@ struct UserReviewsView: View {
         var navigationTitle: String {
             switch self {
             case .places:
-                return "Rated Places"
+                return L10n.ratedPlaces
             case .dishes:
-                return "Reviewed Dishes"
+                return L10n.reviewedDishes
             }
         }
 
         func emptyTitle(for user: User) -> String {
             switch self {
             case .places:
-                return "No rated places yet."
+                return L10n.noRatedPlacesMessage
             case .dishes:
-                return "No reviewed dishes yet."
+                return L10n.noReviewedDishesMessage
             }
         }
 
         func emptyMessage(for user: User) -> String {
             switch self {
             case .places:
-                return "\(user.displayName) has not rated any places yet."
+                return L10n.valueHasNotRatedAnyPlacesYet(String(describing: user.displayName))
             case .dishes:
-                return "\(user.displayName) has not reviewed any dishes yet."
+                return L10n.valueHasNotReviewedAnyDishesYet(String(describing: user.displayName))
             }
         }
 
@@ -133,13 +133,13 @@ struct UserReviewsView: View {
     private func placeDisplayName(for review: PlaceReview) -> String {
         let displayName = review.place.displayName.profileReviewsTrimmedNonEmptyText
         let fallbackName = placeNames[review.placeId]?.profileReviewsTrimmedNonEmptyText
-        return displayName ?? fallbackName ?? "Place"
+        return displayName ?? fallbackName ?? L10n.place
     }
 
     private func placeDisplayName(for review: DishReview) -> String {
         let displayName = review.place.displayName.profileReviewsTrimmedNonEmptyText
         let fallbackName = placeNames[review.placeId]?.profileReviewsTrimmedNonEmptyText
-        return displayName ?? fallbackName ?? "Place"
+        return displayName ?? fallbackName ?? L10n.place
     }
 }
 

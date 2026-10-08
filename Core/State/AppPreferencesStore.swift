@@ -10,9 +10,9 @@ enum AppMapStylePreference: String, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .standard:
-            return "Standard"
+            return L10n.standard
         case .satellite:
-            return "Satellite"
+            return L10n.satellite
         }
     }
 }
@@ -27,11 +27,11 @@ enum AppAppearancePreference: String, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .system:
-            return "System"
+            return L10n.system
         case .light:
-            return "Light"
+            return L10n.light
         case .dark:
-            return "Dark"
+            return L10n.dark
         }
     }
 

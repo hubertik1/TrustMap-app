@@ -37,7 +37,7 @@ struct AddDishReviewView: View {
         .toolbar {
             if showsCancelButton {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L10n.cancel) { dismiss() }
                 }
             }
 
@@ -45,7 +45,7 @@ struct AddDishReviewView: View {
                 if viewModel.isSaving || viewModel.isDeleting {
                     ProgressView()
                 } else {
-                    Button("Save") {
+                    Button(L10n.save) {
                         Task { await viewModel.save() }
                     }
                     .disabled(!viewModel.canSave)
@@ -72,7 +72,7 @@ struct AddDishReviewView: View {
                 set: { if !$0 { viewModel.errorMessage = nil } }
             )
         ) {
-            Button("OK", role: .cancel) {}
+            Button(L10n.ok, role: .cancel) {}
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
@@ -96,7 +96,7 @@ struct AddDishReviewView: View {
 
     private var reviewForm: some View {
         Form {
-            Section("Place") {
+            Section(L10n.place) {
                 Text(viewModel.place.displayName)
                     .font(.headline)
                 if let secondaryDisplayText = viewModel.place.secondaryDisplayText {
@@ -105,12 +105,12 @@ struct AddDishReviewView: View {
                 }
             }
 
-            Section("Dish Review") {
-                TextField("Dish name", text: $viewModel.dishName)
+            Section(L10n.dishReview) {
+                TextField(L10n.dishName, text: $viewModel.dishName)
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Rating")
+                        Text(L10n.rating)
                             .font(.subheadline.weight(.medium))
 
                         Spacer()
@@ -123,29 +123,29 @@ struct AddDishReviewView: View {
                     StarRatingInputView(rating: $viewModel.dishRating)
                 }
 
-                TextField("Short review (optional)", text: $viewModel.dishReviewText, axis: .vertical)
+                TextField(L10n.shortReviewOptional, text: $viewModel.dishReviewText, axis: .vertical)
                     .lineLimit(3...5)
-                TextField("Price", text: $viewModel.priceText)
+                TextField(L10n.price, text: $viewModel.priceText)
                     .keyboardType(.decimalPad)
 
-                Picker("Category", selection: $viewModel.selectedCategoryId) {
+                Picker(L10n.category, selection: $viewModel.selectedCategoryId) {
                     if viewModel.availableCategories.isEmpty {
-                        Text("No active categories").tag(UUID?.none)
+                        Text(L10n.noActiveCategories).tag(UUID?.none)
                     } else {
                         ForEach(viewModel.availableCategories) { category in
-                            Text(category.name).tag(Optional(category.id))
+                            Text(category.displayName).tag(Optional(category.id))
                         }
                     }
                 }
 
                 if viewModel.selectedCategoryId == nil {
-                    Text("Add the Restaurants category back to your active categories before saving.")
+                    Text(L10n.addTheRestaurantsCategoryBackToYourActiveCategoriesBeforeSaving)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }
 
-            Section("Photo") {
+            Section(L10n.photo) {
                 Button {
                     isPhotoSourceDialogPresented = true
                 } label: {
@@ -165,7 +165,7 @@ struct AddDishReviewView: View {
                     viewModel.setSelectedPhoto(photo)
 
                     if didSkipAnyPhotos {
-                        viewModel.errorMessage = AppError.validationFailure("Some selected photos couldn't be prepared.").errorDescription
+                        viewModel.errorMessage = AppError.validationFailure(L10n.someSelectedPhotosCouldnTBePrepared).errorDescription
                     }
                 } onError: { error in
                     viewModel.errorMessage = AppError.wrap(error).errorDescription
@@ -173,7 +173,7 @@ struct AddDishReviewView: View {
 
                 if !visibleExistingPhotos.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Current Photos")
+                        Text(L10n.currentPhotos)
                             .font(.subheadline.weight(.medium))
 
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -196,24 +196,24 @@ struct AddDishReviewView: View {
                     Button(role: .destructive) {
                         isDeleteConfirmationPresented = true
                     } label: {
-                        Text("Delete Dish Review")
+                        Text(L10n.deleteDishReview)
                     }
                     .disabled(viewModel.isSaving || viewModel.isDeleting)
                     .confirmationDialog(
-                        "Delete this dish review?",
+                        L10n.deleteThisDishReview,
                         isPresented: $isDeleteConfirmationPresented,
                         titleVisibility: .visible
                     ) {
-                        Button("Delete Dish Review", role: .destructive) {
+                        Button(L10n.deleteDishReview, role: .destructive) {
                             Task { await viewModel.deleteReview() }
                         }
 
-                        Button("Cancel", role: .cancel) {}
+                        Button(L10n.cancel, role: .cancel) {}
                     } message: {
-                        Text("This action can't be undone.")
+                        Text(L10n.thisActionCanTBeUndone)
                     }
                 } header: {
-                    Text("Danger Zone")
+                    Text(L10n.dangerZone)
                 }
             }
         }
@@ -229,11 +229,11 @@ struct AddDishReviewView: View {
 
     private var photoButtonTitle: String {
         let hasActivePhoto = viewModel.selectedPhoto != nil || !visibleExistingPhotos.isEmpty
-        return hasActivePhoto ? "Replace Photo" : "Add Photo"
+        return hasActivePhoto ? L10n.replacePhoto : L10n.addPhoto
     }
 
     private var photoAccessibilityLabel: String {
-        photoButtonTitle == "Replace Photo" ? "Replace photo" : "Add photo"
+        photoButtonTitle == L10n.replacePhoto ? L10n.replacePhoto : L10n.addPhoto
     }
 
     private func existingPhotoThumbnail(_ photo: PhotoAsset) -> some View {
@@ -250,7 +250,7 @@ struct AddDishReviewView: View {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(.black.opacity(0.36))
                             .overlay(
-                                Text("Will Replace")
+                                Text(L10n.willReplace)
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.white)
                             )

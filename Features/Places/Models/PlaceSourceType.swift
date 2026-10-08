@@ -10,11 +10,11 @@ enum PlaceSourceType: String, Codable, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .providerVenue:
-            return "Provider Venue"
+            return L10n.providerVenue
         case .customPin:
-            return "Custom Pin"
+            return L10n.customPin
         case .approvedPublic:
-            return "Approved Public"
+            return L10n.approvedPublic
         }
     }
 }

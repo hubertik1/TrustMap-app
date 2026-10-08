@@ -23,7 +23,7 @@ struct SettingsView: View {
 
     var body: some View {
         settingsContent
-        .navigationTitle("Settings")
+        .navigationTitle(L10n.settings)
         .navigationBarTitleDisplayMode(.inline)
         .trustMapPhoneTabBarHidden()
         .task {
@@ -64,7 +64,7 @@ struct SettingsView: View {
     }
 
     private var accountSection: some View {
-        Section("Account") {
+        Section(L10n.account) {
             if viewModel.currentUser != nil {
                 NavigationLink {
                     ProfileView(container: container)
@@ -83,19 +83,19 @@ struct SettingsView: View {
     }
 
     private var accountActionsSection: some View {
-        Section("Account Management") {
+        Section(L10n.accountManagement) {
             if viewModel.currentUser != nil {
-                Button("Sign Out", role: .destructive) {
+                Button(L10n.signOut, role: .destructive) {
                     showsSignOutConfirmation = true
                 }
                 .disabled(viewModel.isSigningOut || viewModel.isDeletingAccount)
-                .confirmationDialog("Sign Out?", isPresented: $showsSignOutConfirmation, titleVisibility: .visible) {
-                    Button("Sign Out", role: .destructive) {
+                .confirmationDialog(L10n.confirmSignOut, isPresented: $showsSignOutConfirmation, titleVisibility: .visible) {
+                    Button(L10n.signOut, role: .destructive) {
                         Task { await viewModel.signOut() }
                     }
-                    Button("Cancel", role: .cancel) {}
+                    Button(L10n.cancel, role: .cancel) {}
                 } message: {
-                    Text("Are you sure you want to sign out?")
+                    Text(L10n.areYouSureYouWantToSignOut)
                 }
 
                 Button(role: .destructive) {
@@ -104,20 +104,20 @@ struct SettingsView: View {
                     if viewModel.isDeletingAccount {
                         HStack {
                             ProgressView()
-                            Text("Deleting Account")
+                            Text(L10n.deletingAccount)
                         }
                     } else {
-                        Text("Delete Account")
+                        Text(L10n.deleteAccount)
                     }
                 }
                 .disabled(viewModel.isSigningOut || viewModel.isDeletingAccount)
-                .confirmationDialog("Delete Account?", isPresented: $showsDeleteAccountConfirmation, titleVisibility: .visible) {
-                    Button("Delete Account", role: .destructive) {
+                .confirmationDialog(L10n.confirmDeleteAccount, isPresented: $showsDeleteAccountConfirmation, titleVisibility: .visible) {
+                    Button(L10n.deleteAccount, role: .destructive) {
                         Task { await viewModel.deleteAccount() }
                     }
-                    Button("Cancel", role: .cancel) {}
+                    Button(L10n.cancel, role: .cancel) {}
                 } message: {
-                    Text("This permanently removes your profile, reviews, photos, friends, and private custom places that no one else uses. This can’t be undone.")
+                    Text(L10n.thisPermanentlyRemovesYourProfileReviewsPhotosFriendsAndPrivateCustomPlacesThatNoOneElseUsesT)
                 }
 
                 if let accountDeletionErrorMessage = viewModel.accountDeletionErrorMessage {
@@ -130,12 +130,12 @@ struct SettingsView: View {
     }
 
     private var permissionsSection: some View {
-        Section("Permissions") {
+        Section(L10n.permissions) {
             Button {
                 viewModel.openLocationSettings()
             } label: {
                 NavigationValueRow(
-                    title: "Location access",
+                    title: L10n.locationAccess,
                     value: viewModel.locationAccessLabel
                 )
             }
@@ -145,7 +145,7 @@ struct SettingsView: View {
                 Task { await viewModel.handleNotificationAccessTapped() }
             } label: {
                 NavigationValueRow(
-                    title: "Notifications",
+                    title: L10n.notifications,
                     value: viewModel.notificationAccessLabel
                 )
             }
@@ -155,7 +155,7 @@ struct SettingsView: View {
 
     private var privacySection: some View {
         Section {
-            Picker("Friends list", selection: privacyBinding(
+            Picker(L10n.friendsList, selection: privacyBinding(
                 get: { viewModel.friendListVisibility },
                 set: { viewModel.setFriendListVisibility($0) }
             )) {
@@ -166,7 +166,7 @@ struct SettingsView: View {
             .pickerStyle(.menu)
             .disabled(isPrivacyControlDisabled)
 
-            Picker("Profile photo", selection: privacyBinding(
+            Picker(L10n.profilePhoto, selection: privacyBinding(
                 get: { viewModel.profilePictureVisibility },
                 set: { viewModel.setProfilePictureVisibility($0) }
             )) {
@@ -178,7 +178,7 @@ struct SettingsView: View {
             .disabled(isPrivacyControlDisabled)
 
             if viewModel.currentUser != nil && !viewModel.supportsPrivacySettings {
-                Text("Privacy settings are not available on this server version.")
+                Text(L10n.privacySettingsAreNotAvailableOnThisServerVersion)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -192,10 +192,10 @@ struct SettingsView: View {
             NavigationLink {
                 BlockedUsersView(repository: container.safetyRepository)
             } label: {
-                Text("Blocked Users")
+                Text(L10n.blockedUsers)
             }
         } header: {
-            Text("Privacy")
+            Text(L10n.privacy)
         }
     }
 
@@ -216,22 +216,22 @@ struct SettingsView: View {
 
     private var mapAndDiscoverySection: some View {
         Section {
-            Picker("Default map style", selection: binding(\.defaultMapStyle)) {
+            Picker(L10n.defaultMapStyle, selection: binding(\.defaultMapStyle)) {
                 ForEach(AppMapStylePreference.allCases) { style in
                     Text(style.displayName).tag(style)
                 }
             }
             .pickerStyle(.menu)
 
-            Toggle("Center on my location", isOn: binding(\.centerOnUserLocationOnLaunch))
+            Toggle(L10n.centerOnMyLocation, isOn: binding(\.centerOnUserLocationOnLaunch))
         } header: {
-            Text("Map & Discovery")
+            Text(L10n.mapDiscovery)
         }
     }
 
     private var appearanceSection: some View {
-        Section("Appearance") {
-            Picker("Theme", selection: binding(\.appearance)) {
+        Section(L10n.appearance) {
+            Picker(L10n.theme, selection: binding(\.appearance)) {
                 ForEach(AppAppearancePreference.allCases) { preference in
                     Text(preference.displayName).tag(preference)
                 }
@@ -241,19 +241,19 @@ struct SettingsView: View {
     }
 
     private var aboutSection: some View {
-        Section("About") {
-            LabeledContent("Build", value: viewModel.appVersionBuildLabel)
+        Section(L10n.about) {
+            LabeledContent(L10n.build, value: viewModel.appVersionBuildLabel)
 
             if let privacyPolicyURL = viewModel.privacyPolicyURL {
-                linkRow(title: "Privacy Policy", destination: privacyPolicyURL)
+                linkRow(title: L10n.privacyPolicy, destination: privacyPolicyURL)
             }
 
             if let supportURL = viewModel.supportURL {
-                linkRow(title: "Support", destination: supportURL)
+                linkRow(title: L10n.support, destination: supportURL)
             }
 
             if let termsOfServiceURL = viewModel.termsOfServiceURL {
-                linkRow(title: "Terms of Service", destination: termsOfServiceURL)
+                linkRow(title: L10n.termsOfService, destination: termsOfServiceURL)
             }
         }
     }

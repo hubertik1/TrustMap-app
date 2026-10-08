@@ -109,7 +109,7 @@ struct PlaceCategoryChipView: View {
     let name: String
 
     var body: some View {
-        Text(name)
+        Text(DefaultCategoryCatalog.displayName(for: name))
             .font(PlaceDetailVisualSystem.Typography.chip)
             .foregroundStyle(PlaceDetailVisualSystem.Colors.secondary)
             .padding(.horizontal, 9)

@@ -17,6 +17,11 @@ enum DefaultCategoryCatalog {
         return normalized == "restaurant" || normalized == restaurantsKey
     }
 
+    /// Keep canonical/API names stable; translate only their presentation.
+    static func displayName(for rawName: String) -> String {
+        isRestaurantsName(rawName) ? L10n.restaurants : rawName
+    }
+
     static func canonicalName(for categoryID: UUID?, rawName: String?) -> String? {
         guard let trimmed = rawName?.trimmingCharacters(in: .whitespacesAndNewlines),
               !trimmed.isEmpty else {

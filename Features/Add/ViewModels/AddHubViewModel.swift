@@ -18,9 +18,9 @@ final class AddHubViewModel: ObservableObject {
         var title: String {
             switch self {
             case .placeReview:
-                return "Add Place Review"
+                return L10n.addPlaceReview
             case .dishReview:
-                return "Add Dish Review"
+                return L10n.addDishReview
             }
         }
     }
@@ -96,7 +96,7 @@ final class AddHubViewModel: ObservableObject {
     }
 
     func placeReviewActionTitle(for place: Place) -> String {
-        placeReview(for: place) == nil ? "Add Place Review" : "Edit Place Review"
+        placeReview(for: place) == nil ? L10n.addPlaceReview : L10n.editPlaceReview
     }
 
     private static func makeRecentPlaces(

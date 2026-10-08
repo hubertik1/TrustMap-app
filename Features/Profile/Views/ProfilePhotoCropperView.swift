@@ -73,13 +73,13 @@ struct ProfilePhotoCropperView: View {
             }
         }
         .alert(
-            "Unable to Use Photo",
+            L10n.unableToUsePhoto,
             isPresented: Binding(
                 get: { errorMessage != nil },
                 set: { if !$0 { onDismissError() } }
             )
         ) {
-            Button("OK", role: .cancel) {
+            Button(L10n.ok, role: .cancel) {
                 onDismissError()
             }
         } message: {
@@ -88,7 +88,7 @@ struct ProfilePhotoCropperView: View {
     }
 
     private var helperText: some View {
-        Text("Drag to reposition. Pinch to zoom.")
+        Text(L10n.dragToRepositionPinchToZoom)
             .font(.footnote)
             .foregroundStyle(.white.opacity(0.78))
             .multilineTextAlignment(.center)
@@ -97,7 +97,7 @@ struct ProfilePhotoCropperView: View {
 
     private var toolbar: some View {
         ZStack {
-            Text("Adjust Photo")
+            Text(L10n.adjustPhoto)
                 .font(.headline)
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -109,12 +109,12 @@ struct ProfilePhotoCropperView: View {
                 Button {
                     onCancel()
                 } label: {
-                    Text("Cancel")
+                    Text(L10n.cancel)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                 }
                 .disabled(isPreparingPhoto)
-                .accessibilityLabel("Cancel")
+                .accessibilityLabel(L10n.cancel)
 
                 Spacer(minLength: 8)
 
@@ -127,7 +127,7 @@ struct ProfilePhotoCropperView: View {
                                 .controlSize(.small)
                                 .tint(.white)
                         } else {
-                            Text("Use Photo")
+                            Text(L10n.usePhoto)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
                         }
@@ -135,7 +135,7 @@ struct ProfilePhotoCropperView: View {
                     .frame(minWidth: 74, alignment: .trailing)
                 }
                 .disabled(isPreparingPhoto)
-                .accessibilityLabel("Use Photo")
+                .accessibilityLabel(L10n.usePhoto)
             }
         }
         .font(.body.weight(.semibold))
@@ -167,7 +167,7 @@ struct ProfilePhotoCropperView: View {
         .frame(width: stageSize.width, height: stageSize.height)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Photo crop area")
+        .accessibilityLabel(L10n.photoCropArea)
         .clipped()
         .simultaneousGesture(dragGesture(cropFrameSize: cropFrameSize))
         .simultaneousGesture(magnifyGesture(cropFrameSize: cropFrameSize))

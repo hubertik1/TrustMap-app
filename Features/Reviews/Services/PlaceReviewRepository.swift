@@ -62,7 +62,7 @@ final class PlaceReviewRepository {
 
     func createReview(_ draft: PlaceReviewDraft) async throws -> PlaceReview {
         guard let categoryId = draft.selectedCategoryId else {
-            throw AppError.validationFailure("Choose a category for this place.")
+            throw AppError.validationFailure(L10n.chooseACategoryForThisPlace)
         }
 
         let payload = CreatePlaceReviewPayload(
@@ -89,7 +89,7 @@ final class PlaceReviewRepository {
             } catch {
                 try? await deleteReview(review)
                 throw AppError.validationFailure(
-                    "The review could not be saved because at least one photo failed to upload. Nothing was changed."
+                    L10n.theReviewCouldNotBeSavedBecauseAtLeastOnePhotoFailedToUploadNothingWasChanged
                 )
             }
 
@@ -101,7 +101,7 @@ final class PlaceReviewRepository {
 
     func updateReview(_ review: PlaceReview, with draft: PlaceReviewDraft) async throws -> PlaceReview {
         guard let categoryId = draft.selectedCategoryId else {
-            throw AppError.validationFailure("Choose a category for this place.")
+            throw AppError.validationFailure(L10n.chooseACategoryForThisPlace)
         }
 
         let payload = UpdatePlaceReviewPayload(
@@ -125,7 +125,7 @@ final class PlaceReviewRepository {
             try await deletePhotos(withIDs: draft.photoIDsToDelete)
         } catch {
             throw AppError.validationFailure(
-                "Review details were saved, but TrustMap could not finish the photo changes. Refresh the place and try again."
+                L10n.reviewDetailsWereSavedButTrustmapCouldNotFinishThePhotoChangesRefreshThePlaceAndTryAgain
             )
         }
 

@@ -10,11 +10,11 @@ enum ActivityItemType: String, Codable, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .placeReviewAdded:
-            return "Place Review"
+            return L10n.placeReview
         case .dishReviewAdded:
-            return "Dish Review"
+            return L10n.dishReview
         case .photoAdded:
-            return "Photo"
+            return L10n.photo
         }
     }
 }

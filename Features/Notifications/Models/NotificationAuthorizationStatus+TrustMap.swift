@@ -4,17 +4,17 @@ extension UNAuthorizationStatus {
     var trustMapAccessLabel: String {
         switch self {
         case .authorized:
-            return "On"
+            return L10n.on
         case .provisional:
-            return "Quiet"
+            return L10n.quiet
         case .ephemeral:
-            return "Temporary"
+            return L10n.temporary
         case .denied:
-            return "Off"
+            return L10n.off
         case .notDetermined:
-            return "Not Requested"
+            return L10n.notRequested
         @unknown default:
-            return "Off"
+            return L10n.off
         }
     }
 

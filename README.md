@@ -232,3 +232,47 @@ xcuserdata/
 ```
 
 Do not commit signing assets, provisioning profiles, private keys or local environment overrides.
+
+## Localization
+
+TrustMap supports English (`en`, the source and fallback language), Polish (`pl`),
+German (`de`), Spanish (`es`), French (`fr`), Italian (`it`), Portuguese (`pt`), and
+Ukrainian (`uk`). iOS selects the best supported language from the user's language
+preferences; it also exposes the app's language setting in system Settings.
+
+- `Resources/Localizable.xcstrings` owns app copy, stable keys, translations, and
+  native plural rules, including Polish and Ukrainian `one/few/many/other` forms.
+- `Core/Localization/L10n.swift` provides the typed Swift interface used by views,
+  models, validation, accessibility labels, and error messages.
+- `Resources/InfoPlist.xcstrings` translates camera and location permission prompts
+  for both Local and Prod. The base Info.plist files retain English fallback text.
+- The welcome map preview uses SwiftUI/MapKit with localized sample copy rather
+  than a screenshot with English text baked into its pixels.
+- System controls (including Sign in with Apple), relative dates, numbers, and
+  currency formatting use the system's locale support.
+- User-generated reviews, place names, usernames, and custom category names are
+  retained. The built-in Restaurants category is translated for display while
+  its canonical API name and ID remain stable.
+- Known server error messages are translated for display using the catalog's
+  English entries. Raw associated error values stay unchanged for error handling.
+  New, unknown server messages retain their original text until added to the catalog.
+
+When adding copy, create a stable catalog key, provide every supported translation,
+and add a corresponding `L10n` property or function. Use a native plural variation
+for count-dependent nouns; pass complete sentences with arguments rather than
+concatenating translated fragments. Technical API identifiers are not localization
+keys. Keep localized text out of stored data and request payloads.
+
+Validate catalog coverage and formatting arguments with:
+
+```bash
+python3 scripts/validate_localizations.py
+swift test
+```
+
+`LocalizationTests` checks that every entry is packaged in every language, checks
+navigation translations, and exercises compiled Foundation plural rules with
+counts such as 1, 2, 5, 12, and 22. For visual QA, set a scheme's Application Language
+and run on an iPhone/iPad simulator; verify navigation, form labels, VoiceOver,
+empty states, and permission dialogs. Both the existing project and project
+regeneration script include the catalogs and all eight development regions.

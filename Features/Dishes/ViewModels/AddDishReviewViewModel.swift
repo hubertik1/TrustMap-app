@@ -10,9 +10,9 @@ final class AddDishReviewViewModel: ObservableObject {
         var errorTitle: String {
             switch self {
             case .save:
-                return "Unable to Save Dish Review"
+                return L10n.unableToSaveDishReview
             case .delete:
-                return "Unable to Delete Dish Review"
+                return L10n.unableToDeleteDishReview
             }
         }
     }
@@ -73,7 +73,7 @@ final class AddDishReviewViewModel: ObservableObject {
     }
 
     var navigationTitle: String {
-        isEditing ? "Edit Dish Review" : "Add Dish Review"
+        isEditing ? L10n.editDishReview : L10n.addDishReview
     }
 
     var selectedPhotoData: Data? {
@@ -122,7 +122,7 @@ final class AddDishReviewViewModel: ObservableObject {
     }
 
     func showPhotoPreparationFailure() {
-        errorMessage = AppError.validationFailure("The selected photo couldn't be prepared.").errorDescription
+        errorMessage = AppError.validationFailure(L10n.theSelectedPhotoCouldnTBePrepared).errorDescription
     }
 
     func removeSelectedPhoto() {
@@ -144,17 +144,17 @@ final class AddDishReviewViewModel: ObservableObject {
     func save() async {
         let trimmedDishName = dishName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedDishName.isEmpty else {
-            errorMessage = AppError.validationFailure("Enter a dish name.").errorDescription
+            errorMessage = AppError.validationFailure(L10n.enterADishName).errorDescription
             return
         }
 
         guard dishRating > 0 else {
-            errorMessage = AppError.validationFailure("Choose a rating.").errorDescription
+            errorMessage = AppError.validationFailure(L10n.chooseARating).errorDescription
             return
         }
 
         guard let selectedCategoryId else {
-            errorMessage = AppError.validationFailure("Choose an active category.").errorDescription
+            errorMessage = AppError.validationFailure(L10n.chooseAnActiveCategory).errorDescription
             return
         }
 
@@ -216,7 +216,7 @@ final class AddDishReviewViewModel: ObservableObject {
 
         do {
             guard let reviewID = existingReview?.id else {
-                throw AppError.validationFailure("No editable dish review exists for this place.")
+                throw AppError.validationFailure(L10n.noEditableDishReviewExistsForThisPlace)
             }
 
             let review = try await dishReviewRepository.fetchReview(id: reviewID)
