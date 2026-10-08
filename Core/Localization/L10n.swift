@@ -135,6 +135,7 @@ enum L10n {
     static var privacyPolicy: String { text("ui.privacy_policy") }
 
     static var support: String { text("ui.support") }
+    static var contactSupport: String { text("ui.contact_support") }
 
     static var signingIn: String { text("ui.signing_in") }
 

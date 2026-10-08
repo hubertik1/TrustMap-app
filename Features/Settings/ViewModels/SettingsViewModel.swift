@@ -177,6 +177,10 @@ final class SettingsViewModel: ObservableObject {
         AppConfiguration.supportURL
     }
 
+    var supportEmailURL: URL? {
+        AppConfiguration.supportEmailURL
+    }
+
     var termsOfServiceURL: URL? {
         AppConfiguration.termsOfServiceURL
     }
