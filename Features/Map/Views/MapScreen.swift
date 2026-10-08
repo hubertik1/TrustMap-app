@@ -8,6 +8,7 @@ struct MapScreen: View {
     @StateObject private var viewModel: MapScreenViewModel
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var mapSelection: MapSelection<UUID>?
+    @State private var isPhoneSearchPresented = false
     @Environment(\.openURL) private var openURL
 
     init(container: AppContainer) {
@@ -34,6 +35,21 @@ struct MapScreen: View {
                 Map(position: $cameraPosition, selection: $mapSelection) {
                     UserAnnotation()
 
+                    if let searchResult = viewModel.searchResultMarker {
+                        if let mapItem = searchResult.mapItem {
+                            Marker(item: mapItem)
+                                .annotationTitles(.visible)
+                        } else {
+                            Marker(
+                                searchResult.place.displayName,
+                                systemImage: "mappin",
+                                coordinate: searchResult.coordinate
+                            )
+                            .tint(Color.accentColor)
+                            .annotationTitles(.visible)
+                        }
+                    }
+
                     if let droppedPinPlace = viewModel.droppedPinPlace {
                         Annotation(L10n.droppedPin, coordinate: droppedPinPlace.coordinate, anchor: .bottom) {
                             Image(systemName: "mappin.circle.fill")
@@ -44,7 +60,9 @@ struct MapScreen: View {
                     }
 
                     ForEach(viewModel.annotations) { annotation in
-                        mapAnnotationView(for: annotation)
+                        if annotation.place.id != viewModel.searchResultMarker?.id {
+                            mapAnnotationView(for: annotation)
+                        }
                     }
                 }
                 .mapStyle(mapStyle)
@@ -53,7 +71,8 @@ struct MapScreen: View {
                 }
                 .onChange(of: mapSelection) { _, selection in
                     guard let selection else {
-                        viewModel.dismissPrompt()
+                        // MapKit can clear its selection while the map is moving.
+                        // Dismiss our place card only after an explicit map tap.
                         return
                     }
 
@@ -80,18 +99,22 @@ struct MapScreen: View {
                     viewModel.clearRequestedCameraRegion()
                 }
                 .simultaneousGesture(longPressGesture(proxy: proxy))
+                .simultaneousGesture(
+                    mapDismissGesture,
+                    including: isPlaceSelectionPresented ? .all : .subviews
+                )
                 // Keep the map behind the floating phone navigation and search controls.
                 .ignoresSafeArea(edges: TrustMapPlatform.isMacCatalyst ? .bottom : .all)
 
-                if MapStatusOverlayVisibility.shouldShowFullScreenLoading(
+                if !isPlaceSelectionPresented && MapStatusOverlayVisibility.shouldShowFullScreenLoading(
                     isLoading: viewModel.isLoading,
-                    hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleAnnotationsInCurrentViewport
+                    hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleMapContentInCurrentViewport
                 ) {
                     LoadingStateView(title: L10n.loadingYourMap)
                         .background(.thinMaterial)
-                } else if MapStatusOverlayVisibility.shouldShowFullScreenError(
+                } else if !isPlaceSelectionPresented && MapStatusOverlayVisibility.shouldShowFullScreenError(
                     errorMessage: viewModel.errorMessage,
-                    hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleAnnotationsInCurrentViewport
+                    hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleMapContentInCurrentViewport
                 ), let errorMessage = viewModel.errorMessage {
                     ErrorStateView(message: errorMessage) {
                         Task { await viewModel.load() }
@@ -119,13 +142,6 @@ struct MapScreen: View {
                 }
 
                 if let promptContext = viewModel.promptContext {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            clearMapSelection()
-                        }
-
                     Group {
                         if TrustMapPlatform.isMacCatalyst {
                             HStack {
@@ -164,7 +180,10 @@ struct MapScreen: View {
         }
         .navigationTitle(L10n.map)
         .navigationBarTitleDisplayMode(.inline)
-        .modifier(PhoneMapSearchModifier(searchText: $viewModel.searchText))
+        .modifier(PhoneMapSearchModifier(
+            searchText: $viewModel.searchText,
+            isPresented: $isPhoneSearchPresented
+        ))
         .onChange(of: viewModel.searchText) { _, _ in
             viewModel.handleSearchTextChange()
         }
@@ -263,6 +282,8 @@ struct MapScreen: View {
             LazyVStack(spacing: 8) {
                 ForEach(viewModel.searchResults) { result in
                     Button {
+                        isPhoneSearchPresented = false
+                        clearMapSelection()
                         Task { await viewModel.selectSearchResult(result) }
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
@@ -366,14 +387,14 @@ struct MapScreen: View {
 
     private var shouldShowMapStatusOverlay: Bool {
         MapStatusOverlayVisibility.shouldShowStatusOverlay(
-            isPromptPresented: viewModel.promptContext != nil,
+            isPromptPresented: viewModel.promptContext != nil || viewModel.searchResultMarker != nil,
             isDroppedPinPresented: viewModel.droppedPinPlace != nil,
             hasSearchResults: !viewModel.searchResults.isEmpty,
             searchText: viewModel.searchText,
             errorMessage: viewModel.errorMessage,
             hasLoadedMapPlaces: viewModel.hasLoadedMapPlaces,
             isLoading: viewModel.isLoading,
-            hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleAnnotationsInCurrentViewport
+            hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleMapContentInCurrentViewport
         )
     }
 
@@ -381,7 +402,7 @@ struct MapScreen: View {
     private var mapStatusOverlay: some View {
         if MapStatusOverlayVisibility.shouldShowRefreshErrorBanner(
             errorMessage: viewModel.errorMessage,
-            hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleAnnotationsInCurrentViewport
+            hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleMapContentInCurrentViewport
         ), let errorMessage = viewModel.errorMessage {
             InlineErrorBanner(title: L10n.couldnTRefreshMap, message: errorMessage) {
                 Task { await viewModel.load() }
@@ -405,6 +426,23 @@ struct MapScreen: View {
     private func clearMapSelection() {
         mapSelection = nil
         viewModel.dismissPrompt()
+    }
+
+    private var isPlaceSelectionPresented: Bool {
+        viewModel.promptContext != nil
+            || viewModel.searchResultMarker != nil
+            || viewModel.droppedPinPlace != nil
+            || viewModel.selectedAnnotationID != nil
+    }
+
+    private var mapDismissGesture: some Gesture {
+        // Let MapKit handle pan, pinch, and double-tap zoom alongside this gesture.
+        TapGesture(count: 2)
+            .exclusively(before: TapGesture(count: 1))
+            .onEnded { value in
+                guard case .second = value, isPlaceSelectionPresented else { return }
+                clearMapSelection()
+            }
     }
 
     private var promptBottomInset: CGFloat {
@@ -590,6 +628,7 @@ struct MapScreen: View {
 
 private struct PhoneMapSearchModifier: ViewModifier {
     @Binding var searchText: String
+    @Binding var isPresented: Bool
 
     func body(content: Content) -> some View {
         if TrustMapPlatform.isMacCatalyst {
@@ -598,6 +637,7 @@ private struct PhoneMapSearchModifier: ViewModifier {
             content
                 .searchable(
                     text: $searchText,
+                    isPresented: $isPresented,
                     placement: .navigationBarDrawer(displayMode: .always),
                     prompt: L10n.searchPlaces
                 )

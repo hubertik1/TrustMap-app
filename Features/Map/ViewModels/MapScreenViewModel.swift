@@ -8,6 +8,7 @@ final class MapScreenViewModel: ObservableObject {
     struct PromptContext: Identifiable {
         let place: Place
         let coordinate: CLLocationCoordinate2D
+        let mapItem: MKMapItem?
 
         var id: UUID {
             place.id
@@ -25,6 +26,7 @@ final class MapScreenViewModel: ObservableObject {
     @Published var selectedPlace: Place?
     @Published var selectedAnnotationID: UUID?
     @Published var promptContext: PromptContext?
+    @Published private(set) var searchResultMarker: PromptContext?
     @Published var droppedPinPlace: Place?
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -37,6 +39,17 @@ final class MapScreenViewModel: ObservableObject {
 
     var hasActiveFilters: Bool {
         filterState != .defaultState
+    }
+
+    var hasVisibleMapContentInCurrentViewport: Bool {
+        if hasVisibleAnnotationsInCurrentViewport {
+            return true
+        }
+
+        guard let region else { return false }
+        let bounds = mapBounds(from: region)
+        return searchResultMarker.map { bounds.contains($0.coordinate) } == true
+            || droppedPinPlace.map { bounds.contains($0.coordinate) } == true
     }
 
     private let logger = Logger(subsystem: "TrustMap", category: "MapScreenViewModel")
@@ -190,23 +203,27 @@ final class MapScreenViewModel: ObservableObject {
     func selectSearchResult(_ result: PlaceSearchResult) async {
         do {
             let resolvedResult = try await mapSearchService.resolve(result, region: region)
+            guard let coordinate = resolvedResult.coordinate else {
+                throw AppError.invalidPlaceSelection
+            }
             let place = try await placeRepository.createOrGetPlace(from: resolvedResult)
+            searchTask?.cancel()
             searchResults = []
             searchText = ""
             let searchRegion = MKCoordinateRegion(
-                center: resolvedResult.coordinate ?? region?.center ?? CLLocationCoordinate2D(latitude: 52.2297, longitude: 21.0122),
+                center: coordinate,
                 span: Self.defaultSpan
             )
             region = searchRegion
-            requestedCameraRegion = searchRegion
-            requestedCameraRegionToken = UUID()
             droppedPinPlace = nil
             startPromptFlow(
                 for: place,
-                coordinate: searchRegion.center,
-                selectedAnnotationID: nil
+                coordinate: coordinate,
+                selectedAnnotationID: nil,
+                showsSearchResultMarker: true,
+                mapItem: resolvedResult.mapItem
             )
-            await loadPinsIfNeeded(for: searchRegion, debounce: false)
+            await loadPinsIfNeeded(for: region ?? searchRegion, debounce: false)
         } catch {
             errorMessage = AppError.wrap(error).errorDescription
         }
@@ -447,12 +464,16 @@ final class MapScreenViewModel: ObservableObject {
     }
 
     private func searchForSuggestions(reportErrors: Bool) async {
+        let query = searchText
         do {
-            searchResults = try await mapSearchService.search(query: searchText, region: region)
+            let results = try await mapSearchService.search(query: query, region: region)
+            guard !Task.isCancelled, searchText == query else { return }
+            searchResults = results
             if reportErrors {
                 errorMessage = nil
             }
         } catch {
+            guard !Task.isCancelled, searchText == query else { return }
             if reportErrors {
                 errorMessage = AppError.wrap(error).errorDescription
             }
@@ -493,12 +514,19 @@ final class MapScreenViewModel: ObservableObject {
         MapBoundsCoverage.shouldFetchPins(for: viewportBounds, loadedBounds: loadedBounds)
     }
 
-    private func startPromptFlow(for place: Place, coordinate: CLLocationCoordinate2D, selectedAnnotationID: UUID?) {
+    private func startPromptFlow(
+        for place: Place,
+        coordinate: CLLocationCoordinate2D,
+        selectedAnnotationID: UUID?,
+        showsSearchResultMarker: Bool = false,
+        mapItem: MKMapItem? = nil
+    ) {
         promptPresentationTask?.cancel()
         promptPresentationTask = nil
 
-        let context = PromptContext(place: place, coordinate: coordinate)
+        let context = PromptContext(place: place, coordinate: coordinate, mapItem: mapItem)
 
+        searchResultMarker = showsSearchResultMarker ? context : nil
         self.selectedAnnotationID = selectedAnnotationID
         promptContext = nil
 
@@ -521,7 +549,7 @@ final class MapScreenViewModel: ObservableObject {
         promptPresentationTask?.cancel()
         promptPresentationTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(delayMilliseconds))
-            guard let self else {
+            guard !Task.isCancelled, let self else {
                 return
             }
 
@@ -534,6 +562,7 @@ final class MapScreenViewModel: ObservableObject {
         promptPresentationTask?.cancel()
         promptPresentationTask = nil
         promptContext = nil
+        searchResultMarker = nil
         selectedAnnotationID = nil
         droppedPinPlace = nil
 
