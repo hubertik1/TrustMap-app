@@ -252,10 +252,6 @@ struct SettingsView: View {
                 linkRow(title: L10n.support, destination: supportURL)
             }
 
-            if let supportEmailURL = viewModel.supportEmailURL {
-                linkRow(title: L10n.contactSupport, destination: supportEmailURL)
-            }
-
             if let termsOfServiceURL = viewModel.termsOfServiceURL {
                 linkRow(title: L10n.termsOfService, destination: termsOfServiceURL)
             }

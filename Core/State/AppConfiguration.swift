@@ -25,10 +25,6 @@ enum AppConfiguration {
     static let preferredHandleMaxLength = 32
     static let privacyPolicyInfoKey = "TrustMapPrivacyPolicyURL"
     static let supportInfoKey = "TrustMapSupportURL"
-    static let supportEmail = "support@trustmap.hubertik.com"
-    static var supportEmailURL: URL? {
-        URL(string: "mailto:\(supportEmail)")
-    }
     static let termsOfServiceInfoKey = "TrustMapTermsOfServiceURL"
     static let environmentInfoKey = "TrustMapEnvironmentName"
     static let apiBaseURLInfoKey = "TrustMapAPIBaseURL"
