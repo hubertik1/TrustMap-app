@@ -78,6 +78,7 @@
 		6ADE9DDB194AC0A944CD8EA1 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E040639FA0CE5A6D64DA1F1 /* AppDelegate.swift */; };
 		6C4E658E67D237658388DC6D /* PlaceSummaryHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6664D1B50BCDD2447FE955A8 /* PlaceSummaryHeaderView.swift */; };
 		6CDA098C10697545BF500C6A /* WelcomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D7562332EFF5E8023801350 /* WelcomeViewModel.swift */; };
+		6F194146FD3332C1FEAB90B2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7DC3DA18D5326A895B5A152B /* PrivacyInfo.xcprivacy */; };
 		70D50876F1D02B4146B997BC /* PlaceSearchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E302A2A6BC79FA0AFBCBB98E /* PlaceSearchSheet.swift */; };
 		71BF9B136056BBD4C60683AA /* PlacesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E724FCB826A62E866E85767 /* PlacesView.swift */; };
 		72CD72A51015AE90847B9D2C /* TrustMapApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 677957693B0ACBE50E25F662 /* TrustMapApp.swift */; };
@@ -219,6 +220,7 @@
 		76ACB40BA5CB0E53CCBA308B /* MapScreenViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MapScreenViewModel.swift; path = Features/Map/ViewModels/MapScreenViewModel.swift; sourceTree = "<group>"; };
 		79B8EBD15E3E79FB5AF19E98 /* PhotoGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PhotoGridView.swift; path = Shared/Components/PhotoGridView.swift; sourceTree = "<group>"; };
 		7D930C40E133F4A03992CDB1 /* SafetyRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SafetyRepository.swift; path = Features/Safety/Services/SafetyRepository.swift; sourceTree = SOURCE_ROOT; };
+		7DC3DA18D5326A895B5A152B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Resources/PrivacyInfo.xcprivacy; sourceTree = SOURCE_ROOT; };
 		7E9E54DCC305609C15E98E46 /* ProfileView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProfileView.swift; path = Features/Profile/Views/ProfileView.swift; sourceTree = "<group>"; };
 		7F0FE5DDB6C6E4A16DF19C36 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; includeInIndex = 1; name = InfoPlist.xcstrings; path = Resources/InfoPlist.xcstrings; sourceTree = "<group>"; };
 		7F431F7AFF42860F773EF141 /* PlaceSearchViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlaceSearchViewModel.swift; path = Features/Places/ViewModels/PlaceSearchViewModel.swift; sourceTree = "<group>"; };
@@ -470,6 +472,7 @@
 				FFAF6CC6EC9845B638D3D5E3 /* TrustMap.entitlements */,
 				0BC2189372BE785CB459CFE0 /* Localizable.xcstrings */,
 				7F0FE5DDB6C6E4A16DF19C36 /* InfoPlist.xcstrings */,
+				7DC3DA18D5326A895B5A152B /* PrivacyInfo.xcprivacy */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -1193,6 +1196,7 @@
 				566657C65FCEB068B2939CF5 /* Preview Assets.xcassets in Resources */,
 				EC686F8F475B6A0815F303C4 /* Localizable.xcstrings in Resources */,
 				7B972D143DB126D2E4918BA6 /* InfoPlist.xcstrings in Resources */,
+				6F194146FD3332C1FEAB90B2 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

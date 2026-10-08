@@ -83,6 +83,8 @@ The app's deployment target is configured in `Config/Base.xcconfig`.
 
 ## Public Website Links
 
+`Resources/PrivacyInfo.xcprivacy` is bundled with the shared app target in Local and Prod, including Mac Catalyst. It declares `UserDefaults` under required-reason API code `CA92.1` for app-owned preferences and sign-in state. App Store Connect data-collection disclosures must still reflect the app and backend; this API declaration does not replace them.
+
 Settings > About also includes Contact support, which opens an email to `support@trustmap.hubertik.com`.
 
 Both build schemes include the Privacy Policy (`https://trustmap.hubertik.com/privacy`) and Support (`https://trustmap.hubertik.com/support`) links from `Config/Base.xcconfig`, expanded into their Info.plist files. They appear below Sign in with Apple and in Settings > About. Runtime overrides are available through `TRUSTMAP_PRIVACY_POLICY_URL` and `TRUSTMAP_SUPPORT_URL`.
