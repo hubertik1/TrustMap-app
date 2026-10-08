@@ -1086,5 +1086,7 @@ enum L10n {
     }
 
     static var welcomeExampleReview: String { text("welcome.example_review") }
+    static var welcomeAverageRating: String { text("welcome.average_rating") }
+    static var welcomePreviewDescription: String { text("welcome.preview_description") }
     static func trustedByFriends(_ count: Int) -> String { format("welcome.trusted_by_friends", count) }
 }

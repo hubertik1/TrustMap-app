@@ -28,33 +28,45 @@ struct WelcomeView: View {
 
     private var phoneBody: some View {
         NavigationStack {
-            ZStack {
-                WelcomeBackgroundView(theme: theme)
+            GeometryReader { geometry in
+                let compact = geometry.size.height < 700
+                VStack(spacing: compact ? 12 : 18) {
+                    WelcomeBrandHeader(theme: theme, compact: compact)
 
-                GeometryReader { geometry in
-                    ViewThatFits(in: .vertical) {
-                        welcomeContent(allowsFlexibleSpacing: true)
-                            .frame(
-                                width: geometry.size.width,
-                                height: geometry.size.height,
-                                alignment: .top
-                            )
+                    heroSection(compact: compact)
 
-                        ScrollView(showsIndicators: false) {
-                            welcomeContent(allowsFlexibleSpacing: false)
-                                .frame(maxWidth: .infinity, alignment: .top)
-                        }
+                    GeometryReader { previewGeometry in
+                        let artworkSize = max(0, min(
+                            previewGeometry.size.width,
+                            previewGeometry.size.height,
+                            420
+                        ))
+                        WelcomePreviewCard(theme: theme)
+                            .environment(\.dynamicTypeSize, .medium)
+                            .frame(width: 340, height: 340)
+                            .scaleEffect(artworkSize / 340)
+                            .frame(width: previewGeometry.size.width, height: previewGeometry.size.height)
                     }
+                    .frame(minHeight: 0)
+
+                    WelcomeCTASection(
+                        theme: theme,
+                        isSigningIn: viewModel.isSigningIn,
+                        isPreviewEnvironment: AppConfiguration.isRunningPreviews,
+                        horizontalPadding: 0,
+                        topPadding: 0,
+                        bottomPadding: 4,
+                        configureRequest: viewModel.configure(_:),
+                        handleCompletion: viewModel.handleSignInCompletion(_:)
+                    )
                 }
+                .padding(.horizontal, WelcomeLayout.horizontalContentPadding)
+                .padding(.top, compact ? 8 : 16)
+                .frame(maxWidth: 480)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .safeAreaInset(edge: .bottom) {
-                WelcomeCTASection(
-                    theme: theme,
-                    isSigningIn: viewModel.isSigningIn,
-                    isPreviewEnvironment: AppConfiguration.isRunningPreviews,
-                    configureRequest: viewModel.configure(_:),
-                    handleCompletion: viewModel.handleSignInCompletion(_:)
-                )
+            .background {
+                WelcomeBackgroundView(theme: theme)
             }
             .toolbar(.hidden, for: .navigationBar)
         }
@@ -93,44 +105,20 @@ struct WelcomeView: View {
         }
     }
 
-    @ViewBuilder
-    private func welcomeContent(allowsFlexibleSpacing: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            WelcomeBrandHeader(theme: theme)
-
-            heroSection
-                .padding(.top, 22)
-
-            if allowsFlexibleSpacing {
-                Spacer(minLength: 24)
-            } else {
-                WelcomePreviewCard(theme: theme)
-                    .padding(.top, 28)
-            }
-
-            if allowsFlexibleSpacing {
-                WelcomePreviewCard(theme: theme)
-            }
-        }
-        .padding(.horizontal, WelcomeLayout.horizontalContentPadding)
-        .padding(.top, 16)
-        .padding(.bottom, allowsFlexibleSpacing ? 16 : 32)
-    }
-
-    private var heroSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private func heroSection(compact: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: compact ? 8 : 14) {
             Text(L10n.keepThePlacesYourPeopleTrustAllInOneMap)
                 .foregroundStyle(.primary)
-            .font(.system(size: 27, weight: .bold, design: .rounded))
-            .tracking(-0.15)
-            .lineSpacing(3)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityLabel(L10n.keepThePlacesYourPeopleTrustAllInOneMap)
+                .font(.system(size: compact ? 23 : 27, weight: .bold, design: .rounded))
+                .tracking(-0.15)
+                .lineSpacing(compact ? 1 : 3)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel(L10n.keepThePlacesYourPeopleTrustAllInOneMap)
 
             Text(L10n.saveFavoriteSpotsCompareNotesAndRevisitTrustedPicksFromYourFriends)
-                .font(.system(size: 16))
+                .font(.system(size: compact ? 14 : 16))
                 .foregroundStyle(.secondary)
-                .lineSpacing(3)
+                .lineSpacing(compact ? 1 : 3)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -139,7 +127,7 @@ struct WelcomeView: View {
         VStack(alignment: .leading, spacing: 30) {
             WelcomeBrandHeader(theme: theme)
 
-            heroSection
+            heroSection()
                 .frame(maxWidth: 460, alignment: .leading)
 
             WelcomeCTASection(
@@ -157,6 +145,7 @@ struct WelcomeView: View {
 
 private struct WelcomeBrandHeader: View {
     let theme: WelcomeTheme
+    var compact = false
 
     var body: some View {
         HStack(spacing: 14) {
@@ -164,7 +153,7 @@ private struct WelcomeBrandHeader: View {
                 .resizable()
                 .interpolation(.high)
                 .scaledToFill()
-                .frame(width: 62, height: 62)
+                .frame(width: compact ? 50 : 62, height: compact ? 50 : 62)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -180,6 +169,7 @@ private struct WelcomeBrandHeader: View {
                 Text(L10n.privateRecommendationsFromTrustedFriends)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer()
@@ -191,28 +181,16 @@ private struct WelcomePreviewCard: View {
     let theme: WelcomeTheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            WelcomeMapPreview()
-                .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(theme.imageStroke, lineWidth: 1)
-                }
-                .frame(maxWidth: .infinity)
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(theme.cardFill)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .stroke(theme.cardStroke, lineWidth: 1)
-        }
-        .shadow(color: theme.cardShadow, radius: theme.cardShadowRadius, y: 16)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(L10n.previewOfTheRealTrustmapProductShowingTheWelcomeMapScreen)
+        WelcomeMapPreview()
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .strokeBorder(theme.cardStroke, lineWidth: 3)
+            }
+            .shadow(color: theme.cardShadow, radius: theme.cardShadowRadius, y: 16)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L10n.welcomePreviewDescription)
     }
 }
 
@@ -221,6 +199,8 @@ private struct WelcomeCTASection: View {
     let isSigningIn: Bool
     let isPreviewEnvironment: Bool
     var horizontalPadding = WelcomeLayout.horizontalContentPadding
+    var topPadding: CGFloat = 38
+    var bottomPadding: CGFloat = 20
     let configureRequest: (ASAuthorizationAppleIDRequest) -> Void
     let handleCompletion: (Result<ASAuthorization, any Error>) async -> Void
 
@@ -234,6 +214,8 @@ private struct WelcomeCTASection: View {
                 }
             }
             .signInWithAppleButtonStyle(theme.appleButtonStyle)
+            // Recreate the native button when the scheme changes so its style refreshes.
+            .id(theme.colorScheme)
             .frame(height: 56)
             .disabled(isSigningIn || isPreviewEnvironment)
 
@@ -267,8 +249,8 @@ private struct WelcomeCTASection: View {
             }
         }
         .padding(.horizontal, horizontalPadding)
-        .padding(.top, 38)
-        .padding(.bottom, 20)
+        .padding(.top, topPadding)
+        .padding(.bottom, bottomPadding)
     }
 }
 
@@ -334,16 +316,11 @@ private struct WelcomeTheme {
             : Color.white.opacity(0.34)
     }
 
-    var cardFill: Color {
-        isDark
-            ? Color(red: 0.09, green: 0.11, blue: 0.15).opacity(0.84)
-            : Color.white.opacity(0.78)
-    }
-
     var cardStroke: Color {
+        // TrustMap website brand purple (#352A85), lifted for dark backgrounds.
         isDark
-            ? Color.white.opacity(0.08)
-            : Color.black.opacity(0.07)
+            ? Color(red: 0.56, green: 0.50, blue: 0.88)
+            : Color(red: 53 / 255, green: 42 / 255, blue: 133 / 255)
     }
 
     var cardShadow: Color {
@@ -368,12 +345,6 @@ private struct WelcomeTheme {
         isDark
             ? Color(red: 0.77, green: 0.78, blue: 1.0)
             : Color(red: 0.24, green: 0.28, blue: 0.62)
-    }
-
-    var imageStroke: Color {
-        isDark
-            ? Color.white.opacity(0.08)
-            : Color.black.opacity(0.05)
     }
 
     var appleButtonStyle: SignInWithAppleButton.Style {

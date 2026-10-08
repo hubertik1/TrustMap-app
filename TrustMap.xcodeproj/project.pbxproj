@@ -135,6 +135,7 @@
 		D7D48337DF108FAC74B3E791 /* FriendRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BB81976BAA7CC5AA6C5B9E5 /* FriendRepository.swift */; };
 		DA7C31A0CD1F6CE6EDD736D9 /* StableIdentifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4421ED27FF34D177E1BD6F2 /* StableIdentifier.swift */; };
 		DC92504EAFF1BD89E1B804BC /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C32929E995BE38A94E1EED09 /* FeedViewModel.swift */; };
+		DE3AFF131192A977614FEAD1 /* WelcomeDemoPlaceCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 173ECAD78A5BE30B2EE49538 /* WelcomeDemoPlaceCard.swift */; };
 		DF1A4A1A3D5DE8E1A5878BDF /* PlaceListRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB25508C0403A427317BD821 /* PlaceListRowView.swift */; };
 		DFB398E07B5F86DBFBFF9826 /* AppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36FA4345608D1B3C00A7E6B /* AppError.swift */; };
 		DFD528B895E4970BF4FBB0DA /* ProfileHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08FF58FC03E9ECBE9667E9BD /* ProfileHeroCard.swift */; };
@@ -169,6 +170,7 @@
 		10A1FEE9B03E5F22D9C16D5B /* Preview Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; name = "Preview Assets.xcassets"; path = "Resources/Preview Content/Preview Assets.xcassets"; sourceTree = "<group>"; };
 		128AD2176043C753743EF0A0 /* UserReviewsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UserReviewsView.swift; path = Features/Profile/Views/UserReviewsView.swift; sourceTree = "<group>"; };
 		1408D797D96331C017BBD31F /* AppleAuthenticationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppleAuthenticationService.swift; path = Features/Auth/Services/AppleAuthenticationService.swift; sourceTree = "<group>"; };
+		173ECAD78A5BE30B2EE49538 /* WelcomeDemoPlaceCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WelcomeDemoPlaceCard.swift; path = Features/Auth/Views/WelcomeDemoPlaceCard.swift; sourceTree = "<group>"; };
 		17753C16478EA4B286BE4DE7 /* AddPlaceReviewViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AddPlaceReviewViewModel.swift; path = Features/Reviews/ViewModels/AddPlaceReviewViewModel.swift; sourceTree = "<group>"; };
 		18295547CFD3347955E3AC7D /* RemotePhotoView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RemotePhotoView.swift; path = Shared/Components/RemotePhotoView.swift; sourceTree = "<group>"; };
 		1F20FA988765850232C213D8 /* Prod.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Prod.xcconfig; path = Config/Prod.xcconfig; sourceTree = "<group>"; };
@@ -894,6 +896,7 @@
 			children = (
 				86AE56033B9FDBD8812640B4 /* WelcomeView.swift */,
 				5BCA166E6DB97AE2FB83CF6C /* WelcomeMapPreview.swift */,
+				173ECAD78A5BE30B2EE49538 /* WelcomeDemoPlaceCard.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -1348,6 +1351,7 @@
 				B5745AF2A0859F1ADD3164D7 /* L10n.swift in Sources */,
 				F23BFFEC4AA0BCA6332FDFA0 /* WelcomeMapPreview.swift in Sources */,
 				CABAFDBEFF4E1E7DA7308268 /* DishReviewCurrency.swift in Sources */,
+				DE3AFF131192A977614FEAD1 /* WelcomeDemoPlaceCard.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

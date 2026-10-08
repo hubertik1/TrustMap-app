@@ -1,100 +1,60 @@
-import MapKit
 import SwiftUI
 
-/// An illustrative map rendered with real UI text so it follows the app language.
+/// Fictional onboarding artwork; labels remain native and follow the app language.
 struct WelcomeMapPreview: View {
-    private static let region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 37.7593, longitude: -122.4128),
-        span: MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006)
-    )
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        Map(initialPosition: .region(Self.region), interactionModes: []) {
-            Annotation("Caffè Aurora", coordinate: CLLocationCoordinate2D(latitude: 37.7606, longitude: -122.4119)) {
-                ratingPin(4, color: .green)
+        Image("WelcomeScreenMap")
+            .resizable()
+            .aspectRatio(1, contentMode: .fit)
+            .overlay {
+                Color.black.opacity(colorScheme == .dark ? 0.12 : 0)
             }
-            Annotation("Bistro Verde", coordinate: CLLocationCoordinate2D(latitude: 37.7596, longitude: -122.4146)) {
-                ratingPin(5, color: .orange)
-            }
-        }
-        .mapStyle(.standard(pointsOfInterest: .excludingAll, showsTraffic: false))
-        .mapControls {}
-        .allowsHitTesting(false)
-        .aspectRatio(1, contentMode: .fit)
-        .overlay(alignment: .bottom) {
-            exampleReview
-                .padding(12)
-        }
-        .accessibilityHidden(true)
-    }
+            .overlay {
+                GeometryReader { geometry in
+                    ZStack {
+                        ratingPin(4.0)
+                            .position(x: geometry.size.width * 0.18, y: geometry.size.height * 0.18)
 
-    private func ratingPin(_ rating: Int, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "fork.knife")
-            Text(RatingDisplayFormatter.rating(rating))
-        }
-        .font(.caption.weight(.bold))
-        .foregroundStyle(.white)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 7)
-        .background(color, in: Capsule())
-        .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
-    }
-
-    private var exampleReview: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(.green.opacity(0.65))
-                    .frame(width: 36, height: 36)
-                    .overlay {
-                        Text("N")
-                            .font(.headline)
-                            .foregroundStyle(.white)
+                        VStack(spacing: 5) {
+                            ratingPin(4.5)
+                            Text(verbatim: "Sunday Table")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 4)
+                                .background(.regularMaterial, in: Capsule())
+                        }
+                        .position(x: geometry.size.width * 0.58, y: geometry.size.height * 0.24)
                     }
-                Text("Caffè Aurora")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-            }
-
-            Text(L10n.welcomeExampleReview)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Divider()
-
-            HStack(spacing: 8) {
-                Text(L10n.trustedByFriends(3))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Spacer(minLength: 0)
-
-                HStack(spacing: -4) {
-                    exampleAvatar("AL", color: .orange)
-                    exampleAvatar("NC", color: .mint)
-                    exampleAvatar("ME", color: .blue)
                 }
             }
-        }
-        .padding(12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
+            .overlay(alignment: .bottom) {
+                WelcomeDemoPlaceCard()
+                    .padding(12)
+            }
+            .allowsHitTesting(false)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityHidden(true)
     }
 
-    private func exampleAvatar(_ initials: String, color: Color) -> some View {
-        Circle()
-            .fill(color.opacity(0.65))
-            .frame(width: 28, height: 28)
-            .overlay {
-                Text(initials)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.primary)
+    private func ratingPin(_ rating: Double) -> some View {
+        VStack(spacing: -2) {
+            HStack(spacing: 5) {
+                Image(systemName: "fork.knife")
+                Text(RatingDisplayFormatter.rating(rating))
             }
-            .overlay {
-                Circle().strokeBorder(.background, lineWidth: 2)
-            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 8)
+            .background(rating.badgeFillColor, in: Capsule())
+
+            Image(systemName: "arrowtriangle.down.fill")
+                .font(.caption2)
+                .foregroundStyle(rating.badgeFillColor)
+        }
+        .shadow(color: .black.opacity(0.15), radius: 5, y: 3)
     }
 }

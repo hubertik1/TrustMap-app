@@ -20,9 +20,6 @@
     "%@/5" : {
 
     },
-    "Caffè Aurora" : {
-
-    },
     "category.restaurants" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -940,9 +937,6 @@
           }
         }
       }
-    },
-    "N" : {
-
     },
     "profile.friends_count" : {
       "extractionState" : "manual",
@@ -29890,6 +29884,59 @@
         }
       }
     },
+    "welcome.average_rating" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Durchschnitt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Average rating"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nota media"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note moyenne"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voto medio"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Średnia ocena"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nota média"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Середня оцінка"
+          }
+        }
+      }
+    },
     "welcome.example_review" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -29939,6 +29986,59 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Тихий дворик, ідеальний для зустрічі."
+          }
+        }
+      }
+    },
+    "welcome.preview_description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Illustrierte Karte mit einem fiktiven Restaurant, einer Durchschnittsbewertung von 4,5 von 5, einem Essensfoto und Empfehlungen von zwei Freunden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Illustrated map with a fictional restaurant, an average rating of 4.5 out of 5, a food photo, and recommendations from two friends."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mapa ilustrado con un restaurante ficticio, una nota media de 4,5 sobre 5, una foto de comida y recomendaciones de dos amigos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carte illustrée avec un restaurant fictif, une note moyenne de 4,5 sur 5, une photo de plat et les recommandations de deux amis."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mappa illustrata con un ristorante immaginario, un voto medio di 4,5 su 5, una foto di un piatto e i consigli di due amici."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ilustrowana mapa z fikcyjną restauracją, średnią oceną 4,5 na 5, zdjęciem jedzenia i rekomendacjami dwóch znajomych."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mapa ilustrado com um restaurante fictício, uma nota média de 4,5 em 5, uma foto de comida e recomendações de dois amigos."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ілюстрована карта з вигаданим рестораном, середньою оцінкою 4,5 з 5, фото їжі та рекомендаціями двох друзів."
           }
         }
       }
