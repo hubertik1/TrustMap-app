@@ -39,9 +39,11 @@ struct FeedView: View {
                 feedContent
             }
         }
-        .background(Color(uiColor: .systemGroupedBackground))
+        .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
         .navigationTitle(L10n.activity)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color(uiColor: .systemGroupedBackground), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .task(id: refreshCenter.globalRevision) {
             await viewModel.load()
         }
