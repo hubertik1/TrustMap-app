@@ -33,6 +33,9 @@ struct AppRootView: View {
                         authService: container.authService
                     )
                 )
+                .task {
+                    sessionStore.warmUpBackendIfNeeded()
+                }
 
             case .signedIn:
                 MainTabView(container: container)

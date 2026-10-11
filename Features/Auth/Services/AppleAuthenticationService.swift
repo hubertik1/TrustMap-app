@@ -142,6 +142,10 @@ final class AuthRepository {
         self.apiClient = apiClient
     }
 
+    func warmUpBackend() async {
+        await apiClient.warmUpBackend()
+    }
+
     func signIn(with credential: AppleSignInCredential) async throws -> AuthSession {
         let preferredHandle = Self.preferredHandle(from: credential)
         let payload = AppleAuthPayload(

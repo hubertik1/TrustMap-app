@@ -223,6 +223,13 @@ When the saved access token expires within 30 seconds, startup calls `/auth/refr
 directly and uses the returned profile, avoiding the old `/me` → refresh → `/me`
 sequence. Concurrent refresh callers share one request and use persisted tokens.
 
+When the welcome screen appears, the app also sends one anonymous, uncached
+`GET /health/live` per app launch to start waking the backend while the user
+confirms Sign in with Apple. This probe runs independently of sign-in, allows
+45 seconds for the response, and never shows an error or changes credentials.
+Successful sign-in cancels any remaining probe. There is no periodic keep-alive,
+no probe during session restoration, and no probe in SwiftUI previews.
+
 `SessionRestorationTests` covers this behavior using the production session store
 and API transport with fake HTTP responses. These changes require an updated app;
 they do not change the Azure hosting plan or prevent Free F1 from sleeping.

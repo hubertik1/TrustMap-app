@@ -154,6 +154,17 @@ final class APIClient {
         self.encoder = encoder
     }
 
+    func warmUpBackend() async {
+        var request = URLRequest(url: baseURL.appendingPathComponent("health/live"))
+        request.httpMethod = HTTPMethod.get.rawValue
+        request.timeoutInterval = AppConfiguration.sessionRestorationTimeout
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+        // Liveness is plain text. Waking the process does not require JSON,
+        // authentication, a database check, or a successful health response.
+        _ = try? await urlSession.data(for: request)
+    }
+
     func send<Response: Decodable>(_ request: APIRequest<Response>) async throws -> Response {
         do {
             return try await perform(request)

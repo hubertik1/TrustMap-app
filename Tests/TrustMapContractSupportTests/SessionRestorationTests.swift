@@ -5,6 +5,99 @@ import XCTest
 
 @MainActor
 final class SessionRestorationTests: XCTestCase {
+    func testWelcomeWarmsBackendOnceWithoutCredentialsOrCachedResponse() async {
+        let fixture = makeFixture(responses: [.json(200, "Healthy")])
+        fixture.tokens.tokens = nil
+        await fixture.store.bootstrap()
+
+        fixture.store.warmUpBackendIfNeeded()
+        fixture.store.warmUpBackendIfNeeded()
+        await waitForRequests(1, in: fixture.scenario)
+        await Task.yield()
+        fixture.store.warmUpBackendIfNeeded()
+        await Task.yield()
+
+        XCTAssertEqual(fixture.scenario.requests.count, 1)
+        let request = fixture.scenario.requests.first
+        XCTAssertEqual(request?.url?.path, "/health/live")
+        XCTAssertEqual(request?.httpMethod, "GET")
+        XCTAssertEqual(request?.timeoutInterval, 45)
+        XCTAssertEqual(request?.cachePolicy, .reloadIgnoringLocalCacheData)
+        XCTAssertNil(request?.value(forHTTPHeaderField: "Authorization"))
+        XCTAssertNil(request?.httpBody)
+        XCTAssertNil(fixture.store.alertMessage)
+        guard case .signedOut = fixture.store.state else { return XCTFail("Warm-up must not change the welcome screen.") }
+    }
+
+    func testPendingWarmupDoesNotDelayAppleSignIn() async {
+        let fixture = makeFixture(responses: [.pending, .json(200, sessionJSON)])
+        fixture.tokens.tokens = nil
+        await fixture.store.bootstrap()
+        fixture.store.warmUpBackendIfNeeded()
+        await waitForRequests(1, in: fixture.scenario)
+        fixture.store.warmUpBackendIfNeeded()
+
+        let started = ContinuousClock.now
+        await fixture.store.signIn(with: .failure(URLError(.unknown)))
+
+        XCTAssertLessThan(started.duration(to: .now), .seconds(2))
+        XCTAssertEqual(fixture.store.currentUser?.displayName, "Anna")
+        XCTAssertEqual(fixture.scenario.requests.map(\.url?.path), ["/health/live", "/auth/apple"])
+        XCTAssertEqual(fixture.tokens.tokens?.accessToken, "fresh-access")
+        XCTAssertNil(fixture.store.alertMessage)
+    }
+
+    func testWarmupConnectionFailureDoesNotShowAlertOrPreventSignIn() async {
+        let fixture = makeFixture(responses: [.failure(.cannotConnectToHost), .json(200, sessionJSON)])
+        fixture.tokens.tokens = nil
+        await fixture.store.bootstrap()
+        fixture.store.warmUpBackendIfNeeded()
+        await waitForRequests(1, in: fixture.scenario)
+        await Task.yield()
+
+        XCTAssertNil(fixture.store.alertMessage)
+        guard case .signedOut = fixture.store.state else { return XCTFail("Warm-up failure must keep welcome available.") }
+        await fixture.store.signIn(with: .failure(URLError(.unknown)))
+        XCTAssertEqual(fixture.store.currentUser?.displayName, "Anna")
+        XCTAssertEqual(fixture.scenario.requests.map(\.url?.path), ["/health/live", "/auth/apple"])
+    }
+
+    func testWarmupRejectionDoesNotInvalidateSavedCredentials() async {
+        let fixture = makeFixture(responses: [.json(200, userJSON), .json(401, "not authorized")])
+        await fixture.store.bootstrap()
+        fixture.store.setPreviewState(.signedOut)
+        fixture.store.warmUpBackendIfNeeded()
+        await waitForRequests(2, in: fixture.scenario)
+        await Task.yield()
+
+        XCTAssertEqual(fixture.tokens.tokens?.accessToken, "saved-access")
+        XCTAssertEqual(fixture.tokens.clearCount, 0)
+        XCTAssertNil(fixture.store.alertMessage)
+        XCTAssertNil(fixture.scenario.requests.last?.value(forHTTPHeaderField: "Authorization"))
+    }
+
+    func testStartupAndRestoredSessionDoNotSendSeparateWarmup() async {
+        for expired in [false, true] {
+            let fixture = makeFixture(expired: expired, responses: [.json(200, expired ? sessionJSON : userJSON)])
+            fixture.store.warmUpBackendIfNeeded()
+            await fixture.store.bootstrap()
+            fixture.store.warmUpBackendIfNeeded()
+            await Task.yield()
+
+            XCTAssertEqual(fixture.scenario.requests.map(\.url?.path), [expired ? "/auth/refresh" : "/me"])
+        }
+    }
+
+    func testRecoverableStartupErrorDoesNotStartSeparateWarmup() async {
+        let fixture = makeFixture(expired: true, responses: [.failure(.timedOut)], timeout: .milliseconds(50))
+        await fixture.store.bootstrap()
+        fixture.store.warmUpBackendIfNeeded()
+        await Task.yield()
+
+        assertRetryState(fixture)
+        XCTAssertEqual(fixture.scenario.requests.map(\.url?.path), ["/auth/refresh"])
+    }
+
     func testExpiredAccessTokenRestoresWithOnlyOneRefreshRequest() async {
         let fixture = makeFixture(expired: true, responses: [.json(200, sessionJSON)])
         await fixture.store.bootstrap()

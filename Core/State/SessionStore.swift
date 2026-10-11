@@ -27,6 +27,7 @@ final class SessionStore: ObservableObject, APISessionProviding {
     private var refreshTask: Task<AuthSession, Error>?
     private var refreshTaskID: UUID?
     private var bootstrapTask: Task<User, Error>?
+    private var backendWarmupTask: Task<Void, Never>?
     private var sessionGeneration = 0
 
     init(
@@ -45,6 +46,10 @@ final class SessionStore: ObservableObject, APISessionProviding {
         self.startupTimeout = startupTimeout
     }
 
+    deinit {
+        backendWarmupTask?.cancel()
+    }
+
     var currentUser: User? {
         guard case .signedIn(let user) = state else {
             return nil
@@ -55,6 +60,18 @@ final class SessionStore: ObservableObject, APISessionProviding {
 
     var currentAccessToken: String? {
         storedTokens?.accessToken
+    }
+
+    func warmUpBackendIfNeeded() {
+        guard case .signedOut = state,
+              backendWarmupTask == nil,
+              !AppConfiguration.isRunningPreviews else { return }
+
+        // Own this task outside the welcome view so Apple's sheet does not
+        // cancel it. Keep its handle to allow only one probe per app launch.
+        backendWarmupTask = Task { [authRepository] in
+            await authRepository.warmUpBackend()
+        }
     }
 
     func bootstrap() async {
@@ -262,6 +279,7 @@ final class SessionStore: ObservableObject, APISessionProviding {
     }
 
     private func applySession(_ session: AuthSession, appleUserID: String?) throws {
+        backendWarmupTask?.cancel()
         storedTokens = session.tokens
         try tokenStore.save(session.tokens)
         authService.persistLastAppleUserID(appleUserID)
