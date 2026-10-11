@@ -56,6 +56,75 @@ final class MapPinCacheTests: XCTestCase {
         ))
     }
 
+    func testRefreshingPreviouslyLoadedMapDoesNotShowLoadingIndicator() {
+        for hasVisiblePins in [false, true] {
+            XCTAssertFalse(MapStatusOverlayVisibility.shouldShowLoadingIndicator(
+                isLoading: true,
+                hasLoadedMapPlaces: true,
+                hasVisibleAnnotationsInCurrentViewport: hasVisiblePins
+            ))
+        }
+    }
+
+    func testFirstMapLoadShowsLoadingIndicatorWithoutVisiblePins() {
+        XCTAssertTrue(MapStatusOverlayVisibility.shouldShowLoadingIndicator(
+            isLoading: true,
+            hasLoadedMapPlaces: false,
+            hasVisibleAnnotationsInCurrentViewport: false
+        ))
+        XCTAssertFalse(MapStatusOverlayVisibility.shouldShowLoadingIndicator(
+            isLoading: true,
+            hasLoadedMapPlaces: false,
+            hasVisibleAnnotationsInCurrentViewport: true
+        ))
+    }
+
+    func testLoadingIndicatorDisappearsWhenInitialRequestFinishes() {
+        for hasLoadedMapPlaces in [false, true] {
+            XCTAssertFalse(MapStatusOverlayVisibility.shouldShowLoadingIndicator(
+                isLoading: false,
+                hasLoadedMapPlaces: hasLoadedMapPlaces,
+                hasVisibleAnnotationsInCurrentViewport: false
+            ))
+        }
+    }
+
+    func testRefreshFailureKeepsPreviouslyLoadedEmptyMapVisibleWithErrorBanner() {
+        XCTAssertFalse(MapStatusOverlayVisibility.shouldShowFullScreenError(
+            errorMessage: "Offline",
+            hasLoadedMapPlaces: true,
+            hasVisibleAnnotationsInCurrentViewport: false
+        ))
+        XCTAssertTrue(MapStatusOverlayVisibility.shouldShowStatusOverlay(
+            isPromptPresented: false,
+            isDroppedPinPresented: false,
+            hasSearchResults: false,
+            searchText: "",
+            errorMessage: "Offline",
+            hasLoadedMapPlaces: true,
+            isLoading: false,
+            hasVisibleAnnotationsInCurrentViewport: false
+        ))
+        XCTAssertTrue(MapStatusOverlayVisibility.shouldShowRefreshErrorBanner(
+            errorMessage: "Offline",
+            hasLoadedMapPlaces: true,
+            hasVisibleAnnotationsInCurrentViewport: false
+        ))
+    }
+
+    func testFirstMapLoadFailureStillShowsFullScreenError() {
+        XCTAssertTrue(MapStatusOverlayVisibility.shouldShowFullScreenError(
+            errorMessage: "Offline",
+            hasLoadedMapPlaces: false,
+            hasVisibleAnnotationsInCurrentViewport: false
+        ))
+        XCTAssertFalse(MapStatusOverlayVisibility.shouldShowRefreshErrorBanner(
+            errorMessage: "Offline",
+            hasLoadedMapPlaces: false,
+            hasVisibleAnnotationsInCurrentViewport: false
+        ))
+    }
+
     private func makePin(
         id: UUID = UUID(),
         latitude: Double,

@@ -1,25 +1,28 @@
 import Foundation
 
 enum MapStatusOverlayVisibility {
-    static func shouldShowFullScreenLoading(
+    static func shouldShowLoadingIndicator(
         isLoading: Bool,
+        hasLoadedMapPlaces: Bool,
         hasVisibleAnnotationsInCurrentViewport: Bool
     ) -> Bool {
-        isLoading && !hasVisibleAnnotationsInCurrentViewport
+        isLoading && !hasLoadedMapPlaces && !hasVisibleAnnotationsInCurrentViewport
     }
 
     static func shouldShowFullScreenError(
         errorMessage: String?,
+        hasLoadedMapPlaces: Bool,
         hasVisibleAnnotationsInCurrentViewport: Bool
     ) -> Bool {
-        errorMessage?.isEmpty == false && !hasVisibleAnnotationsInCurrentViewport
+        errorMessage?.isEmpty == false && !hasLoadedMapPlaces && !hasVisibleAnnotationsInCurrentViewport
     }
 
     static func shouldShowRefreshErrorBanner(
         errorMessage: String?,
+        hasLoadedMapPlaces: Bool,
         hasVisibleAnnotationsInCurrentViewport: Bool
     ) -> Bool {
-        errorMessage?.isEmpty == false && hasVisibleAnnotationsInCurrentViewport
+        errorMessage?.isEmpty == false && (hasLoadedMapPlaces || hasVisibleAnnotationsInCurrentViewport)
     }
 
     static func shouldShowStatusOverlay(
@@ -46,6 +49,7 @@ enum MapStatusOverlayVisibility {
 
         if shouldShowRefreshErrorBanner(
             errorMessage: errorMessage,
+            hasLoadedMapPlaces: hasLoadedMapPlaces,
             hasVisibleAnnotationsInCurrentViewport: hasVisibleAnnotationsInCurrentViewport
         ) {
             return true

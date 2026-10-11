@@ -9,6 +9,7 @@ struct MapScreen: View {
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var mapSelection: MapSelection<UUID>?
     @State private var isPhoneSearchPresented = false
+    @State private var lastRenderableMapSize: CGSize?
     @Environment(\.openURL) private var openURL
 
     init(container: AppContainer) {
@@ -29,7 +30,10 @@ struct MapScreen: View {
 
     var body: some View {
         GeometryReader { geometry in
-            if isRenderableMapSize(geometry.size) {
+            // Tab transitions can briefly propose a zero size. Keep the existing
+            // MapKit view alive at its last valid size instead of recreating it.
+            let mapSize = isRenderableMapSize(geometry.size) ? geometry.size : lastRenderableMapSize
+            if let mapSize {
                 MapReader { proxy in
                     ZStack(alignment: .topLeading) {
                 Map(position: $cameraPosition, selection: $mapSelection) {
@@ -106,14 +110,24 @@ struct MapScreen: View {
                 // Keep the map behind the floating phone navigation and search controls.
                 .ignoresSafeArea(edges: TrustMapPlatform.isMacCatalyst ? .bottom : .all)
 
-                if !isPlaceSelectionPresented && MapStatusOverlayVisibility.shouldShowFullScreenLoading(
+                if !isPlaceSelectionPresented && MapStatusOverlayVisibility.shouldShowLoadingIndicator(
                     isLoading: viewModel.isLoading,
+                    hasLoadedMapPlaces: viewModel.hasLoadedMapPlaces,
                     hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleMapContentInCurrentViewport
                 ) {
-                    LoadingStateView(title: L10n.loadingYourMap)
-                        .background(.thinMaterial)
+                    // Loading must never replace the map with an opaque screen,
+                    // including before the first response has populated the pins.
+                    ProgressView(L10n.loadingYourMap)
+                        .font(.subheadline)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .allowsHitTesting(false)
                 } else if !isPlaceSelectionPresented && MapStatusOverlayVisibility.shouldShowFullScreenError(
                     errorMessage: viewModel.errorMessage,
+                    hasLoadedMapPlaces: viewModel.hasLoadedMapPlaces,
                     hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleMapContentInCurrentViewport
                 ), let errorMessage = viewModel.errorMessage {
                     ErrorStateView(message: errorMessage) {
@@ -172,6 +186,12 @@ struct MapScreen: View {
                     }
                     .animation(.easeInOut(duration: 0.2), value: promptContext.id)
                 }
+                    }
+                }
+                .frame(width: mapSize.width, height: mapSize.height)
+                .onChange(of: geometry.size, initial: true) { _, size in
+                    if isRenderableMapSize(size) {
+                        lastRenderableMapSize = size
                     }
                 }
             } else {
@@ -263,7 +283,7 @@ struct MapScreen: View {
         }
         .task(id: refreshCenter.mapRevision) {
             viewModel.startLocationFlowIfNeeded()
-            await viewModel.load(resetPinCache: true)
+            await viewModel.load(invalidateLoadedBounds: true)
         }
         .onChange(of: refreshCenter.mapPinRefresh) { _, refresh in
             guard let refresh else { return }
@@ -402,6 +422,7 @@ struct MapScreen: View {
     private var mapStatusOverlay: some View {
         if MapStatusOverlayVisibility.shouldShowRefreshErrorBanner(
             errorMessage: viewModel.errorMessage,
+            hasLoadedMapPlaces: viewModel.hasLoadedMapPlaces,
             hasVisibleAnnotationsInCurrentViewport: viewModel.hasVisibleMapContentInCurrentViewport
         ), let errorMessage = viewModel.errorMessage {
             InlineErrorBanner(title: L10n.couldnTRefreshMap, message: errorMessage) {

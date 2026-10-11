@@ -103,13 +103,15 @@ final class MapScreenViewModel: ObservableObject {
         mapReloadTask?.cancel()
     }
 
-    func load(resetPinCache: Bool = false) async {
+    func load(invalidateLoadedBounds: Bool = false) async {
         errorMessage = nil
         isLoading = true
         await loadCategories()
 
-        if resetPinCache {
-            clearPinCache()
+        if invalidateLoadedBounds {
+            // Refetch previously visited regions, but keep their pins visible
+            // until a successful response reconciles the cache for each region.
+            loadedBounds = []
         }
 
         await reloadMapPinsForCurrentRegion(force: true)
@@ -499,15 +501,6 @@ final class MapScreenViewModel: ObservableObject {
         for pin in pins {
             cachedPinsByPlaceId[pin.placeId] = pin
         }
-    }
-
-    private func clearPinCache() {
-        mapReloadTask?.cancel()
-        cachedPinsByPlaceId = [:]
-        loadedBounds = []
-        annotations = []
-        hasVisibleAnnotationsInCurrentViewport = false
-        hasLoadedMapPlaces = false
     }
 
     private func shouldFetchPins(for viewportBounds: MapBounds) -> Bool {
