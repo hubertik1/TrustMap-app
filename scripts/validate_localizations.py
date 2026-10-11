@@ -33,6 +33,8 @@ def main():
         catalog = json.loads(path.read_text())
         assert catalog["sourceLanguage"] == "en", path
         for key, entry in catalog["strings"].items():
+            if entry.get("shouldTranslate") is False:
+                continue
             localizations = entry["localizations"]
             assert set(localizations) == LANGUAGES, f"{path.name}: language coverage for {key}"
             expected = signature(units(localizations["en"])[0]["value"])
@@ -44,7 +46,7 @@ def main():
                     assert signature(unit["value"]) == expected, f"Argument mismatch: {language}: {key}"
             total += 1
         if path.name == "Localizable.xcstrings":
-            catalog_keys = set(catalog["strings"])
+            catalog_keys = {key for key, entry in catalog["strings"].items() if entry.get("shouldTranslate") is not False}
     api = (ROOT / "Core/Localization/L10n.swift").read_text()
     used_keys = set(re.findall(r'(?:text|format)\("([^"]+)"', api))
     assert used_keys == {key for key in catalog_keys if not key.startswith("server.")}, f"Catalog/API mismatch: {used_keys ^ catalog_keys}"

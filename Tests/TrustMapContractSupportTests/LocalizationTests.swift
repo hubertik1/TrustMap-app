@@ -20,9 +20,11 @@ final class LocalizationTests: XCTestCase {
         let strings = try XCTUnwrap(catalog["strings"] as? [String: Any])
         for language in L10n.supportedLanguages {
             let bundle = try languageBundle(language)
-            for key in strings.keys {
-                let value = bundle.localizedString(forKey: key, value: nil, table: "Localizable")
-                XCTAssertNotEqual(value, key, "Missing \(language) translation for \(key)")
+            for (key, entry) in strings {
+                if (entry as? [String: Any])?["shouldTranslate"] as? Bool == false { continue }
+                let missing = "__missing_translation__"
+                let value = bundle.localizedString(forKey: key, value: missing, table: "Localizable")
+                XCTAssertNotEqual(value, missing, "Missing \(language) translation for \(key)")
                 XCTAssertFalse(value.isEmpty, "Empty \(language) translation for \(key)")
             }
         }

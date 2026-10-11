@@ -2,12 +2,13 @@
   "sourceLanguage" : "en",
   "strings" : {
     "@%@" : {
-
+      "shouldTranslate" : false
     },
     "%@" : {
-
+      "shouldTranslate" : false
     },
     "%@/%@" : {
+      "shouldTranslate" : false,
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -18,7 +19,7 @@
       }
     },
     "%@/5" : {
-
+      "shouldTranslate" : false
     },
     "category.restaurants" : {
       "extractionState" : "manual",
@@ -4448,7 +4449,7 @@
       }
     },
     "TrustMap" : {
-
+      "shouldTranslate" : false
     },
     "ui.a_z" : {
       "comment" : "",
