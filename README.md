@@ -277,6 +277,12 @@ preferences; it also exposes the app's language setting in system Settings.
   than a screenshot with English text baked into its pixels.
 - System controls (including Sign in with Apple), relative dates, numbers, and
   currency formatting use the system's locale support.
+- Push alerts use APNs `loc-key`/`loc-args` to select their message from the app's
+  compiled catalog in its current language, even while the app is closed. The
+  three normal message keys are shared with in-app notifications. `push.*` keys
+  supply translated generic and anonymous-actor fallbacks; these keys are consumed
+  by iOS directly rather than the typed `L10n` API. Ship these catalogs before the
+  companion backend's localized push update.
 - User-generated reviews, place names, usernames, and custom category names are
   retained. The built-in Restaurants category is translated for display while
   its canonical API name and ID remain stable.

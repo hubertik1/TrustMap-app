@@ -38,6 +38,49 @@ final class LocalizationTests: XCTestCase {
         }
     }
 
+    func testPushLocalizationKeysResolveInEveryAppLanguageAndPreserveUserNames() throws {
+        let namedKeys = ["ui.value_added_a_place_review", "ui.value_added_a_dish_review", "ui.value_sent_you_a_friend_request"]
+        let anonymousKeys = ["push.place_review_added_unknown_actor", "push.dish_review_added_unknown_actor",
+                             "push.friend_request_sent_unknown_actor", "push.new_notification"]
+        let actor = "@100%_Żółć_東京"
+        for language in L10n.supportedLanguages {
+            let bundle = try languageBundle(language)
+            for key in namedKeys {
+                let template = bundle.localizedString(forKey: key, value: nil, table: "Localizable")
+                XCTAssertNotEqual(template, key)
+                let message = String(format: template, locale: Locale(identifier: language), actor)
+                XCTAssertTrue(message.contains(actor), "\(language): user names must remain literal")
+                XCTAssertFalse(message.contains("%@"))
+                if language != "en" {
+                    let english = try languageBundle("en").localizedString(forKey: key, value: nil, table: "Localizable")
+                    XCTAssertNotEqual(template, english, "\(language): push must not fall back to English")
+                }
+            }
+            for key in anonymousKeys {
+                let message = bundle.localizedString(forKey: key, value: nil, table: "Localizable")
+                XCTAssertNotEqual(message, key)
+                XCTAssertFalse(message.contains("%@"))
+                XCTAssertFalse(message.isEmpty)
+                if language != "en" { XCTAssertFalse(message.contains("Someone")) }
+            }
+        }
+    }
+
+    func testPushMessagesUseSpanishAndPolishAppTranslations() throws {
+        let cases = [
+            ("es", "ui.value_added_a_place_review", "@ana añadió una reseña de un lugar"),
+            ("es", "ui.value_added_a_dish_review", "@ana añadió una reseña de un plato"),
+            ("es", "ui.value_sent_you_a_friend_request", "@ana te envió una solicitud de amistad"),
+            ("pl", "ui.value_added_a_place_review", "@ana dodaje opinię o miejscu"),
+            ("pl", "ui.value_added_a_dish_review", "@ana dodaje opinię o daniu"),
+            ("pl", "ui.value_sent_you_a_friend_request", "@ana wysyła Ci zaproszenie do znajomych")
+        ]
+        for (language, key, expected) in cases {
+            let template = try languageBundle(language).localizedString(forKey: key, value: nil, table: "Localizable")
+            XCTAssertEqual(String(format: template, locale: Locale(identifier: language), "@ana"), expected)
+        }
+    }
+
     func testNativePluralRulesForPolishAndUkrainian() throws {
         let examples = [
             ("en", [1: "1 review", 2: "2 reviews", 5: "5 reviews"]),

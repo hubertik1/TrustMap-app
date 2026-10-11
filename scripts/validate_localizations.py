@@ -49,7 +49,8 @@ def main():
             catalog_keys = {key for key, entry in catalog["strings"].items() if entry.get("shouldTranslate") is not False}
     api = (ROOT / "Core/Localization/L10n.swift").read_text()
     used_keys = set(re.findall(r'(?:text|format)\("([^"]+)"', api))
-    assert used_keys == {key for key in catalog_keys if not key.startswith("server.")}, f"Catalog/API mismatch: {used_keys ^ catalog_keys}"
+    # Server messages and APNs localization keys are resolved outside the typed Swift API.
+    assert used_keys == {key for key in catalog_keys if not key.startswith(("server.", "push."))}, f"Catalog/API mismatch: {used_keys ^ catalog_keys}"
     definitions = set(re.findall(r'static (?:var|func|let) (\w+)', api))
     for directory in ["App", "Core", "Features", "Shared"]:
         for path in (ROOT / directory).rglob("*.swift"):
