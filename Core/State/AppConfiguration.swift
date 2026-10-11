@@ -22,6 +22,7 @@ enum AppConfiguration {
     static let inviteURLScheme = "trustmap"
     static let inviteUniversalLinkBaseURL: URL? = nil
     static let networkTimeout: TimeInterval = 30
+    static let sessionRestorationTimeout: TimeInterval = 45
     static let preferredHandleMaxLength = 32
     static let privacyPolicyInfoKey = "TrustMapPrivacyPolicyURL"
     static let supportInfoKey = "TrustMapSupportURL"

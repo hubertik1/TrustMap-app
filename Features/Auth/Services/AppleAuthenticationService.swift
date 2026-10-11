@@ -157,7 +157,8 @@ final class AuthRepository {
             method: .post,
             path: "auth/apple",
             body: .json(AnyEncodable(payload)),
-            requiresAuthorization: false
+            requiresAuthorization: false,
+            timeoutInterval: AppConfiguration.sessionRestorationTimeout
         )
 
         let response = try await apiClient.send(request)
@@ -169,7 +170,8 @@ final class AuthRepository {
             method: .post,
             path: "auth/refresh",
             body: .json(AnyEncodable(RefreshTokenPayload(refreshToken: refreshToken))),
-            requiresAuthorization: false
+            requiresAuthorization: false,
+            timeoutInterval: AppConfiguration.sessionRestorationTimeout
         )
 
         let response = try await apiClient.send(request)

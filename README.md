@@ -211,9 +211,25 @@ Some full-app behavior depends on the Xcode project, Apple frameworks and a runn
 
 ## Backend Contract
 
+### Session restoration
+
+Startup allows 45 seconds for a sleeping backend to respond. Temporary connection
+failures preserve Keychain tokens and lead to a generic error with a retry button,
+without technical details or another Apple sign-in. Safe profile reads can retry
+within that deadline; Apple sign-in and rotating refresh tokens are never replayed
+automatically. A definitive session rejection still requires sign-in.
+
+When the saved access token expires within 30 seconds, startup calls `/auth/refresh`
+directly and uses the returned profile, avoiding the old `/me` → refresh → `/me`
+sequence. Concurrent refresh callers share one request and use persisted tokens.
+
+`SessionRestorationTests` covers this behavior using the production session store
+and API transport with fake HTTP responses. These changes require an updated app;
+they do not change the Azure hosting plan or prevent Free F1 from sleeping.
+
 The app expects the backend to provide:
 
-- Apple sign-in exchange through `/auth/sign-in`.
+- Apple sign-in exchange through `/auth/apple`.
 - Refresh-token rotation through `/auth/refresh`.
 - Authenticated endpoints for users, friends, categories, places, reviews, feed, map, photos, notifications and device tokens.
 - Protected media endpoints that accept the current access token.

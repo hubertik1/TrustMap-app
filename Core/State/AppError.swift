@@ -54,6 +54,15 @@ enum AppError: LocalizedError {
         }
     }
 
+    var invalidatesSession: Bool {
+        switch self {
+        case .invalidSession, .authFailed:
+            return true
+        default:
+            return false
+        }
+    }
+
     static func wrap(_ error: Error) -> AppError {
         if let appError = error as? AppError {
             return appError

@@ -21,6 +21,11 @@ struct AppRootView: View {
             case .launching:
                 LoadingStateView(title: L10n.preparingTrustmap)
 
+            case .restorationFailed:
+                ErrorStateView {
+                    Task { await sessionStore.bootstrap() }
+                }
+
             case .signedOut:
                 WelcomeView(
                     viewModel: WelcomeViewModel(

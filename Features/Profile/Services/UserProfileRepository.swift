@@ -32,11 +32,16 @@ final class UserProfileRepository {
         self.apiClient = apiClient
     }
 
-    func fetchCurrentUser() async throws -> User {
+    func fetchCurrentUser(
+        timeoutInterval: TimeInterval = AppConfiguration.networkTimeout,
+        retryDeadline: ContinuousClock.Instant? = nil
+    ) async throws -> User {
         try await apiClient.send(
             APIRequest<User>(
                 method: .get,
-                path: "me"
+                path: "me",
+                timeoutInterval: timeoutInterval,
+                retryDeadline: retryDeadline
             )
         )
     }

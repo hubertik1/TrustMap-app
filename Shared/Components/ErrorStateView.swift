@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ErrorStateView: View {
-    let message: String
+    var message: String? = nil
     var retryTitle: String = L10n.tryAgain
     var retryAction: (() -> Void)?
 
@@ -24,10 +24,12 @@ struct ErrorStateView: View {
                 Text(L10n.somethingWentWrong)
                     .font(.headline)
 
-                Text(message)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                if let message {
+                    Text(message)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
 
                 if let retryAction {
                     Button(retryTitle, action: retryAction)
@@ -48,4 +50,8 @@ struct ErrorStateView: View {
 
 #Preview {
     ErrorStateView(message: "We couldn’t load your map data.")
+}
+
+#Preview("Startup Retry") {
+    ErrorStateView(retryAction: {})
 }

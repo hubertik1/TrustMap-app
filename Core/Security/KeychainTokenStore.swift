@@ -8,7 +8,13 @@ struct SessionTokens: Codable, Equatable, Sendable {
     let refreshTokenExpiresAt: Date
 }
 
-final class KeychainTokenStore {
+protocol SessionTokenStoring {
+    func load() -> SessionTokens?
+    func save(_ tokens: SessionTokens) throws
+    func clear()
+}
+
+final class KeychainTokenStore: SessionTokenStoring {
     private let service = "com.hubertik.TrustMap.session"
     private let account = "backend-session"
 

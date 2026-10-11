@@ -68,6 +68,8 @@ struct APIRequest<Response: Decodable> {
     var retriesAfterUnauthorized = true
     var acceptedStatusCodes: Set<Int> = [200]
     var emptyResponse: Response? = nil
+    var timeoutInterval: TimeInterval = AppConfiguration.networkTimeout
+    var retryDeadline: ContinuousClock.Instant? = nil
 }
 
 struct MultipartFormData: Sendable {
@@ -155,21 +157,31 @@ final class APIClient {
     func send<Response: Decodable>(_ request: APIRequest<Response>) async throws -> Response {
         do {
             return try await perform(request)
-        } catch TransportError.unauthorized where request.requiresAuthorization && request.retriesAfterUnauthorized {
-            guard let sessionProvider else {
+        } catch TransportError.unauthorized {
+            guard request.requiresAuthorization else {
+                throw AppError.invalidSession
+            }
+            guard request.retriesAfterUnauthorized, let sessionProvider else {
+                await sessionProvider?.handleUnauthorizedSession()
                 throw AppError.invalidSession
             }
 
             do {
                 _ = try await sessionProvider.refreshSession()
             } catch {
-                await sessionProvider.handleUnauthorizedSession()
-                throw AppError.invalidSession
+                if Self.isCancellation(error) {
+                    throw error
+                }
+                let wrappedError = AppError.wrap(error)
+                if wrappedError.invalidatesSession {
+                    await sessionProvider.handleUnauthorizedSession()
+                }
+                throw wrappedError
             }
 
             var retryRequest = request
             retryRequest.retriesAfterUnauthorized = false
-            return try await perform(retryRequest)
+            return try await send(retryRequest)
         } catch let appError as AppError {
             throw appError
         } catch {
@@ -182,6 +194,23 @@ final class APIClient {
     }
 
     private func perform<Response: Decodable>(_ request: APIRequest<Response>) async throws -> Response {
+        while true {
+            try Task.checkCancellation()
+            do {
+                return try await performOnce(request)
+            } catch {
+                guard request.method == .get,
+                      let deadline = request.retryDeadline,
+                      ContinuousClock.now < deadline,
+                      AppError.wrap(error).isConnectivityFailure else {
+                    throw error
+                }
+                try await Task.sleep(for: min(.seconds(2), ContinuousClock.now.duration(to: deadline)))
+            }
+        }
+    }
+
+    private func performOnce<Response: Decodable>(_ request: APIRequest<Response>) async throws -> Response {
         let urlRequest = try buildURLRequest(for: request)
         let (data, response) = try await urlSession.data(for: urlRequest)
 
@@ -218,7 +247,7 @@ final class APIClient {
 
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = request.method.rawValue
-        urlRequest.timeoutInterval = AppConfiguration.networkTimeout
+        urlRequest.timeoutInterval = request.timeoutInterval
 
         for (header, value) in request.headers {
             urlRequest.setValue(value, forHTTPHeaderField: header)
@@ -278,6 +307,8 @@ final class APIClient {
             return .authFailed(message)
         case 429:
             return .rateLimited(message)
+        case 500...599:
+            return .syncFailure(L10n.couldNotConnectToTheServer)
         default:
             return .underlying(message)
         }
