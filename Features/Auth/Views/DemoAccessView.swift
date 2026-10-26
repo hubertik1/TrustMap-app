@@ -62,11 +62,6 @@ struct DemoAccessView: View {
                     .accessibilityIdentifier("demoSignIn")
                 }
 
-                if let termsOfServiceURL = AppConfiguration.termsOfServiceURL {
-                    Section {
-                        Link(L10n.termsOfService, destination: termsOfServiceURL)
-                    }
-                }
             }
             .navigationTitle(L10n.demoAccess)
             .navigationBarTitleDisplayMode(.inline)

@@ -88,7 +88,7 @@ The app's deployment target is configured in `Config/Base.xcconfig`.
 
 Settings > About includes a Support link to the website, where the contact email `support@trustmap.hubertik.com` is provided.
 
-Both build schemes include the Privacy Policy (`https://trustmap.hubertik.com/privacy`), Support (`https://trustmap.hubertik.com/support`), and Terms of Service (`https://trustmap.hubertik.com/terms/`) links from `Config/Base.xcconfig`, expanded into their Info.plist files. They appear below Sign in with Apple and in Settings > About. Terms of Service is also available in the demo sign-in sheet. Privacy Policy, Terms of Service, Support, and the compact Demo button share one row on the welcome screen. The demo sheet retains its full Demo access title. Runtime overrides are available through `TRUSTMAP_PRIVACY_POLICY_URL`, `TRUSTMAP_SUPPORT_URL`, and `TRUSTMAP_TERMS_OF_SERVICE_URL`.
+Both build schemes include the Privacy Policy (`https://trustmap.hubertik.com/privacy`), Support (`https://trustmap.hubertik.com/support`), and Terms of Service (`https://trustmap.hubertik.com/terms/`) links from `Config/Base.xcconfig`, expanded into their Info.plist files. They appear below Sign in with Apple and in Settings > About. Privacy Policy, Terms of Service, Support, and the compact Demo button share one row on the welcome screen. The demo sheet retains its full Demo access title. Runtime overrides are available through `TRUSTMAP_PRIVACY_POLICY_URL`, `TRUSTMAP_SUPPORT_URL`, and `TRUSTMAP_TERMS_OF_SERVICE_URL`.
 
 ## Local Development
 
