@@ -228,18 +228,21 @@ private struct WelcomeCTASection: View {
             .frame(height: 56)
             .disabled(isSigningIn || isPreviewEnvironment)
 
-            HStack(spacing: 6) {
+            HStack(spacing: 0) {
                 if let privacyPolicyURL = AppConfiguration.privacyPolicyURL {
                     Link(L10n.privacyPolicy, destination: privacyPolicyURL)
                         .frame(minHeight: 44)
+                    Spacer(minLength: 6)
                 }
                 if let termsOfServiceURL = AppConfiguration.termsOfServiceURL {
                     Link(L10n.termsOfService, destination: termsOfServiceURL)
                         .frame(minHeight: 44)
+                    Spacer(minLength: 6)
                 }
                 if let supportURL = AppConfiguration.supportURL {
                     Link(L10n.support, destination: supportURL)
                         .frame(minHeight: 44)
+                    Spacer(minLength: 6)
                 }
                 Button(L10n.demoShort, action: showDemoAccess)
                     .frame(minHeight: 44)
