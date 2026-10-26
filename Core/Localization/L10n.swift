@@ -20,6 +20,18 @@ enum L10n {
         String(format: text(key), locale: Locale.current, arguments: arguments)
     }
 
+    static var demoAccess: String { text("ui.demo_access") }
+
+    static var demoInvalidCredentials: String { text("ui.demo_invalid_credentials") }
+
+    static var demoUsername: String { text("ui.demo_username") }
+
+    static var demoPassword: String { text("ui.demo_password") }
+
+    static var demoSignIn: String { text("ui.demo_sign_in") }
+
+    static var demoAccessDescription: String { text("ui.demo_access_description") }
+
     static var preparingTrustmap: String { text("ui.preparing_trustmap") }
 
     static var map: String { text("ui.map") }

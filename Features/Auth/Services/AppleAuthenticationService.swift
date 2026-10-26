@@ -182,6 +182,25 @@ final class AuthRepository {
         return AuthSession(response: response)
     }
 
+    func signInToDemo(username: String, password: String) async throws -> AuthSession {
+        struct DemoAuthPayload: Encodable {
+            let username: String
+            let password: String
+        }
+        do {
+            let response = try await apiClient.send(APIRequest<SessionResponse>(
+                method: .post,
+                path: "auth/demo",
+                body: .json(AnyEncodable(DemoAuthPayload(username: username, password: password))),
+                requiresAuthorization: false,
+                timeoutInterval: AppConfiguration.sessionRestorationTimeout
+            ))
+            return AuthSession(response: response)
+        } catch AppError.invalidSession {
+            throw AppError.authFailed(L10n.demoInvalidCredentials)
+        }
+    }
+
     func logout(refreshToken: String?, allDevices: Bool) async {
         let request = APIRequest<EmptyResponse>(
             method: .post,

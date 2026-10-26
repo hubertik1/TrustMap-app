@@ -51,6 +51,8 @@
 	<string>$(PRIVACY_POLICY_URL)</string>
 	<key>TrustMapSupportURL</key>
 	<string>$(SUPPORT_URL)</string>
+	<key>TrustMapTermsOfServiceURL</key>
+	<string>$(TERMS_OF_SERVICE_URL)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

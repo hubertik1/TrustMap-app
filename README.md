@@ -7,6 +7,7 @@ This repository contains the SwiftUI client. The companion backend lives in the 
 ## Features
 
 - Sign in with Apple.
+- Demo access beside Privacy Policy and Support opens a credential sheet for the prepared App Review account. Configure the companion API using `TrustMap-server/docs/demo-access.md` before distributing a build with this feature.
 - Map-based discovery of saved and friend-recommended places.
 - Place search with custom place support.
 - Place reviews with ratings, notes, photos and visibility controls.
@@ -87,7 +88,7 @@ The app's deployment target is configured in `Config/Base.xcconfig`.
 
 Settings > About includes a Support link to the website, where the contact email `support@trustmap.hubertik.com` is provided.
 
-Both build schemes include the Privacy Policy (`https://trustmap.hubertik.com/privacy`) and Support (`https://trustmap.hubertik.com/support`) links from `Config/Base.xcconfig`, expanded into their Info.plist files. They appear below Sign in with Apple and in Settings > About. Runtime overrides are available through `TRUSTMAP_PRIVACY_POLICY_URL` and `TRUSTMAP_SUPPORT_URL`.
+Both build schemes include the Privacy Policy (`https://trustmap.hubertik.com/privacy`), Support (`https://trustmap.hubertik.com/support`), and Terms of Service (`https://trustmap.hubertik.com/terms/`) links from `Config/Base.xcconfig`, expanded into their Info.plist files. They appear below Sign in with Apple and in Settings > About. Terms of Service is also available in the demo sign-in sheet. Demo access remains on the same row as Privacy Policy and Support, with Terms of Service on its own row above them. Runtime overrides are available through `TRUSTMAP_PRIVACY_POLICY_URL`, `TRUSTMAP_SUPPORT_URL`, and `TRUSTMAP_TERMS_OF_SERVICE_URL`.
 
 ## Local Development
 

@@ -9,6 +9,7 @@ struct WelcomeView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     @StateObject private var viewModel: WelcomeViewModel
+    @State private var isDemoAccessPresented = false
 
     init(viewModel: WelcomeViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -19,10 +20,15 @@ struct WelcomeView: View {
     }
 
     var body: some View {
-        if TrustMapPlatform.isMacCatalyst {
-            macBody
-        } else {
-            phoneBody
+        Group {
+            if TrustMapPlatform.isMacCatalyst {
+                macBody
+            } else {
+                phoneBody
+            }
+        }
+        .sheet(isPresented: $isDemoAccessPresented) {
+            DemoAccessView(viewModel: viewModel)
         }
     }
 
@@ -57,7 +63,8 @@ struct WelcomeView: View {
                         topPadding: 0,
                         bottomPadding: 4,
                         configureRequest: viewModel.configure(_:),
-                        handleCompletion: viewModel.handleSignInCompletion(_:)
+                        handleCompletion: viewModel.handleSignInCompletion(_:),
+                        showDemoAccess: { isDemoAccessPresented = true }
                     )
                 }
                 .padding(.horizontal, WelcomeLayout.horizontalContentPadding)
@@ -136,7 +143,8 @@ struct WelcomeView: View {
                 isPreviewEnvironment: AppConfiguration.isRunningPreviews,
                 horizontalPadding: 0,
                 configureRequest: viewModel.configure(_:),
-                handleCompletion: viewModel.handleSignInCompletion(_:)
+                handleCompletion: viewModel.handleSignInCompletion(_:),
+                showDemoAccess: { isDemoAccessPresented = true }
             )
             .frame(maxWidth: 420, alignment: .leading)
         }
@@ -203,6 +211,7 @@ private struct WelcomeCTASection: View {
     var bottomPadding: CGFloat = 20
     let configureRequest: (ASAuthorizationAppleIDRequest) -> Void
     let handleCompletion: (Result<ASAuthorization, any Error>) async -> Void
+    let showDemoAccess: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -219,7 +228,14 @@ private struct WelcomeCTASection: View {
             .frame(height: 56)
             .disabled(isSigningIn || isPreviewEnvironment)
 
-            HStack(spacing: 24) {
+            if let termsOfServiceURL = AppConfiguration.termsOfServiceURL {
+                Link(L10n.termsOfService, destination: termsOfServiceURL)
+                    .font(.footnote)
+                    .tint(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+
+            HStack(spacing: 12) {
                 if let privacyPolicyURL = AppConfiguration.privacyPolicyURL {
                     Link(L10n.privacyPolicy, destination: privacyPolicyURL)
                         .frame(minHeight: 44)
@@ -228,8 +244,13 @@ private struct WelcomeCTASection: View {
                     Link(L10n.support, destination: supportURL)
                         .frame(minHeight: 44)
                 }
+                Button(L10n.demoAccess, action: showDemoAccess)
+                    .frame(minHeight: 44)
+                    .disabled(isSigningIn || isPreviewEnvironment)
             }
             .font(.footnote)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
             .tint(.secondary)
             .frame(maxWidth: .infinity)
 

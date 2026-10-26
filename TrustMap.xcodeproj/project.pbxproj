@@ -80,6 +80,7 @@
 		6CDA098C10697545BF500C6A /* WelcomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D7562332EFF5E8023801350 /* WelcomeViewModel.swift */; };
 		6F194146FD3332C1FEAB90B2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7DC3DA18D5326A895B5A152B /* PrivacyInfo.xcprivacy */; };
 		70D50876F1D02B4146B997BC /* PlaceSearchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E302A2A6BC79FA0AFBCBB98E /* PlaceSearchSheet.swift */; };
+		7162F458484A253C92678CF7 /* DemoAccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 953CCA0BA57E691CDEB889FB /* DemoAccessView.swift */; };
 		71BF9B136056BBD4C60683AA /* PlacesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E724FCB826A62E866E85767 /* PlacesView.swift */; };
 		72CD72A51015AE90847B9D2C /* TrustMapApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 677957693B0ACBE50E25F662 /* TrustMapApp.swift */; };
 		7712BBD2D7B5147025D115D4 /* AddPlaceReviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17753C16478EA4B286BE4DE7 /* AddPlaceReviewViewModel.swift */; };
@@ -245,6 +246,7 @@
 		8E040639FA0CE5A6D64DA1F1 /* AppDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = App/AppDelegate.swift; sourceTree = "<group>"; };
 		8FFBEFE4252E5098F45D49CB /* FriendInvite.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FriendInvite.swift; path = Features/Friends/Models/FriendInvite.swift; sourceTree = "<group>"; };
 		907395BC4665146050D8531C /* AddHubViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AddHubViewModel.swift; path = Features/Add/ViewModels/AddHubViewModel.swift; sourceTree = "<group>"; };
+		953CCA0BA57E691CDEB889FB /* DemoAccessView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DemoAccessView.swift; path = Features/Auth/Views/DemoAccessView.swift; sourceTree = "<group>"; };
 		95FCA67F524294514B3BE696 /* MapPlaceAnnotation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MapPlaceAnnotation.swift; path = Features/Map/Models/MapPlaceAnnotation.swift; sourceTree = "<group>"; };
 		96C4491E6ABA73582BCE107C /* VisibilityStatus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = VisibilityStatus.swift; path = Features/Reviews/Models/VisibilityStatus.swift; sourceTree = "<group>"; };
 		98F4EBB013C108ED1BDE224A /* FeedRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FeedRepository.swift; path = Features/Feed/Services/FeedRepository.swift; sourceTree = "<group>"; };
@@ -736,6 +738,7 @@
 				27DE5E7F23443A88A1566801 /* Resources */,
 				5A8F99AE767A8A2DF9150B00 /* ReviewAuthorButton.swift */,
 				EA29973535D42EF675243977 /* ReviewEditButton.swift */,
+				953CCA0BA57E691CDEB889FB /* DemoAccessView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1352,6 +1355,7 @@
 				F23BFFEC4AA0BCA6332FDFA0 /* WelcomeMapPreview.swift in Sources */,
 				CABAFDBEFF4E1E7DA7308268 /* DishReviewCurrency.swift in Sources */,
 				DE3AFF131192A977614FEAD1 /* WelcomeDemoPlaceCard.swift in Sources */,
+				7162F458484A253C92678CF7 /* DemoAccessView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

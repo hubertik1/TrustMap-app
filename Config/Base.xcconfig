@@ -5,6 +5,7 @@ MARKETING_VERSION = 1.0
 URL_SLASH = /
 PRIVACY_POLICY_URL = https:$(URL_SLASH)$(URL_SLASH)trustmap.hubertik.com/privacy
 SUPPORT_URL = https:$(URL_SLASH)$(URL_SLASH)trustmap.hubertik.com/support
+TERMS_OF_SERVICE_URL = https:$(URL_SLASH)$(URL_SLASH)trustmap.hubertik.com/terms/
 
 SWIFT_VERSION = 6.0
 IPHONEOS_DEPLOYMENT_TARGET = 18.0

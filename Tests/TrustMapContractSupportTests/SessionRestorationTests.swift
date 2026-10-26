@@ -5,6 +5,60 @@ import XCTest
 
 @MainActor
 final class SessionRestorationTests: XCTestCase {
+    func testDemoSignInPersistsNormalSessionAndClearsAppleIdentity() async throws {
+        let fixture = makeFixture(responses: [.json(200, sessionJSON), .json(200, sessionJSON)])
+        fixture.tokens.tokens = nil
+        await fixture.store.bootstrap()
+        try await fixture.store.signInToDemo(username: "appreview", password: "test-demo-password")
+
+        XCTAssertEqual(fixture.store.currentUser?.displayName, "Anna")
+        XCTAssertEqual(fixture.tokens.tokens?.accessToken, "fresh-access")
+        XCTAssertNil(fixture.auth.lastAppleUserID())
+        let request = try XCTUnwrap(fixture.scenario.requests.first)
+        XCTAssertEqual(request.url?.path, "/auth/demo")
+        XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+        let body: Data
+        if let data = request.httpBody {
+            body = data
+        } else {
+            let stream = try XCTUnwrap(request.httpBodyStream)
+            stream.open()
+            defer { stream.close() }
+            var data = Data()
+            var buffer = [UInt8](repeating: 0, count: 1024)
+            while stream.hasBytesAvailable {
+                let count = stream.read(&buffer, maxLength: buffer.count)
+                guard count > 0 else { break }
+                data.append(contentsOf: buffer.prefix(count))
+            }
+            body = data
+        }
+        let payload = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: String])
+        XCTAssertEqual(payload, ["username": "appreview", "password": "test-demo-password"])
+
+        await fixture.store.handleSceneDidBecomeActive()
+        let token = try await fixture.store.refreshSession()
+        XCTAssertEqual(token, "fresh-access")
+        XCTAssertNil(fixture.auth.lastAppleUserID())
+        XCTAssertEqual(fixture.scenario.requests.map(\.url?.path), ["/auth/demo", "/auth/refresh"])
+    }
+
+    func testRejectedDemoSignInDoesNotCreateSession() async {
+        let fixture = makeFixture(responses: [.json(401, "{}")])
+        fixture.tokens.tokens = nil
+        fixture.auth.appleUserID = nil
+        await fixture.store.bootstrap()
+        do {
+            try await fixture.store.signInToDemo(username: "appreview", password: "wrong")
+            XCTFail("Invalid credentials must be rejected")
+        } catch {
+            XCTAssertEqual(AppError.wrap(error).errorDescription, L10n.demoInvalidCredentials)
+            XCTAssertNil(fixture.store.currentUser)
+            XCTAssertNil(fixture.tokens.tokens)
+            XCTAssertNil(fixture.auth.lastAppleUserID())
+        }
+    }
+
     func testWelcomeWarmsBackendOnceWithoutCredentialsOrCachedResponse() async {
         let fixture = makeFixture(responses: [.json(200, "Healthy")])
         fixture.tokens.tokens = nil

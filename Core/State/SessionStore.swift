@@ -158,6 +158,17 @@ final class SessionStore: ObservableObject, APISessionProviding {
         }
     }
 
+    func signInToDemo(username: String, password: String) async throws {
+        sessionGeneration &+= 1
+        bootstrapTask?.cancel()
+        refreshTask?.cancel()
+        let generation = sessionGeneration
+        let session = try await authRepository.signInToDemo(username: username, password: password)
+        try Task.checkCancellation()
+        guard generation == sessionGeneration else { throw CancellationError() }
+        try applySession(session, appleUserID: nil)
+    }
+
     func refreshSession() async throws -> String {
         if let refreshTask {
             let session = try await refreshTask.value
