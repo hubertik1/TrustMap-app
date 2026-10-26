@@ -22,6 +22,8 @@ enum L10n {
 
     static var demoAccess: String { text("ui.demo_access") }
 
+    static var demoShort: String { text("ui.demo_short") }
+
     static var demoInvalidCredentials: String { text("ui.demo_invalid_credentials") }
 
     static var demoUsername: String { text("ui.demo_username") }

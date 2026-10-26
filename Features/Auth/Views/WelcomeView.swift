@@ -228,31 +228,30 @@ private struct WelcomeCTASection: View {
             .frame(height: 56)
             .disabled(isSigningIn || isPreviewEnvironment)
 
-            if let termsOfServiceURL = AppConfiguration.termsOfServiceURL {
-                Link(L10n.termsOfService, destination: termsOfServiceURL)
-                    .font(.footnote)
-                    .tint(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-
-            HStack(spacing: 12) {
+            HStack(spacing: 6) {
                 if let privacyPolicyURL = AppConfiguration.privacyPolicyURL {
                     Link(L10n.privacyPolicy, destination: privacyPolicyURL)
+                        .frame(minHeight: 44)
+                }
+                if let termsOfServiceURL = AppConfiguration.termsOfServiceURL {
+                    Link(L10n.termsOfService, destination: termsOfServiceURL)
                         .frame(minHeight: 44)
                 }
                 if let supportURL = AppConfiguration.supportURL {
                     Link(L10n.support, destination: supportURL)
                         .frame(minHeight: 44)
                 }
-                Button(L10n.demoAccess, action: showDemoAccess)
+                Button(L10n.demoShort, action: showDemoAccess)
                     .frame(minHeight: 44)
+                    .accessibilityLabel(L10n.demoAccess)
                     .disabled(isSigningIn || isPreviewEnvironment)
             }
-            .font(.footnote)
+            .font(.caption)
             .lineLimit(1)
-            .minimumScaleFactor(0.75)
+            .minimumScaleFactor(0.7)
             .tint(.secondary)
             .frame(maxWidth: .infinity)
+            .padding(.horizontal, -16)
 
             if isSigningIn {
                 ProgressView(L10n.signingIn)
